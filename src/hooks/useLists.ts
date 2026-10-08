@@ -13,9 +13,9 @@ export function useGameListIds(gameId: string | undefined) {
     setLoading(true)
     await ensureSession()
     const { data, error } = await supabase
-      .from('list_games')
+      .from('list_items')
       .select('list_id')
-      .eq('game_id', gameId)
+      .eq('item_id', gameId)
 
     if (!error) setListIds(new Set(data.map((row) => row.list_id as string)))
     setLoading(false)
@@ -30,10 +30,10 @@ export function useGameListIds(gameId: string | undefined) {
       if (!gameId) return
       if (listIds.has(listId)) {
         const { error } = await supabase
-          .from('list_games')
+          .from('list_items')
           .delete()
           .eq('list_id', listId)
-          .eq('game_id', gameId)
+          .eq('item_id', gameId)
         if (error) throw error
         setListIds((prev) => {
           const next = new Set(prev)
@@ -42,8 +42,8 @@ export function useGameListIds(gameId: string | undefined) {
         })
       } else {
         const { error } = await supabase
-          .from('list_games')
-          .insert({ list_id: listId, game_id: gameId })
+          .from('list_items')
+          .insert({ list_id: listId, item_id: gameId })
         if (error) throw error
         setListIds((prev) => new Set(prev).add(listId))
       }
@@ -63,12 +63,12 @@ export function useListGameIds(listId: string | undefined) {
     setLoading(true)
     await ensureSession()
     const { data, error } = await supabase
-      .from('list_games')
-      .select('game_id')
+      .from('list_items')
+      .select('item_id')
       .eq('list_id', listId)
       .order('added_at', { ascending: false })
 
-    if (!error) setGameIds(data.map((row) => row.game_id as string))
+    if (!error) setGameIds(data.map((row) => row.item_id as string))
     setLoading(false)
   }, [listId])
 
@@ -80,10 +80,10 @@ export function useListGameIds(listId: string | undefined) {
     async (gameId: string) => {
       if (!listId) return
       const { error } = await supabase
-        .from('list_games')
+        .from('list_items')
         .delete()
         .eq('list_id', listId)
-        .eq('game_id', gameId)
+        .eq('item_id', gameId)
       if (error) throw error
       setGameIds((prev) => prev.filter((id) => id !== gameId))
     },
@@ -95,8 +95,8 @@ export function useListGameIds(listId: string | undefined) {
     async (gameId: string, index: number) => {
       if (!listId) return
       const { error } = await supabase
-        .from('list_games')
-        .insert({ list_id: listId, game_id: gameId })
+        .from('list_items')
+        .insert({ list_id: listId, item_id: gameId })
       if (error) throw error
       setGameIds((prev) => {
         if (prev.includes(gameId)) return prev

@@ -32,9 +32,13 @@ export function Timeline() {
   useEffect(() => {
     ensureSession().then(() => {
       supabase
-        .from('play_sessions')
-        .select('id, duration_minutes, played_at, game_id, games(title)')
-        .order('played_at', { ascending: false })
+        .from('activity_log')
+        .select(
+          'id, duration_minutes, played_at:occurred_at, game_id:item_id, games:items!inner(title, media_type)'
+        )
+        .eq('games.media_type', 'game')
+        .not('duration_minutes', 'is', null)
+        .order('occurred_at', { ascending: false })
         .limit(50)
         .then(({ data }) => {
           setSessions((data as unknown as SessionRow[]) ?? [])

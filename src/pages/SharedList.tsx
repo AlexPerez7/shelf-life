@@ -3,24 +3,47 @@ import { Link, useParams } from 'react-router-dom'
 import { ClipboardList } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { statusColors, statusLabels } from '../lib/status'
+import { gameStatusFromItem } from '../lib/gameItem'
 import { plural } from '../lib/text'
 import { GameThumb } from '../components/GameThumb'
 import { Skeleton } from '../components/Skeleton'
 import type { GameStatus } from '../types/game'
+import type { ItemStatus, MediaType } from '../types/item'
+
+/** Lo que devuelve `get_public_list` por cada ítem (migración 0011). */
+interface PublicItem {
+  media_type: MediaType
+  title: string
+  cover_url: string | null
+  platforms: string[]
+  genres: string[]
+  status: ItemStatus
+  rating: number | null
+  release_date: string | null
+}
 
 interface PublicGame {
   title: string
   cover_url: string | null
-  platform: string | null
-  genre: string | null
   status: GameStatus
-  rating: number | null
-  first_release_date: number | null
 }
 
 interface PublicList {
   name: string
   games: PublicGame[]
+}
+
+function toPublicList(data: { name: string; items: PublicItem[] }): PublicList {
+  return {
+    name: data.name,
+    games: data.items
+      .filter((i) => i.media_type === 'game')
+      .map((i) => ({
+        title: i.title,
+        cover_url: i.cover_url,
+        status: gameStatusFromItem(i.status),
+      })),
+  }
 }
 
 /**
@@ -35,7 +58,9 @@ export function SharedList() {
     if (!id) return
     supabase
       .rpc('get_public_list', { p_list_id: id })
-      .then(({ data, error }) => setList(error ? null : ((data as PublicList | null) ?? null)))
+      .then(({ data, error }) =>
+        setList(error || !data ? null : toPublicList(data as { name: string; items: PublicItem[] }))
+      )
   }, [id])
 
   return (

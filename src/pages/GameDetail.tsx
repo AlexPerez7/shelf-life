@@ -342,10 +342,10 @@ export function GameDetail() {
   /** Sesión para un juego distinto al que se está viendo. */
   async function addSessionFor(gameId: string, minutes: number, startedAt: number) {
     try {
-      const { error } = await supabase.from('play_sessions').insert({
-        game_id: gameId,
+      const { error } = await supabase.from('activity_log').insert({
+        item_id: gameId,
         duration_minutes: minutes,
-        played_at: new Date(startedAt).toISOString(),
+        occurred_at: new Date(startedAt).toISOString(),
       })
       if (error) throw error
       await refreshGame(gameId)

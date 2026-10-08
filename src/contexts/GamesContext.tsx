@@ -2,7 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react'
 import { supabase, ensureSession } from '../lib/supabaseClient'
 import { readCache, removeCacheByPrefix, writeCache } from '../lib/localCache'
+import { gameChangesToItem, itemToGame, newGameToItem } from '../lib/gameItem'
 import type { Game, NewGame } from '../types/game'
+import type { Item } from '../types/item'
 
 interface GamesContextValue {
   games: Game[]
@@ -20,10 +22,18 @@ interface GamesContextValue {
 
 const GamesContext = createContext<GamesContextValue | null>(null)
 
-const CACHE_PREFIX = 'playdex_games_v1:'
+// La DB guarda `items` (multimedia); las pantallas de juegos ven `Game`.
+// El estado guarda los Item crudos (hacen falta para combinar `metadata`) y
+// expone los juegos ya traducidos.
+const CACHE_PREFIX = 'playdex_items_v1:'
+/** Cache del modelo anterior (filas de `games`): se descarta. */
+const LEGACY_CACHE_PREFIX = 'playdex_games_v1:'
 
 export function GamesProvider({ children }: { children: ReactNode }) {
-  const [games, setGames] = useState<Game[]>([])
+  const [items, setItems] = useState<Item[]>([])
+  const games = useMemo(() => items.map(itemToGame), [items])
+  const itemsRef = useRef<Item[]>([])
+  itemsRef.current = items
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // Una vez que hay datos, las recargas son silenciosas (sin esqueletos).
@@ -35,8 +45,9 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     if (!hasLoaded.current) setLoading(true)
     await ensureSession()
     const { data, error } = await supabase
-      .from('games')
+      .from('items')
       .select('*')
+      .eq('media_type', 'game')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -44,7 +55,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       // la biblioteca ni muestra error: se sigue viendo lo último conocido.
       if (!hasLoaded.current) setError(error.message)
     } else {
-      setGames(data as Game[])
+      setItems(data as Item[])
       setError(null)
       hasLoaded.current = true
     }
@@ -60,6 +71,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     // Se ignoran TOKEN_REFRESHED y USER_UPDATED: en mobile el token se renueva
     // cada vez que la PWA vuelve del segundo plano, y recargar ahí hacía
     // parpadear toda la app con esqueletos.
+    removeCacheByPrefix(LEGACY_CACHE_PREFIX)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -67,7 +79,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
         hasLoaded.current = false
         userIdRef.current = null
         removeCacheByPrefix(CACHE_PREFIX)
-        setGames([])
+        setItems([])
         setError(null)
         setLoading(false)
         return
@@ -77,9 +89,9 @@ export function GamesProvider({ children }: { children: ReactNode }) {
         // revalidar contra la DB en segundo plano.
         if (userIdRef.current !== session.user.id) {
           userIdRef.current = session.user.id
-          const cached = readCache<Game[]>(CACHE_PREFIX + session.user.id)
+          const cached = readCache<Item[]>(CACHE_PREFIX + session.user.id)
           if (cached) {
-            setGames(cached.data)
+            setItems(cached.data)
             setLoading(false)
             hasLoaded.current = true
           }
@@ -95,9 +107,9 @@ export function GamesProvider({ children }: { children: ReactNode }) {
   // Mantener la cache local al día con cada cambio (alta, edición, borrado).
   useEffect(() => {
     if (hasLoaded.current && userIdRef.current) {
-      writeCache(CACHE_PREFIX + userIdRef.current, games)
+      writeCache(CACHE_PREFIX + userIdRef.current, items)
     }
-  }, [games])
+  }, [items])
 
   const addGame = useCallback(async (game: NewGame) => {
     const {
@@ -106,14 +118,14 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     if (!user) throw new Error('No hay sesión activa')
 
     const { data, error } = await supabase
-      .from('games')
-      .insert({ ...game, user_id: user.id })
+      .from('items')
+      .insert({ ...newGameToItem(game), user_id: user.id })
       .select()
       .single()
 
     if (error) throw error
-    setGames((prev) => [data as Game, ...prev])
-    return data as Game
+    setItems((prev) => [data as Item, ...prev])
+    return itemToGame(data as Item)
   }, [])
 
   const addGames = useCallback(async (newGames: NewGame[]) => {
@@ -124,39 +136,42 @@ export function GamesProvider({ children }: { children: ReactNode }) {
 
     const created: Game[] = []
     for (let i = 0; i < newGames.length; i += 200) {
-      const rows = newGames.slice(i, i + 200).map((g) => ({ ...g, user_id: user.id }))
-      const { data, error } = await supabase.from('games').insert(rows).select()
+      const rows = newGames
+        .slice(i, i + 200)
+        .map((g) => ({ ...newGameToItem(g), user_id: user.id }))
+      const { data, error } = await supabase.from('items').insert(rows).select()
       if (error) throw error
-      created.push(...(data as Game[]))
+      created.push(...(data as Item[]).map(itemToGame))
       // Actualizar por tandas para que se vea el avance.
-      setGames((prev) => [...(data as Game[]), ...prev])
+      setItems((prev) => [...(data as Item[]), ...prev])
     }
     return created
   }, [])
 
   const updateGame = useCallback(async (id: string, changes: Partial<Game>) => {
+    const current = itemsRef.current.find((i) => i.id === id)
     const { data, error } = await supabase
-      .from('games')
-      .update(changes)
+      .from('items')
+      .update(gameChangesToItem(changes, current?.metadata))
       .eq('id', id)
       .select()
       .single()
 
     if (error) throw error
-    setGames((prev) => prev.map((g) => (g.id === id ? (data as Game) : g)))
-    return data as Game
+    setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
+    return itemToGame(data as Item)
   }, [])
 
   const deleteGame = useCallback(async (id: string) => {
-    const { error } = await supabase.from('games').delete().eq('id', id)
+    const { error } = await supabase.from('items').delete().eq('id', id)
     if (error) throw error
-    setGames((prev) => prev.filter((g) => g.id !== id))
+    setItems((prev) => prev.filter((i) => i.id !== id))
   }, [])
 
   const refreshGame = useCallback(async (id: string) => {
-    const { data, error } = await supabase.from('games').select('*').eq('id', id).single()
+    const { data, error } = await supabase.from('items').select('*').eq('id', id).single()
     if (error) throw error
-    setGames((prev) => prev.map((g) => (g.id === id ? (data as Game) : g)))
+    setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
   }, [])
 
   const value = useMemo<GamesContextValue>(

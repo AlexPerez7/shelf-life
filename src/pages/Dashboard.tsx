@@ -51,9 +51,11 @@ function useRecentSessions() {
     since.setMonth(since.getMonth() - 12, 1)
     ensureSession().then(() =>
       supabase
-        .from('play_sessions')
-        .select('duration_minutes, played_at, game_id')
-        .gte('played_at', since.toISOString())
+        .from('activity_log')
+        .select('duration_minutes, played_at:occurred_at, game_id:item_id, items!inner(media_type)')
+        .eq('items.media_type', 'game')
+        .not('duration_minutes', 'is', null)
+        .gte('occurred_at', since.toISOString())
         .then(({ data }) => setSessions((data as SessionRow[]) ?? []))
     )
   }, [])
