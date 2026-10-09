@@ -6,16 +6,14 @@ import { useTrackerTheme } from '../useTrackerTheme'
 import { ScreenLibrary } from './ScreenLibrary'
 
 const AddMedia = lazy(() => import('../../pages/AddMedia').then((m) => ({ default: m.AddMedia })))
-const MediaDetail = lazy(() =>
-  import('../../pages/MediaDetail').then((m) => ({ default: m.MediaDetail }))
-)
+const ScreenDetail = lazy(() => import('./ScreenDetail').then((m) => ({ default: m.ScreenDetail })))
 
 const section = mediaSections.pantalla
 
 /**
  * Tracker de Pantalla (películas, series y anime): todo lo que vive bajo
- * /pantalla. Su biblioteca tiene diseño propio (de app de streaming); el alta
- * y el detalle todavía son las pantallas genéricas.
+ * /pantalla. La biblioteca y el detalle tienen diseño propio (de app de
+ * streaming); el alta todavía es la pantalla genérica.
  */
 export function ScreenTracker() {
   useTrackerTheme('pantalla')
@@ -26,7 +24,7 @@ export function ScreenTracker() {
         <Routes>
           <Route index element={<ScreenLibrary />} />
           <Route path="agregar" element={<AddMedia sectionId="pantalla" />} />
-          <Route path=":id" element={<MediaDetail sectionId="pantalla" />} />
+          <Route path=":id" element={<ScreenDetail />} />
         </Routes>
       </Suspense>
       <MediaTrackerNav section={section} />

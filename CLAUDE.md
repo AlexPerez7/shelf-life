@@ -23,7 +23,7 @@ React 19 + Vite + TypeScript + Tailwind CSS v4 (config en `src/index.css` con `@
 
 - `src/pages/Hub.tsx`: inicio común (`/`), lanzador de los tres trackers.
 - `src/trackers/{juegos,pantalla,libros}/`: un tracker por carpeta, cada uno con su `*Tracker.tsx` (rutas propias + barra inferior) cargado con `lazy` desde `App.tsx`. Metadatos de cada tracker en `src/trackers/trackers.ts`.
-- Diseños propios: Juegos (completo), Libros (librero en `BooksLibrary`/`Bookshelf`) y Pantalla (biblioteca estilo streaming en `ScreenLibrary`). Pantalla y Libros todavía comparten el alta y el detalle genéricos de `src/pages/` (`AddMedia`, `MediaDetail`); la idea es que cada tracker los reemplace por los suyos sin tocar a los demás.
+- Diseños propios: Juegos (completo), Libros (librero en `BooksLibrary`/`Bookshelf`) y Pantalla (biblioteca y detalle estilo streaming en `ScreenLibrary` y `ScreenDetail`). Pantalla y Libros todavía comparten el alta genérica (`src/pages/AddMedia`) y Libros usa el detalle genérico (`src/pages/MediaDetail`); la idea es que cada tracker los reemplace por los suyos sin tocar a los demás.
 - Datos: todo vive en la tabla `items` (migración `0011`). Juegos la ve como `Game` mediante la capa de adaptación de `src/lib/gameItem.ts` y `GamesContext`; el resto usa `Item` directo vía `MediaContext` (`src/types/item.ts`).
 - Configuración de Pantalla y Libros (etiquetas de estado, rutas, colores) en `mediaSections` de `src/lib/media.ts`. Ahí también están las reglas de avance: `statusChanges` y `progressChanges`. Reusarlas en vez de duplicar la lógica.
 - Actividad (episodios, sesiones, lecturas) en `activity_log`; un trigger de la DB suma `time_spent_minutes`. El frontend no suma tiempo a mano.

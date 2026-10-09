@@ -26,6 +26,7 @@ import { StarRating } from '../components/StarRating'
 import { TagList } from '../components/TagList'
 import { ItemStatusSheet } from '../components/ItemStatusSheet'
 import { BottomSheet } from '../components/BottomSheet'
+import { BlurTextarea } from '../components/BlurTextarea'
 import { MediaForm } from '../components/MediaForm'
 import { haptic } from '../lib/haptics'
 import { todayISO } from '../lib/dates'
@@ -45,35 +46,6 @@ import type { Item, ItemStatus, ItemWrite } from '../types/item'
 
 const inputClass =
   'w-full rounded-xl bg-background/40 px-3 py-2.5 text-sm text-ink ring-1 ring-primary-dark/30 focus:outline-none focus:ring-2 focus:ring-primary'
-
-/** Campo de texto que guarda al salir del campo (no en cada tecla). */
-function BlurTextarea({
-  value,
-  onSave,
-  rows,
-  placeholder,
-}: {
-  value: string | null
-  onSave: (value: string | null) => void
-  rows: number
-  placeholder: string
-}) {
-  const [text, setText] = useState(value ?? '')
-  useEffect(() => setText(value ?? ''), [value])
-  return (
-    <textarea
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={() => {
-        const next = text.trim() || null
-        if (next !== (value ?? null)) onSave(next)
-      }}
-      rows={rows}
-      placeholder={placeholder}
-      className={inputClass}
-    />
-  )
-}
 
 /** Total de episodios o páginas, editable a mano (las APIs no siempre lo traen). */
 function TotalInput({
@@ -635,6 +607,7 @@ export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
                     onSave={(notes) => save({ notes })}
                     rows={3}
                     placeholder={section.notesPlaceholder}
+                    className={inputClass}
                   />
                 </label>
                 <label className="block">
@@ -644,6 +617,7 @@ export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
                     onSave={(review) => save({ review }, 'Reseña guardada')}
                     rows={4}
                     placeholder="Tu opinión..."
+                    className={inputClass}
                   />
                 </label>
               </div>
