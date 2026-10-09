@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Gamepad2 } from 'lucide-react'
+import { Gamepad2, type LucideIcon } from 'lucide-react'
 
 interface GameThumbProps {
   src: string | null
@@ -12,6 +12,8 @@ interface GameThumbProps {
   placeholderClassName?: string
   /** Cargar de inmediato (imágenes visibles al abrir la pantalla, ej. portada hero). */
   eager?: boolean
+  /** Ícono del placeholder (por defecto, un control de juego). */
+  icon?: LucideIcon
 }
 
 /**
@@ -27,6 +29,7 @@ export function GameThumb({
   className = '',
   placeholderClassName = '',
   eager = false,
+  icon: Icon = Gamepad2,
 }: GameThumbProps) {
   const chain = src ? [src, ...fallbacks] : []
   const [index, setIndex] = useState(0)
@@ -36,7 +39,7 @@ export function GameThumb({
       <div
         className={`flex items-center justify-center bg-primary-dark/20 text-lavender/50 ${className} ${placeholderClassName}`}
       >
-        <Gamepad2 className="h-[1em] w-[1em]" />
+        <Icon className="h-[1em] w-[1em]" />
       </div>
     )
   }

@@ -1,23 +1,21 @@
-import { NavLink } from 'react-router-dom'
-import { BarChart3, ClipboardList, Gamepad2, Home, Plus, type LucideIcon } from 'lucide-react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { BarChart3, ClipboardList, Gamepad2, Home, Plus, Tv, type LucideIcon } from 'lucide-react'
+import { readLastSection, sectionForPath, sectionPaths } from '../lib/sections'
 
 interface NavItem {
   to: string
   label: string
   Icon: LucideIcon
+  /** Activo según la ruta (si no, el criterio de NavLink). */
+  active?: boolean
 }
-
-const left: NavItem[] = [
-  { to: '/home', label: 'Inicio', Icon: Home },
-  { to: '/', label: 'Biblioteca', Icon: Gamepad2 },
-]
 
 const right: NavItem[] = [
   { to: '/lists', label: 'Listas', Icon: ClipboardList },
   { to: '/dashboard', label: 'Estadísticas', Icon: BarChart3 },
 ]
 
-function NavItemLink({ to, label, Icon }: NavItem) {
+function NavItemLink({ to, label, Icon, active }: NavItem) {
   return (
     <li className="flex-1 list-none">
       <NavLink
@@ -25,7 +23,7 @@ function NavItemLink({ to, label, Icon }: NavItem) {
         end={to === '/'}
         className={({ isActive }) =>
           `flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] transition-colors ${
-            isActive ? 'text-accent' : 'text-lavender active:text-ink'
+            (active ?? isActive) ? 'text-accent' : 'text-lavender active:text-ink'
           }`
         }
       >
@@ -37,6 +35,21 @@ function NavItemLink({ to, label, Icon }: NavItem) {
 }
 
 export function BottomNav() {
+  const { pathname } = useLocation()
+  // "Biblioteca" y "+" apuntan a la sección en la que se está (o a la última
+  // usada, desde las pantallas comunes como Listas).
+  const pathSection = sectionForPath(pathname)
+  const section = pathSection ?? readLastSection()
+  const left: NavItem[] = [
+    { to: '/home', label: 'Inicio', Icon: Home },
+    {
+      to: sectionPaths[section].library,
+      label: 'Biblioteca',
+      Icon: section === 'pantalla' ? Tv : Gamepad2,
+      active: pathSection != null && !pathname.endsWith(sectionPaths[section].add),
+    },
+  ]
+
   return (
     <nav
       aria-label="Navegación principal"
@@ -52,8 +65,8 @@ export function BottomNav() {
             con el pulgar que un ítem más de la barra. */}
         <li className="flex flex-1 list-none justify-center">
           <NavLink
-            to="/add"
-            aria-label="Agregar juego"
+            to={sectionPaths[section].add}
+            aria-label={section === 'pantalla' ? 'Agregar película o serie' : 'Agregar juego'}
             className={({ isActive }) =>
               `-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-accent/30 ring-4 ring-background transition-transform active:scale-95 ${
                 isActive ? 'scale-105' : ''

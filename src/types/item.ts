@@ -4,6 +4,9 @@
 
 export type MediaType = 'game' | 'movie' | 'series' | 'anime' | 'book'
 
+/** Tipos de la sección Pantalla. */
+export type ScreenType = 'movie' | 'series' | 'anime'
+
 /** Estado genérico; cada tipo lo muestra con su propio texto. */
 export type ItemStatus =
   | 'wishlist'
@@ -23,6 +26,10 @@ export interface ItemMetadata {
   story_percent?: number
   general_percent?: number
   completionist_percent?: number
+  // Películas, series y anime
+  original_title?: string
+  /** Duración de la película, o de cada episodio, en minutos. */
+  runtime_minutes?: number
 }
 
 export interface Item {
@@ -59,3 +66,18 @@ export interface Item {
 
 /** Columnas escribibles de `items`. */
 export type ItemWrite = Partial<Omit<Item, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
+
+/** Resultado de búsqueda de la Edge Function `media-search` (TMDB / AniList). */
+export interface MediaSearchResult {
+  source: 'tmdb' | 'anilist'
+  external_id: string
+  media_type: ScreenType
+  title: string
+  original_title: string | null
+  cover_url: string | null
+  release_date: string | null
+  genres: string[]
+  summary: string | null
+  episodes: number | null
+  runtime_minutes: number | null
+}

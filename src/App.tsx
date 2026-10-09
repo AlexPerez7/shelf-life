@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import { GamesProvider } from './contexts/GamesContext'
 import { ListsProvider } from './contexts/ListsContext'
+import { MediaProvider } from './contexts/MediaContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { ConfirmProvider } from './contexts/ConfirmContext'
 import { ScrollManager } from './components/ScrollManager'
@@ -29,6 +30,11 @@ const UpdatePassword = lazy(() =>
   import('./pages/UpdatePassword').then((m) => ({ default: m.UpdatePassword }))
 )
 const SharedList = lazy(() => import('./pages/SharedList').then((m) => ({ default: m.SharedList })))
+const ScreenLibrary = lazy(() =>
+  import('./pages/ScreenLibrary').then((m) => ({ default: m.ScreenLibrary }))
+)
+const AddMedia = lazy(() => import('./pages/AddMedia').then((m) => ({ default: m.AddMedia })))
+const MediaDetail = lazy(() => import('./pages/MediaDetail').then((m) => ({ default: m.MediaDetail })))
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })))
 
 function SplashScreen() {
@@ -53,7 +59,7 @@ function App() {
     () => localStorage.getItem(ONBOARDING_KEY) === 'true'
   )
 
-  // GamesProvider/ListsProvider quedan siempre montados (aunque no haya
+  // GamesProvider/MediaProvider/ListsProvider quedan siempre montados (aunque no haya
   // sesión todavía) para que su listener de onAuthStateChange esté
   // suscripto ANTES de que el login dispare el evento SIGNED_IN. Si en
   // cambio solo se montaran después de que `session` pasa a ser verdadero,
@@ -111,6 +117,9 @@ function App() {
             <Route path="/lists/:id" element={<ListDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/timeline" element={<Timeline />} />
+            <Route path="/pantalla" element={<ScreenLibrary />} />
+            <Route path="/pantalla/agregar" element={<AddMedia />} />
+            <Route path="/pantalla/:id" element={<MediaDetail />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
@@ -124,9 +133,11 @@ function App() {
     <ToastProvider>
       <ConfirmProvider>
         <GamesProvider>
-          <ListsProvider>
-            <SessionTimerProvider>{content}</SessionTimerProvider>
-          </ListsProvider>
+          <MediaProvider>
+            <ListsProvider>
+              <SessionTimerProvider>{content}</SessionTimerProvider>
+            </ListsProvider>
+          </MediaProvider>
         </GamesProvider>
       </ConfirmProvider>
     </ToastProvider>

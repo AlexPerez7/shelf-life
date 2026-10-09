@@ -12,6 +12,7 @@ import { todayISO } from '../lib/dates'
 import { plural } from '../lib/text'
 import { GameCardGridSkeleton } from '../components/Skeleton'
 import { PageContainer } from '../components/PageContainer'
+import { SectionTabs } from '../components/SectionTabs'
 import { Chip } from '../components/Chip'
 import { parseTags } from '../lib/tags'
 import { statusLabels, statuses } from '../lib/status'
@@ -205,8 +206,10 @@ export function Library() {
 
   return (
     <PageContainer>
+      <SectionTabs current="juegos" />
+
       <div className="mb-4 flex items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">Mi biblioteca</h1>
+        <h1 className="text-xl font-semibold">Juegos</h1>
         {!loading && games.length > 0 && (
           <span className="text-sm text-lavender">
             {hasFilters ? `${sorted.length} de ${games.length}` : plural(games.length, 'juego')}

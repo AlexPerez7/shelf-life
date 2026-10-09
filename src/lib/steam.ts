@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { callFn } from './functions'
 import type { IgdbSearchResult, NewGame } from '../types/game'
 
 export interface SteamGame {
@@ -14,24 +15,6 @@ export interface SteamProfile {
   steam_avatar: string | null
   /** Solo lo sabemos al vincular; undefined si se cargó desde la DB. */
   is_public?: boolean
-}
-
-/** Invoca una Edge Function y extrae el mensaje de error real del cuerpo. */
-async function callFn<T>(name: string, body?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke<T>(name, { body })
-  if (!error) return data as T
-
-  let message = error.message
-  const ctx = (error as { context?: Response }).context
-  if (ctx && typeof ctx.json === 'function') {
-    try {
-      const parsed = await ctx.json()
-      if (parsed?.error) message = parsed.error
-    } catch {
-      /* el cuerpo no era JSON, dejamos el mensaje genérico */
-    }
-  }
-  throw new Error(message)
 }
 
 /** Perfil de Steam vinculado del usuario actual, o null si no vinculó ninguno. */
