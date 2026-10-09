@@ -23,6 +23,8 @@ import { useMediaSearch } from '../../hooks/useMediaSearch'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import { mediaSections, needsDetails, resultToItemWithStatus, withDetails } from '../../lib/media'
+import { BOOK_FORMATS, readLastBookFormat, saveLastBookFormat } from '../../lib/formats'
+import { FormatPicker } from '../../components/FormatPicker'
 import type { Item, ItemStatus, ItemWrite, MediaSearchResult } from '../../types/item'
 
 const section = mediaSections.libros
@@ -89,6 +91,8 @@ export function BookAdd() {
   const [details, setDetails] = useState<Record<string, MediaSearchResult>>({})
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [adding, setAdding] = useState<ItemStatus | null>(null)
+  // Formato con el que se agrega (el último usado, para no marcarlo cada vez).
+  const [format, setFormat] = useState(readLastBookFormat)
 
   function openPreview(result: MediaSearchResult) {
     setPreview(result)
@@ -109,7 +113,8 @@ export function BookAdd() {
     haptic()
     try {
       const full = details[resultKey(preview)] ?? (await withDetails(preview))
-      const created = await addItem(resultToItemWithStatus(full, status, todayISO()))
+      const created = await addItem({ ...resultToItemWithStatus(full, status, todayISO()), format: format || null })
+      saveLastBookFormat(format)
       setPreview(null)
       showToast(`${created.title}: ${section.statusLabels[status]}`)
     } catch (err) {
@@ -289,24 +294,35 @@ export function BookAdd() {
                 <Check size={18} /> En tu librero: {section.statusLabels[shownExisting.status]}
               </button>
             ) : (
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                {ADD_OPTIONS.map(({ status, label, Icon }) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => handleAdd(status)}
-                    disabled={adding != null}
-                    className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-transform active:scale-95 disabled:opacity-60 ${
-                      status === 'wishlist'
-                        ? 'bg-primary text-white'
-                        : 'bg-background text-ink ring-1 ring-primary-dark/25'
-                    }`}
-                  >
-                    {adding === status ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="mt-5">
+                  <span className="mb-1.5 block text-xs text-lavender">Formato</span>
+                  <FormatPicker
+                    value={format}
+                    onChange={setFormat}
+                    options={BOOK_FORMATS}
+                    inactiveClassName="bg-background text-lavender ring-1 ring-primary-dark/25"
+                  />
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {ADD_OPTIONS.map(({ status, label, Icon }) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => handleAdd(status)}
+                      disabled={adding != null}
+                      className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-transform active:scale-95 disabled:opacity-60 ${
+                        status === 'wishlist'
+                          ? 'bg-primary text-white'
+                          : 'bg-background text-ink ring-1 ring-primary-dark/25'
+                      }`}
+                    >
+                      {adding === status ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}

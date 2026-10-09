@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { FormatPicker } from './FormatPicker'
+import { BOOK_FORMATS, readLastBookFormat, saveLastBookFormat } from '../lib/formats'
 import { GameThumb } from './GameThumb'
 import { Chip } from './Chip'
 import { parseTags } from '../lib/tags'
@@ -70,6 +72,7 @@ export function MediaForm({
   const [authors, setAuthors] = useState(m.authors?.join(', ') ?? '')
   const [publisher, setPublisher] = useState(m.publisher ?? '')
   const [isbn, setIsbn] = useState(m.isbn ?? '')
+  const [format, setFormat] = useState(item?.format ?? (item ? '' : readLastBookFormat()))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -111,6 +114,10 @@ export function MediaForm({
       summary: optionalText(summary),
       progress_total: kind === 'none' ? null : positiveInt(total),
       metadata,
+    }
+    if (kind === 'pages') {
+      data.format = format || null
+      if (!item) saveLastBookFormat(format)
     }
     if (!item) data.status = status
 
@@ -259,6 +266,13 @@ export function MediaForm({
               className={inputClass}
             />
           </Field>
+        </div>
+      )}
+
+      {kind === 'pages' && (
+        <div>
+          <span className="mb-1.5 block text-xs text-lavender">Formato</span>
+          <FormatPicker value={format} onChange={setFormat} options={BOOK_FORMATS} />
         </div>
       )}
 

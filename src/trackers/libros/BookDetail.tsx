@@ -7,6 +7,7 @@ import {
   Calendar,
   ChevronDown,
   Clock,
+  Disc3,
   Heart,
   Library,
   MoreVertical,
@@ -26,6 +27,8 @@ import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
 import { Synopsis } from '../../components/Synopsis'
 import { ListPicker } from '../../components/ListPicker'
+import { FormatPicker } from '../../components/FormatPicker'
+import { BOOK_FORMATS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
 import { parseDate, todayISO } from '../../lib/dates'
 import {
@@ -301,6 +304,7 @@ export function BookDetail() {
   }
 
   const facts = [
+    current.format,
     current.release_date?.slice(0, 4),
     current.progress_total ? `${current.progress_total} págs.` : null,
     current.metadata.publisher,
@@ -548,6 +552,15 @@ export function BookDetail() {
                   />
                 </label>
               </div>
+            </SectionCard>
+
+            <SectionCard icon={Disc3} title="Formato">
+              <FormatPicker
+                value={current.format}
+                onChange={(format) => save({ format: format || null })}
+                options={BOOK_FORMATS}
+                inactiveClassName="bg-background text-lavender ring-1 ring-primary-dark/25"
+              />
             </SectionCard>
 
             <ListPicker itemId={current.id} inactiveClassName="bg-background text-lavender ring-1 ring-primary-dark/25" />

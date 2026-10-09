@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   BookOpenCheck,
   Clock,
+  Disc3,
   Feather,
   FileText,
   Gauge,
@@ -104,6 +105,10 @@ export function BookStats() {
       thisYear: finishedIn(books, year).sort((a, b) => (b.date_finished ?? '').localeCompare(a.date_finished ?? '')),
       genres: topCounts(started(books).flatMap((b) => b.genres), 6),
       authors: topCounts(started(books).flatMap((b) => b.metadata.authors ?? []), 5),
+      formats: topCounts(
+        books.flatMap((b) => (b.format ?? '').split(',').map((f) => f.trim()).filter(Boolean)),
+        6
+      ),
       byStatus: itemStatuses
         .map((s) => ({ status: s, count: books.filter((b) => b.status === s).length }))
         .filter((r) => r.count > 0),
@@ -262,6 +267,17 @@ export function BookStats() {
           {stats.genres.length > 0 && (
             <SectionCard icon={Tag} title="Géneros que más lees">
               <RankBars rows={stats.genres} />
+            </SectionCard>
+          )}
+
+          {stats.formats.length > 0 && (
+            <SectionCard icon={Disc3} title="Cómo lees">
+              <RankBars
+                rows={stats.formats.map((f) => ({
+                  ...f,
+                  to: `${section.libraryPath}?${shelfParam}=${encodeURIComponent(`formato:${f.label}`)}`,
+                }))}
+              />
             </SectionCard>
           )}
 

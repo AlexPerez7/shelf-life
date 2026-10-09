@@ -1,5 +1,5 @@
-// Estantes del librero. Los de estado y colecciones son fijos; los de género
-// y autor se arman con los datos. El estante abierto vive en la URL
+// Estantes del librero. Los de estado y colecciones son fijos; los de
+// formato, género y autor se arman con los datos. El estante abierto vive en la URL
 // (?estante=...) para que la barra inferior pueda llevar directo a uno.
 
 import type { Item, ItemStatus } from '../../types/item'
@@ -64,6 +64,12 @@ export function buildShelves(books: Item[]): { title: string; shelves: ShelfDef[
       name: '★★★★ o más',
       items: books.filter((b) => (b.rating ?? 0) >= 8).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)),
     },
+    ...groupBy(books, (b) => (b.format ?? '').split(','), 1, 6).map(([name, items]) => ({
+      id: `formato:${name}`,
+      category: 'Formato',
+      name,
+      items,
+    })),
   ].filter((s) => s.items.length > 0)
 
   const genres = groupBy(books, (b) => b.genres, 1, MAX_GENRE_SHELVES).map(([name, items]) => ({
