@@ -9,6 +9,7 @@ import {
   Eye,
   Heart,
   Minus,
+  MonitorPlay,
   MoreVertical,
   Play,
   Plus,
@@ -29,6 +30,8 @@ import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
 import { Synopsis } from '../../components/Synopsis'
 import { ListPicker } from '../../components/ListPicker'
+import { FormatPicker } from '../../components/FormatPicker'
+import { SCREEN_PLATFORMS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import {
@@ -304,6 +307,7 @@ export function ScreenDetail() {
 
   const year = current.release_date?.slice(0, 4)
   const facts = [
+    current.format,
     year,
     isMovie
       ? runtime && formatMinutes(runtime)
@@ -512,6 +516,15 @@ export function ScreenDetail() {
                   />
                 </label>
               </div>
+            </SectionCard>
+
+            <SectionCard icon={MonitorPlay} title="Dónde la ves">
+              <FormatPicker
+                value={current.format}
+                onChange={(format) => save({ format: format || null })}
+                options={SCREEN_PLATFORMS}
+                inactiveClassName="bg-background/40 text-lavender ring-1 ring-primary-dark/40"
+              />
             </SectionCard>
 
             <ListPicker itemId={current.id} />

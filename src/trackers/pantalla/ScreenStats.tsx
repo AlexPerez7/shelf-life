@@ -1,6 +1,18 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Clapperboard, Clock, Flame, History, Layers, ListChecks, Star, Tag, Trophy, Tv } from 'lucide-react'
+import {
+  Clapperboard,
+  Clock,
+  Flame,
+  History,
+  Layers,
+  ListChecks,
+  MonitorPlay,
+  Star,
+  Tag,
+  Trophy,
+  Tv,
+} from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
@@ -59,6 +71,10 @@ export function ScreenStats() {
       started(screen).flatMap((i) => i.genres),
       6
     )
+    const platforms = topCounts(
+      started(screen).flatMap((i) => (i.format ?? '').split(',').map((f) => f.trim()).filter(Boolean)),
+      8
+    )
     const byStatus = itemStatuses
       .map((s) => ({ status: s, count: screen.filter((i) => i.status === s).length }))
       .filter((r) => r.count > 0)
@@ -70,6 +86,7 @@ export function ScreenStats() {
       finishedShows,
       byType,
       genres,
+      platforms,
       byStatus,
       topRated: maxBy(screen, (i) => i.rating),
       mostWatched: maxBy(screen, (i) => i.time_spent_minutes),
@@ -229,6 +246,12 @@ export function ScreenStats() {
                 }))}
             />
           </SectionCard>
+
+          {stats.platforms.length > 0 && (
+            <SectionCard icon={MonitorPlay} title="Dónde ves">
+              <RankBars rows={stats.platforms} />
+            </SectionCard>
+          )}
 
           {stats.genres.length > 0 && (
             <SectionCard icon={Tag} title="Géneros que más ves">

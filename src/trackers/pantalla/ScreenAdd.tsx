@@ -8,6 +8,8 @@ import { GameThumb } from '../../components/GameThumb'
 import { Skeleton } from '../../components/Skeleton'
 import { BottomSheet } from '../../components/BottomSheet'
 import { MediaForm } from '../../components/MediaForm'
+import { FormatPicker } from '../../components/FormatPicker'
+import { SCREEN_PLATFORMS } from '../../lib/formats'
 import { useMediaSearch } from '../../hooks/useMediaSearch'
 import { useTrending } from '../../hooks/useTrending'
 import { haptic } from '../../lib/haptics'
@@ -83,9 +85,12 @@ export function ScreenAdd() {
   const [details, setDetails] = useState<Record<string, MediaSearchResult>>({})
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [adding, setAdding] = useState<ItemStatus | null>(null)
+  // Dónde se va a ver (opcional; se elige en la vista previa).
+  const [platform, setPlatform] = useState('')
 
   function openPreview(result: MediaSearchResult) {
     setPreview(result)
+    setPlatform('')
     const key = resultKey(result)
     if (details[key] || !needsDetails(result)) return
     setLoadingDetails(true)
@@ -103,7 +108,7 @@ export function ScreenAdd() {
     haptic()
     try {
       const full = details[resultKey(preview)] ?? (await withDetails(preview))
-      const created = await addItem(resultToItemWithStatus(full, status, todayISO()))
+      const created = await addItem({ ...resultToItemWithStatus(full, status, todayISO()), format: platform || null })
       setPreview(null)
       showToast(`${created.title}: ${section.statusLabels[status]}`)
     } catch (err) {
@@ -338,24 +343,35 @@ export function ScreenAdd() {
                 <Check size={18} /> En tu biblioteca: {section.statusLabels[shownExisting.status]}
               </button>
             ) : (
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                {ADD_OPTIONS.map(({ status, label, Icon }) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => handleAdd(status)}
-                    disabled={adding != null}
-                    className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-transform active:scale-95 disabled:opacity-60 ${
-                      status === 'wishlist'
-                        ? 'bg-accent text-primary-darker'
-                        : 'bg-background text-ink ring-1 ring-primary-dark/50'
-                    }`}
-                  >
-                    {adding === status ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="mt-5">
+                  <span className="mb-1.5 block text-xs text-lavender">Dónde la vas a ver (opcional)</span>
+                  <FormatPicker
+                    value={platform}
+                    onChange={setPlatform}
+                    options={SCREEN_PLATFORMS}
+                    inactiveClassName="bg-background text-lavender ring-1 ring-primary-dark/50"
+                  />
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {ADD_OPTIONS.map(({ status, label, Icon }) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => handleAdd(status)}
+                      disabled={adding != null}
+                      className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-transform active:scale-95 disabled:opacity-60 ${
+                        status === 'wishlist'
+                          ? 'bg-accent text-primary-darker'
+                          : 'bg-background text-ink ring-1 ring-primary-dark/50'
+                      }`}
+                    >
+                      {adding === status ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
