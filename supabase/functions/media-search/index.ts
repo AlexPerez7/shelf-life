@@ -568,15 +568,6 @@ serve(async (req) => {
     }
     const mediaType = type as MediaType
 
-    if (id != null) {
-      const safeId = String(id)
-      if (!ID_PATTERN[mediaType].test(safeId)) return jsonResponse({ error: 'Id inválido' }, 400)
-      if (mediaType === 'book') return jsonResponse(await bookDetails(source, safeId))
-      return jsonResponse(
-        mediaType === 'anime' ? await anilistDetails(safeId) : await tmdbDetails(mediaType, safeId)
-      )
-    }
-
     if (mode === 'covers') {
       const title = typeof body.title === 'string' ? body.title.slice(0, MAX_TEXT) : ''
       const author = typeof body.author === 'string' ? body.author.slice(0, MAX_TEXT) : ''
@@ -617,6 +608,17 @@ serve(async (req) => {
     if (mode === 'trending') {
       if (mediaType === 'book') return jsonResponse({ error: 'Sin tendencias para libros' }, 400)
       return jsonResponse(mediaType === 'anime' ? await anilistTrending() : await tmdbTrending(mediaType))
+    }
+
+    // Detalle por id: después de los modos, que también pueden traer `id`
+    // (ej. portadas de una película).
+    if (id != null) {
+      const safeId = String(id)
+      if (!ID_PATTERN[mediaType].test(safeId)) return jsonResponse({ error: 'Id inválido' }, 400)
+      if (mediaType === 'book') return jsonResponse(await bookDetails(source, safeId))
+      return jsonResponse(
+        mediaType === 'anime' ? await anilistDetails(safeId) : await tmdbDetails(mediaType, safeId)
+      )
     }
 
     if (!query || typeof query !== 'string') {

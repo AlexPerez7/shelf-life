@@ -200,16 +200,16 @@ export interface CoverOption {
  * Google Books para libros; pósters de TMDB para películas y series.
  */
 export async function coverOptions(item: Item): Promise<CoverOption[]> {
-  return (
-    (await callFn<CoverOption[]>('media-search', {
-      type: item.media_type,
-      mode: 'covers',
-      id: item.external_id ?? undefined,
-      source: item.source ?? undefined,
-      title: item.title,
-      author: item.metadata.authors?.[0] ?? '',
-    })) ?? []
-  )
+  const result = await callFn<CoverOption[]>('media-search', {
+    type: item.media_type,
+    mode: 'covers',
+    id: item.external_id ?? undefined,
+    source: item.source ?? undefined,
+    title: item.title,
+    author: item.metadata.authors?.[0] ?? '',
+  })
+  // Una versión vieja de la función responde otra cosa: sin opciones.
+  return Array.isArray(result) ? result : []
 }
 
 /** Detalle (duración, episodios, sinopsis): algunas búsquedas no los traen. */
