@@ -93,8 +93,6 @@ export interface MediaSection {
   emptyText: string
   /** Placeholder de las notas en el detalle. */
   notesPlaceholder: string
-  /** Etiqueta de la barra inferior para lo terminado ("Vistos", "Leídos"). */
-  completedPlural: string
   /** Colores de estado propios (si no, los de juegos). */
   statusColors?: Record<ItemStatus, string>
 }
@@ -119,7 +117,6 @@ export const mediaSections: Record<MediaSectionId, MediaSection> = {
     emptyText:
       'Agrega películas, series y anime para llevar lo que viste, lo que estás viendo y lo que tienes pendiente.',
     notesPlaceholder: 'Dónde quedaste, con quién la ves...',
-    completedPlural: 'Vistos',
   },
   libros: {
     id: 'libros',
@@ -140,7 +137,6 @@ export const mediaSections: Record<MediaSectionId, MediaSection> = {
     emptyText:
       'Agrega libros para llevar lo que leíste, lo que estás leyendo y tu pila de pendientes.',
     notesPlaceholder: 'Citas, ideas, en qué capítulo vas...',
-    completedPlural: 'Leídos',
     // Paleta clásica de las apps de lectura: leyendo ámbar, leído verde,
     // para después celeste, abandonado rosado.
     statusColors: {

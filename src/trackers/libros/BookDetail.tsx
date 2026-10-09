@@ -26,7 +26,7 @@ import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
 import { Synopsis } from '../../components/Synopsis'
 import { haptic } from '../../lib/haptics'
-import { todayISO } from '../../lib/dates'
+import { parseDate, todayISO } from '../../lib/dates'
 import {
   formatMinutes,
   itemStatusColor,
@@ -444,7 +444,7 @@ export function BookDetail() {
                   <p className="font-book font-semibold text-ink">Leído</p>
                   {current.date_finished && (
                     <p className="text-xs text-lavender">
-                      {new Date(`${current.date_finished}T12:00:00`).toLocaleDateString('es', {
+                      {parseDate(current.date_finished).toLocaleDateString('es', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric',

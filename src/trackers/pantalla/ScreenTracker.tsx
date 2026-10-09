@@ -6,6 +6,7 @@ import { useTrackerTheme } from '../useTrackerTheme'
 import { ScreenLibrary } from './ScreenLibrary'
 
 const ScreenAdd = lazy(() => import('./ScreenAdd').then((m) => ({ default: m.ScreenAdd })))
+const ScreenStats = lazy(() => import('./ScreenStats').then((m) => ({ default: m.ScreenStats })))
 const ScreenDetail = lazy(() => import('./ScreenDetail').then((m) => ({ default: m.ScreenDetail })))
 
 const section = mediaSections.pantalla
@@ -24,6 +25,7 @@ export function ScreenTracker() {
         <Routes>
           <Route index element={<ScreenLibrary />} />
           <Route path="agregar" element={<ScreenAdd />} />
+          <Route path="estadisticas" element={<ScreenStats />} />
           <Route path=":id" element={<ScreenDetail />} />
         </Routes>
       </Suspense>

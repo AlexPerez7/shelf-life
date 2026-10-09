@@ -1,11 +1,11 @@
-import { Bookmark, Play, Trophy } from 'lucide-react'
+import { BarChart3, Bookmark, Play } from 'lucide-react'
 import { TrackerNav, type TrackerNavItem } from '../components/TrackerNav'
 import type { MediaSection } from '../lib/media'
 import type { ItemStatus } from '../types/item'
 
 /**
- * Barra inferior de Pantalla y Libros: la biblioteca completa y atajos a los
- * estados que más se consultan (en curso, quiero, terminados).
+ * Barra inferior de Pantalla: la biblioteca completa, atajos a lo que se está
+ * viendo y a lo que se quiere ver, y las estadísticas.
  */
 export function MediaTrackerNav({ section }: { section: MediaSection }) {
   const base = section.libraryPath
@@ -15,7 +15,8 @@ export function MediaTrackerNav({ section }: { section: MediaSection }) {
     Icon,
     isActive: (pathname, search) => pathname === base && search.get('estado') === status,
   })
-  const shortcuts: ItemStatus[] = ['in_progress', 'wishlist', 'completed']
+  const shortcuts: ItemStatus[] = ['in_progress', 'wishlist']
+  const statsPath = `${base}/estadisticas`
 
   return (
     <TrackerNav
@@ -28,13 +29,13 @@ export function MediaTrackerNav({ section }: { section: MediaSection }) {
           isActive: (pathname, search) =>
             pathname === base
               ? !shortcuts.includes(search.get('estado') as ItemStatus)
-              : pathname.startsWith(`${base}/`) && pathname !== section.addPath,
+              : pathname.startsWith(`${base}/`) && pathname !== section.addPath && pathname !== statsPath,
         },
         shortcut('in_progress', section.statusLabels.in_progress, Play),
       ]}
       right={[
         shortcut('wishlist', section.statusLabels.wishlist, Bookmark),
-        shortcut('completed', section.completedPlural, Trophy),
+        { to: statsPath, label: 'Estadísticas', Icon: BarChart3 },
       ]}
       add={{ to: section.addPath, label: `Agregar a ${section.title}` }}
     />
