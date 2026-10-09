@@ -8,10 +8,8 @@ import { BooksLibrary } from './BooksLibrary'
 import { shelfParam } from './bookLists'
 import { useTrackerTheme } from '../useTrackerTheme'
 
-const AddMedia = lazy(() => import('../../pages/AddMedia').then((m) => ({ default: m.AddMedia })))
-const MediaDetail = lazy(() =>
-  import('../../pages/MediaDetail').then((m) => ({ default: m.MediaDetail }))
-)
+const BookAdd = lazy(() => import('./BookAdd').then((m) => ({ default: m.BookAdd })))
+const BookDetail = lazy(() => import('./BookDetail').then((m) => ({ default: m.BookDetail })))
 
 const section = mediaSections.libros
 /** Estantes a los que lleva la barra inferior. */
@@ -21,8 +19,8 @@ const isShelf = (shelf: string) => (pathname: string, search: URLSearchParams) =
 
 /**
  * Tracker de libros: todo lo que vive bajo /libros. Tiene su propio tema
- * (claro, serif, inspirado en Openreads) y su biblioteca es un librero; el alta y el
- * detalle todavía son las pantallas genéricas, que toman el tema solas.
+ * (claro, serif, inspirado en Openreads): la biblioteca es un librero, el alta
+ * busca en una lista con ficha y el detalle es la ficha del libro.
  */
 export function BooksTracker() {
   useTrackerTheme('libros')
@@ -32,8 +30,8 @@ export function BooksTracker() {
       <Suspense fallback={null}>
         <Routes>
           <Route index element={<BooksLibrary />} />
-          <Route path="agregar" element={<AddMedia sectionId="libros" />} />
-          <Route path=":id" element={<MediaDetail sectionId="libros" />} />
+          <Route path="agregar" element={<BookAdd />} />
+          <Route path=":id" element={<BookDetail />} />
         </Routes>
       </Suspense>
       <TrackerNav

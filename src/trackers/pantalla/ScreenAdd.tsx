@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Bookmark, Check, Eye, Loader2, PenLine, Play, Search, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
@@ -8,23 +8,22 @@ import { GameThumb } from '../../components/GameThumb'
 import { Skeleton } from '../../components/Skeleton'
 import { BottomSheet } from '../../components/BottomSheet'
 import { MediaForm } from '../../components/MediaForm'
+import { useMediaSearch } from '../../hooks/useMediaSearch'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import {
   formatMinutes,
-  getMediaDetails,
   mediaSections,
   mediaTypeIcons,
   mediaTypeLabels,
   mediaTypePlurals,
   needsDetails,
-  resultToItem,
-  searchMedia,
+  resultToItemWithStatus,
+  withDetails,
 } from '../../lib/media'
 import type { Item, ItemStatus, ItemWrite, MediaSearchResult, ScreenType } from '../../types/item'
 
 const section = mediaSections.pantalla
-const SEARCH_DELAY_MS = 350
 
 const resultKey = (r: Pick<MediaSearchResult, 'source' | 'external_id'>) => `${r.source}:${r.external_id}`
 
@@ -45,27 +44,6 @@ function resultFacts(r: MediaSearchResult) {
   ]
     .filter(Boolean)
     .join(' · ')
-}
-
-/** Resultado con el detalle completo (duración, episodios, sinopsis); si falla, el de la búsqueda. */
-async function withDetails(result: MediaSearchResult): Promise<MediaSearchResult> {
-  if (!needsDetails(result)) return result
-  return getMediaDetails(result)
-    .then((d) => ({ ...result, ...d, cover_url: d.cover_url ?? result.cover_url }))
-    .catch(() => result)
-}
-
-/** Datos del alta según el estado elegido (fechas y, si ya se vio, avance completo). */
-function itemWithStatus(result: MediaSearchResult, status: ItemStatus) {
-  const item = resultToItem(result)
-  const today = todayISO()
-  item.status = status
-  if (status === 'in_progress') item.date_started = today
-  if (status === 'completed') {
-    item.date_finished = today
-    if (item.progress_total) item.progress = item.progress_total
-  }
-  return item
 }
 
 /**
@@ -89,38 +67,7 @@ export function ScreenAdd() {
   }
 
   const [query, setQuery] = useState('')
-  const searchKey = `${type}:${query.trim()}`
-  const hasQuery = query.trim().length >= 2
-  // Última respuesta, con la búsqueda a la que corresponde: si no coincide con
-  // la actual, se está buscando (así el efecto no toca el estado de forma síncrona).
-  const [response, setResponse] = useState<{
-    key: string
-    results: MediaSearchResult[]
-    error: string | null
-  } | null>(null)
-  const results = hasQuery ? (response?.results ?? []) : []
-  const searchError = hasQuery && response?.key === searchKey ? response.error : null
-  const searching = hasQuery && response?.key !== searchKey
-
-  // Búsqueda con debounce; una respuesta vieja no pisa a una más nueva.
-  useEffect(() => {
-    const text = query.trim()
-    if (text.length < 2) return
-    const key = `${type}:${text}`
-    let cancelled = false
-    const timer = setTimeout(() => {
-      searchMedia(type, text)
-        .then((r) => !cancelled && setResponse({ key, results: r, error: null }))
-        .catch((err) => {
-          if (cancelled) return
-          setResponse({ key, results: [], error: err instanceof Error ? err.message : 'No se pudo buscar' })
-        })
-    }, SEARCH_DELAY_MS)
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [query, type])
+  const { active: hasQuery, results, error: searchError, searching } = useMediaSearch(type, query)
 
   // Ya agregados, por origen + id externo.
   const existing = useMemo(() => {
@@ -154,7 +101,7 @@ export function ScreenAdd() {
     haptic()
     try {
       const full = details[resultKey(preview)] ?? (await withDetails(preview))
-      const created = await addItem(itemWithStatus(full, status))
+      const created = await addItem(resultToItemWithStatus(full, status, todayISO()))
       setPreview(null)
       showToast(`${created.title}: ${section.statusLabels[status]}`)
     } catch (err) {

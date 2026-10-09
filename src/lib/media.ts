@@ -184,6 +184,14 @@ export function needsDetails(result: MediaSearchResult) {
   return result.source === 'tmdb' || result.source === 'openlibrary'
 }
 
+/** Resultado con el detalle completo (duración, episodios, páginas, sinopsis); si falla, el de la búsqueda. */
+export async function withDetails(result: MediaSearchResult): Promise<MediaSearchResult> {
+  if (!needsDetails(result)) return result
+  return getMediaDetails(result)
+    .then((d) => ({ ...result, ...d, cover_url: d.cover_url ?? result.cover_url }))
+    .catch(() => result)
+}
+
 export function resultToItem(r: MediaSearchResult): ItemWrite & Pick<Item, 'media_type' | 'title'> {
   const total = r.media_type === 'book' ? r.pages : r.episodes
   return {
@@ -205,6 +213,22 @@ export function resultToItem(r: MediaSearchResult): ItemWrite & Pick<Item, 'medi
       ...(r.publisher ? { publisher: r.publisher } : {}),
     },
   }
+}
+
+/**
+ * Alta desde un resultado con un estado ya elegido: en curso guarda la fecha
+ * de inicio; terminado, la de fin y el avance completo (sin registrar tiempo:
+ * se supone que se vio o leyó antes).
+ */
+export function resultToItemWithStatus(r: MediaSearchResult, status: ItemStatus, today: string) {
+  const item = resultToItem(r)
+  item.status = status
+  if (status === 'in_progress') item.date_started = today
+  if (status === 'completed') {
+    item.date_finished = today
+    if (item.progress_total) item.progress = item.progress_total
+  }
+  return item
 }
 
 /** "2h 15m" / "45m". */

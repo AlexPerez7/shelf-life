@@ -27,6 +27,7 @@ import { ItemStatusSheet } from '../../components/ItemStatusSheet'
 import { BottomSheet } from '../../components/BottomSheet'
 import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
+import { Synopsis } from '../../components/Synopsis'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import {
@@ -51,32 +52,6 @@ const inputClass =
 
 const isScreenType = (type: string): type is ScreenType =>
   (section.types as string[]).includes(type)
-
-/** Sinopsis recortada a unas líneas, con "Ver más". */
-function Synopsis({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false)
-  const long = text.length > 280
-  return (
-    <div>
-      <p
-        className={`whitespace-pre-line text-sm leading-relaxed text-lavender ${
-          long && !expanded ? 'line-clamp-4' : ''
-        }`}
-      >
-        {text}
-      </p>
-      {long && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="-ml-2 mt-1 min-h-11 rounded-full px-2 text-sm font-semibold text-accent active:bg-primary-dark/30"
-        >
-          {expanded ? 'Ver menos' : 'Ver más'}
-        </button>
-      )}
-    </div>
-  )
-}
 
 interface EpisodesProps {
   item: Item
