@@ -2,21 +2,22 @@ import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Gamepad2, Heart, LayoutGrid, List, Search, X } from 'lucide-react'
 import { SiSteam } from 'react-icons/si'
-import { useGames } from '../hooks/useGames'
-import { GameCard } from '../components/GameCard'
-import { GameCoverCard } from '../components/GameCoverCard'
-import { StatusSheet } from '../components/StatusSheet'
-import { useToast } from '../contexts/ToastContext'
-import { haptic } from '../lib/haptics'
-import { todayISO } from '../lib/dates'
-import { plural } from '../lib/text'
-import { GameCardGridSkeleton } from '../components/Skeleton'
-import { PageContainer } from '../components/PageContainer'
-import { SectionTabs } from '../components/SectionTabs'
-import { Chip } from '../components/Chip'
-import { parseTags } from '../lib/tags'
-import { statusLabels, statuses } from '../lib/status'
-import type { Game, GameStatus } from '../types/game'
+import { useGames } from '../../hooks/useGames'
+import { GameCard } from '../../components/GameCard'
+import { GameCoverCard } from '../../components/GameCoverCard'
+import { StatusSheet } from '../../components/StatusSheet'
+import { useToast } from '../../contexts/ToastContext'
+import { haptic } from '../../lib/haptics'
+import { todayISO } from '../../lib/dates'
+import { plural } from '../../lib/text'
+import { GameCardGridSkeleton } from '../../components/Skeleton'
+import { PageContainer } from '../../components/PageContainer'
+import { TrackerBar } from '../../components/TrackerBar'
+import { Chip } from '../../components/Chip'
+import { parseTags } from '../../lib/tags'
+import { statusLabels, statuses } from '../../lib/status'
+import type { Game, GameStatus } from '../../types/game'
+import { gamesPaths } from './paths'
 
 type StatusFilter = GameStatus | 'todos'
 type SortOption = 'recientes' | 'titulo' | 'horas' | 'puntaje'
@@ -93,13 +94,13 @@ function EmptyLibrary() {
       </p>
       <div className="mt-6 flex w-full max-w-xs flex-col gap-2">
         <Link
-          to="/add"
+          to={gamesPaths.add}
           className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-white"
         >
           <Search size={18} /> Buscar un juego
         </Link>
         <Link
-          to="/steam-import"
+          to={gamesPaths.steamImport}
           className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#1b2838] font-medium text-white ring-1 ring-white/10"
         >
           <SiSteam size={18} /> Importar desde Steam
@@ -206,10 +207,10 @@ export function Library() {
 
   return (
     <PageContainer>
-      <SectionTabs current="juegos" />
+      <TrackerBar tracker="juegos" />
 
       <div className="mb-4 flex items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">Juegos</h1>
+        <h1 className="text-xl font-semibold">Mi biblioteca</h1>
         {!loading && games.length > 0 && (
           <span className="text-sm text-lavender">
             {hasFilters ? `${sorted.length} de ${games.length}` : plural(games.length, 'juego')}
@@ -339,7 +340,7 @@ export function Library() {
                     <GameCoverCard
                       key={game.id}
                       game={game}
-                      onClick={(g) => navigate(`/game/${g.id}`)}
+                      onClick={(g) => navigate(gamesPaths.game(g.id))}
                       onStatusClick={setStatusGame}
                     />
                   ))}
@@ -350,7 +351,7 @@ export function Library() {
                     <GameCard
                       key={game.id}
                       game={game}
-                      onClick={(g) => navigate(`/game/${g.id}`)}
+                      onClick={(g) => navigate(gamesPaths.game(g.id))}
                       onStatusClick={setStatusGame}
                     />
                   ))}

@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SiSteam } from 'react-icons/si'
-import { GameForm } from '../components/GameForm'
-import { PageContainer } from '../components/PageContainer'
-import { useGames } from '../hooks/useGames'
-import { useToast } from '../contexts/ToastContext'
-import type { NewGame } from '../types/game'
+import { GameForm } from '../../components/GameForm'
+import { PageContainer } from '../../components/PageContainer'
+import { useGames } from '../../hooks/useGames'
+import { useToast } from '../../contexts/ToastContext'
+import type { NewGame } from '../../types/game'
+import { gamesPaths } from './paths'
 
 export function AddGame() {
   const { games, addGame } = useGames()
@@ -22,7 +23,7 @@ export function AddGame() {
     showToast(`${created.title} agregado a tu biblioteca`)
     // Al detalle, para ajustar estado/progreso en el momento. `replace` para
     // que "volver" desde ahí no regrese a un formulario ya enviado.
-    navigate(`/game/${created.id}`, { replace: true })
+    navigate(gamesPaths.game(created.id), { replace: true })
   }
 
   return (
@@ -30,7 +31,7 @@ export function AddGame() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Agregar juego</h1>
         <button
-          onClick={() => navigate('/steam-import')}
+          onClick={() => navigate(gamesPaths.steamImport)}
           className="-mr-2 flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm text-accent active:bg-primary-dark/20"
         >
           <SiSteam size={16} />

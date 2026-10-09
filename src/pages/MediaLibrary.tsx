@@ -4,7 +4,7 @@ import { Search, X } from 'lucide-react'
 import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
 import { PageContainer } from '../components/PageContainer'
-import { SectionTabs } from '../components/SectionTabs'
+import { TrackerBar } from '../components/TrackerBar'
 import { MediaCoverCard } from '../components/MediaCoverCard'
 import { ItemStatusSheet } from '../components/ItemStatusSheet'
 import { Chip } from '../components/Chip'
@@ -111,7 +111,7 @@ export function MediaLibrary({ sectionId }: { sectionId: MediaSectionId }) {
 
   return (
     <PageContainer>
-      <SectionTabs current={section.id} />
+      <TrackerBar tracker={section.id} />
 
       <div className="mb-4 flex items-baseline justify-between gap-2">
         <h1 className="text-xl font-semibold">{section.title}</h1>

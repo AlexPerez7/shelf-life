@@ -10,17 +10,18 @@ import {
   steamGameToNewGame,
   type SteamGame,
   type SteamProfile,
-} from '../lib/steam'
-import { useGames } from '../hooks/useGames'
-import { useToast } from '../contexts/ToastContext'
-import { useConfirm } from '../contexts/ConfirmContext'
-import { getIgdbBySteamAppIds } from '../lib/igdb'
-import { Chip } from '../components/Chip'
-import { plural } from '../lib/text'
-import type { Game, IgdbSearchResult } from '../types/game'
-import { PageContainer } from '../components/PageContainer'
-import { PopularCardSkeleton } from '../components/Skeleton'
-import { GameThumb } from '../components/GameThumb'
+} from '../../lib/steam'
+import { useGames } from '../../hooks/useGames'
+import { useToast } from '../../contexts/ToastContext'
+import { useConfirm } from '../../contexts/ConfirmContext'
+import { getIgdbBySteamAppIds } from '../../lib/igdb'
+import { Chip } from '../../components/Chip'
+import { plural } from '../../lib/text'
+import type { Game, IgdbSearchResult } from '../../types/game'
+import { PageContainer } from '../../components/PageContainer'
+import { PopularCardSkeleton } from '../../components/Skeleton'
+import { GameThumb } from '../../components/GameThumb'
+import { gamesPaths } from './paths'
 
 function PrivacyNote() {
   return (
@@ -291,7 +292,7 @@ export function SteamImport() {
   return (
     <PageContainer>
       <button
-        onClick={() => navigate('/add')}
+        onClick={() => navigate(gamesPaths.add)}
         className="-ml-2 mb-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm text-accent active:bg-primary-dark/20"
       >
         <ArrowLeft size={16} /> Volver

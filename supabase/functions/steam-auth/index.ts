@@ -16,7 +16,7 @@ import { userClient } from '../_shared/supabase.ts'
 
 const STEAM_OPENID = 'https://steamcommunity.com/openid/login'
 const STEAM_API_KEY = Deno.env.get('STEAM_API_KEY')!
-const CALLBACK_PATH = '/steam-import/callback'
+const CALLBACK_PATH = '/juegos/steam-import/callback'
 
 // URLs base de la app a las que Steam puede devolver al usuario. Sin esta
 // lista, la función armaba un login de Steam hacia cualquier https:// que le

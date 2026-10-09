@@ -15,21 +15,23 @@ import {
   UserRound,
   type LucideIcon,
 } from 'lucide-react'
-import { useGames } from '../hooks/useGames'
-import { StatsCard } from '../components/StatsCard'
-import { SectionCard } from '../components/SectionCard'
-import { Skeleton, StatsCardSkeleton } from '../components/Skeleton'
-import { PageContainer } from '../components/PageContainer'
-import { parseTags } from '../lib/tags'
-import { plural } from '../lib/text'
-import { parseDate } from '../lib/dates'
-import { statusLabels, statuses } from '../lib/status'
-import { getTimeToBeatBatch } from '../lib/igdb'
-import { supabase, ensureSession } from '../lib/supabaseClient'
-import { useAuth } from '../hooks/useAuth'
-import { useToast } from '../contexts/ToastContext'
-import { useConfirm } from '../contexts/ConfirmContext'
-import type { Game } from '../types/game'
+import { useGames } from '../../hooks/useGames'
+import { StatsCard } from '../../components/StatsCard'
+import { SectionCard } from '../../components/SectionCard'
+import { Skeleton, StatsCardSkeleton } from '../../components/Skeleton'
+import { PageContainer } from '../../components/PageContainer'
+import { TrackerBar } from '../../components/TrackerBar'
+import { parseTags } from '../../lib/tags'
+import { plural } from '../../lib/text'
+import { parseDate } from '../../lib/dates'
+import { statusLabels, statuses } from '../../lib/status'
+import { getTimeToBeatBatch } from '../../lib/igdb'
+import { supabase, ensureSession } from '../../lib/supabaseClient'
+import { useAuth } from '../../hooks/useAuth'
+import { useToast } from '../../contexts/ToastContext'
+import { useConfirm } from '../../contexts/ConfirmContext'
+import type { Game } from '../../types/game'
+import { gamesPaths } from './paths'
 
 interface SessionRow {
   duration_minutes: number
@@ -112,22 +114,23 @@ export function Dashboard() {
       icon: Star,
       label: 'Mejor puntuado',
       value: stats.topRated.title,
-      to: `/game/${stats.topRated.id}`,
+      to: gamesPaths.game(stats.topRated.id),
     },
     stats.mostPlayed && {
       icon: Flame,
       label: 'Más jugado',
       value: stats.mostPlayed.title,
-      to: `/game/${stats.mostPlayed.id}`,
+      to: gamesPaths.game(stats.mostPlayed.id),
     },
   ].filter(Boolean) as { icon: LucideIcon; label: string; value: string; to?: string }[]
 
   return (
     <PageContainer>
+      <TrackerBar tracker="juegos" />
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Estadísticas</h1>
         <Link
-          to="/timeline"
+          to={gamesPaths.diary}
           className="-mr-2 flex min-h-11 items-center rounded-full px-2 text-sm text-accent active:bg-primary-dark/20"
         >
           Ver diario →
@@ -143,20 +146,20 @@ export function Dashboard() {
       ) : (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatsCard label="En tu biblioteca" value={stats.total} icon={Gamepad2} to="/" />
+            <StatsCard label="En tu biblioteca" value={stats.total} icon={Gamepad2} to={gamesPaths.library} />
             <StatsCard
               label="Completados"
               value={stats.completados}
               icon={CheckCircle2}
-              to="/?estado=completado"
+              to={`${gamesPaths.library}?estado=completado`}
             />
-            <StatsCard label="En curso" value={stats.jugando} icon={Joystick} to="/?estado=jugando" />
+            <StatsCard label="En curso" value={stats.jugando} icon={Joystick} to={`${gamesPaths.library}?estado=jugando`} />
             <StatsCard label="Horas totales" value={`${stats.totalHoras}h`} icon={Timer} />
           </div>
 
           {stats.deseados > 0 && (
             <Link
-              to="/?estado=deseado"
+              to={`${gamesPaths.library}?estado=deseado`}
               className="flex min-h-12 items-center justify-between gap-3 rounded-lg bg-background-surface px-3 ring-1 ring-primary-dark/30 active:bg-primary-dark/20"
             >
               <span className="flex items-center gap-1.5 text-sm text-lavender">
@@ -398,7 +401,7 @@ function StatusBars({ rows }: { rows: { status: Game['status']; count: number }[
         .map((r) => (
           <li key={r.status}>
             <Link
-              to={`/?estado=${r.status}`}
+              to={`${gamesPaths.library}?estado=${r.status}`}
               className="flex min-h-9 items-center gap-3 rounded-lg active:bg-primary-dark/20"
             >
               <span className="w-24 flex-shrink-0 text-sm text-lavender">{statusLabels[r.status]}</span>

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bookmark, Gamepad2, Plus } from 'lucide-react'
-import { getCachedPopularGames, getPopularGames, igdbResultToNewGame } from '../lib/igdb'
-import { useGames } from '../hooks/useGames'
-import { useToast } from '../contexts/ToastContext'
-import { PageContainer } from '../components/PageContainer'
-import { TagList } from '../components/TagList'
-import { PopularCardSkeleton } from '../components/Skeleton'
-import type { GameStatus, IgdbSearchResult } from '../types/game'
+import { getCachedPopularGames, getPopularGames, igdbResultToNewGame } from '../../lib/igdb'
+import { useGames } from '../../hooks/useGames'
+import { useToast } from '../../contexts/ToastContext'
+import { PageContainer } from '../../components/PageContainer'
+import { TrackerBar } from '../../components/TrackerBar'
+import { TagList } from '../../components/TagList'
+import { PopularCardSkeleton } from '../../components/Skeleton'
+import type { GameStatus, IgdbSearchResult } from '../../types/game'
 
 const PULL_THRESHOLD = 60
 
@@ -119,7 +120,8 @@ export function Home() {
               : ''}
       </div>
 
-      <h1 className="mb-1 text-xl font-semibold">Inicio</h1>
+      <TrackerBar tracker="juegos" />
+      <h1 className="mb-1 text-xl font-semibold">Descubrir</h1>
       <p className="mb-4 text-sm text-lavender">
         Juegos con más repercusión salidos en los últimos 2 años
       </p>

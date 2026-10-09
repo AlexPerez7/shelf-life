@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Flag, Play, Plus, Timer, type LucideIcon } from 'lucide-react'
-import { supabase, ensureSession } from '../lib/supabaseClient'
-import { useGames } from '../hooks/useGames'
-import { PageContainer } from '../components/PageContainer'
-import { Skeleton } from '../components/Skeleton'
-import { formatDate, parseDate } from '../lib/dates'
+import { supabase, ensureSession } from '../../lib/supabaseClient'
+import { useGames } from '../../hooks/useGames'
+import { PageContainer } from '../../components/PageContainer'
+import { Skeleton } from '../../components/Skeleton'
+import { formatDate, parseDate } from '../../lib/dates'
+import { gamesPaths } from './paths'
 
 interface TimelineEvent {
   key: string
@@ -112,7 +113,7 @@ export function Timeline() {
   return (
     <PageContainer>
       <button
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate(gamesPaths.stats)}
         className="-ml-2 mb-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm text-accent active:bg-primary-dark/20"
       >
         <ArrowLeft size={16} /> Estadísticas
@@ -147,7 +148,7 @@ export function Timeline() {
               {group.events.map((e) => (
                 <li key={e.key}>
                   <button
-                    onClick={() => navigate(`/game/${e.gameId}`)}
+                    onClick={() => navigate(gamesPaths.game(e.gameId))}
                     className="flex w-full items-start gap-3 rounded-xl bg-background-surface p-3 text-left ring-1 ring-primary-dark/30 active:bg-primary-dark/20"
                   >
                     <e.icon className="mt-0.5 shrink-0 text-accent" size={20} />

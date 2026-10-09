@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight, ClipboardList, Plus, Trash2 } from 'lucide-react'
-import { useLists } from '../hooks/useLists'
-import { PageContainer } from '../components/PageContainer'
-import { Skeleton } from '../components/Skeleton'
-import { useToast } from '../contexts/ToastContext'
-import { useConfirm } from '../contexts/ConfirmContext'
+import { useLists } from '../../hooks/useLists'
+import { PageContainer } from '../../components/PageContainer'
+import { TrackerBar } from '../../components/TrackerBar'
+import { Skeleton } from '../../components/Skeleton'
+import { useToast } from '../../contexts/ToastContext'
+import { useConfirm } from '../../contexts/ConfirmContext'
+import { gamesPaths } from './paths'
 
 export function Lists() {
   const { lists, loading, createList, deleteList } = useLists()
@@ -46,6 +48,7 @@ export function Lists() {
 
   return (
     <PageContainer>
+      <TrackerBar tracker="juegos" />
       <h1 className="mb-4 text-xl font-semibold">Mis listas</h1>
 
       <form onSubmit={handleCreate} className="mb-5 flex gap-2 md:max-w-md">
@@ -92,7 +95,7 @@ export function Lists() {
             className="flex items-center rounded-xl bg-background-surface ring-1 ring-primary-dark/30"
           >
             <Link
-              to={`/lists/${list.id}`}
+              to={gamesPaths.list(list.id)}
               className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-xl pl-4 active:bg-primary-dark/20"
             >
               <ClipboardList size={18} className="flex-shrink-0 text-lavender" />

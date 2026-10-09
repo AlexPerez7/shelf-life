@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient'
 import { callFn } from './functions'
 import type { IgdbSearchResult, NewGame } from '../types/game'
 import { appUrl } from './appUrl'
+import { gamesPaths } from '../trackers/juegos/paths'
 
 export interface SteamGame {
   appid: number
@@ -36,7 +37,7 @@ export async function getSteamProfile(): Promise<SteamProfile | null> {
 
 /** Devuelve la URL de Steam a la que hay que redirigir el navegador. */
 export async function startSteamLogin(): Promise<string> {
-  const returnTo = appUrl('/steam-import/callback')
+  const returnTo = appUrl(gamesPaths.steamCallback)
   const { url } = await callFn<{ url: string }>('steam-auth', {
     action: 'start',
     returnTo,

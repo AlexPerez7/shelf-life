@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { verifySteamLogin } from '../lib/steam'
-import { PageContainer } from '../components/PageContainer'
+import { verifySteamLogin } from '../../lib/steam'
+import { PageContainer } from '../../components/PageContainer'
+import { gamesPaths } from './paths'
 
 export function SteamCallback() {
   const navigate = useNavigate()
@@ -15,7 +16,7 @@ export function SteamCallback() {
 
     const search = window.location.search
     if (!search.includes('openid')) {
-      navigate('/steam-import', { replace: true })
+      navigate(gamesPaths.steamImport, { replace: true })
       return
     }
 
@@ -31,7 +32,7 @@ export function SteamCallback() {
           setStatus('ok')
           setMessage('Cuenta de Steam vinculada.')
         }
-        setTimeout(() => navigate('/steam-import', { replace: true }), 1800)
+        setTimeout(() => navigate(gamesPaths.steamImport, { replace: true }), 1800)
       })
       .catch((err) => {
         setStatus('error')
@@ -52,7 +53,7 @@ export function SteamCallback() {
         <p className={`text-sm ${color}`}>{message}</p>
         {status === 'error' && (
           <button
-            onClick={() => navigate('/steam-import', { replace: true })}
+            onClick={() => navigate(gamesPaths.steamImport, { replace: true })}
             className="mt-4 text-sm text-accent"
           >
             Volver

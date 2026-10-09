@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import { GamesProvider } from './contexts/GamesContext'
 import { ListsProvider } from './contexts/ListsContext'
@@ -9,33 +9,28 @@ import { ConfirmProvider } from './contexts/ConfirmContext'
 import { ScrollManager } from './components/ScrollManager'
 import { SessionTimerProvider } from './contexts/SessionTimerContext'
 import { TimerBanner } from './components/TimerBanner'
-import { BottomNav } from './components/BottomNav'
-import { Library } from './pages/Library'
+import { Hub } from './pages/Hub'
 import { asset } from './lib/appUrl'
+import { gamesPaths } from './trackers/juegos/paths'
 
-// La biblioteca es la pantalla de entrada y va en el bundle principal; el
-// resto se carga bajo demanda para que el primer arranque en mobile (red
-// lenta) descargue lo mínimo. El service worker las precachea igual, así que
-// después de la primera visita cargan al instante.
-const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })))
-const AddGame = lazy(() => import('./pages/AddGame').then((m) => ({ default: m.AddGame })))
-const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })))
-const GameDetail = lazy(() => import('./pages/GameDetail').then((m) => ({ default: m.GameDetail })))
-const Lists = lazy(() => import('./pages/Lists').then((m) => ({ default: m.Lists })))
-const ListDetail = lazy(() => import('./pages/ListDetail').then((m) => ({ default: m.ListDetail })))
-const Timeline = lazy(() => import('./pages/Timeline').then((m) => ({ default: m.Timeline })))
-const SteamImport = lazy(() => import('./pages/SteamImport').then((m) => ({ default: m.SteamImport })))
-const SteamCallback = lazy(() => import('./pages/SteamCallback').then((m) => ({ default: m.SteamCallback })))
+// El inicio (elegir tracker) va en el bundle principal; cada tracker y el
+// resto de las pantallas se cargan bajo demanda para que el primer arranque
+// en mobile (red lenta) descargue lo mínimo. El service worker las precachea
+// igual, así que después de la primera visita cargan al instante.
+const GamesTracker = lazy(() =>
+  import('./trackers/juegos/GamesTracker').then((m) => ({ default: m.GamesTracker }))
+)
+const ScreenTracker = lazy(() =>
+  import('./trackers/pantalla/ScreenTracker').then((m) => ({ default: m.ScreenTracker }))
+)
+const BooksTracker = lazy(() =>
+  import('./trackers/libros/BooksTracker').then((m) => ({ default: m.BooksTracker }))
+)
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })))
 const UpdatePassword = lazy(() =>
   import('./pages/UpdatePassword').then((m) => ({ default: m.UpdatePassword }))
 )
 const SharedList = lazy(() => import('./pages/SharedList').then((m) => ({ default: m.SharedList })))
-const MediaLibrary = lazy(() =>
-  import('./pages/MediaLibrary').then((m) => ({ default: m.MediaLibrary }))
-)
-const AddMedia = lazy(() => import('./pages/AddMedia').then((m) => ({ default: m.AddMedia })))
-const MediaDetail = lazy(() => import('./pages/MediaDetail').then((m) => ({ default: m.MediaDetail })))
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })))
 
 function SplashScreen() {
@@ -50,6 +45,28 @@ function SplashScreen() {
     </div>
   )
 }
+
+/**
+ * Rutas de antes de separar los trackers (la app era solo de juegos): links
+ * guardados o una PWA instalada con la versión vieja siguen funcionando.
+ */
+function LegacyRedirect({ to }: { to: (params: Record<string, string | undefined>) => string }) {
+  const params = useParams()
+  const { search } = useLocation()
+  return <Navigate to={`${to(params)}${search}`} replace />
+}
+
+const legacyRoutes: [string, (p: Record<string, string | undefined>) => string][] = [
+  ['/home', () => gamesPaths.discover],
+  ['/add', () => gamesPaths.add],
+  ['/game/:id', (p) => gamesPaths.game(p.id ?? '')],
+  ['/lists', () => gamesPaths.lists],
+  ['/lists/:id', (p) => gamesPaths.list(p.id ?? '')],
+  ['/dashboard', () => gamesPaths.stats],
+  ['/timeline', () => gamesPaths.diary],
+  ['/steam-import', () => gamesPaths.steamImport],
+  ['/steam-import/callback', () => gamesPaths.steamCallback],
+]
 
 const ONBOARDING_KEY = 'shelflife_onboarding_seen'
 
@@ -104,31 +121,21 @@ function App() {
     content = (
       <div className="min-h-dvh">
         <ScrollManager />
-        {/* Suspense solo alrededor de las rutas: mientras baja el chunk de
-            una pantalla, la barra de navegación sigue visible. */}
+        {/* Cada tracker tiene sus propias rutas y su barra inferior; el
+            inicio (/) es donde se elige a cuál entrar. */}
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<Library />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/add" element={<AddGame />} />
-            <Route path="/steam-import" element={<SteamImport />} />
-            <Route path="/steam-import/callback" element={<SteamCallback />} />
-            <Route path="/game/:id" element={<GameDetail />} />
-            <Route path="/lists" element={<Lists />} />
-            <Route path="/lists/:id" element={<ListDetail />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="/pantalla" element={<MediaLibrary key="pantalla" sectionId="pantalla" />} />
-            <Route path="/pantalla/agregar" element={<AddMedia key="pantalla" sectionId="pantalla" />} />
-            <Route path="/pantalla/:id" element={<MediaDetail sectionId="pantalla" />} />
-            <Route path="/libros" element={<MediaLibrary key="libros" sectionId="libros" />} />
-            <Route path="/libros/agregar" element={<AddMedia key="libros" sectionId="libros" />} />
-            <Route path="/libros/:id" element={<MediaDetail sectionId="libros" />} />
+            <Route path="/" element={<Hub />} />
+            <Route path="/juegos/*" element={<GamesTracker />} />
+            <Route path="/pantalla/*" element={<ScreenTracker />} />
+            <Route path="/libros/*" element={<BooksTracker />} />
+            {legacyRoutes.map(([path, to]) => (
+              <Route key={path} path={path} element={<LegacyRedirect to={to} />} />
+            ))}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
         <TimerBanner />
-        <BottomNav />
       </div>
     )
   }

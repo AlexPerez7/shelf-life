@@ -6,6 +6,16 @@ Ver [`shelf-life-plan.md`](./shelf-life-plan.md) para el plan original de desarr
 
 En producción: https://alexperez7.github.io/shelf-life/
 
+## Estructura: tres trackers en uno
+
+El inicio (`/`) es un lanzador desde el que se entra a cada tracker. Cada uno vive bajo su propia ruta, con su barra de navegación, su color de acento (`[data-tracker]` en `src/index.css`) y su carpeta en `src/trackers/`:
+
+- **Juegos** (`/juegos`, `src/trackers/juegos/`): biblioteca, descubrir, listas, estadísticas, diario e importación de Steam.
+- **Pantalla** (`/pantalla`, `src/trackers/pantalla/`): películas, series y anime.
+- **Libros** (`/libros`, `src/trackers/libros/`): lecturas por páginas.
+
+Pantalla y Libros comparten por ahora las pantallas genéricas de `src/pages/` (`MediaLibrary`, `AddMedia`, `MediaDetail`); cada tracker puede reemplazarlas por un diseño propio sin tocar a los demás. Los datos de los tres están en la misma tabla `items`.
+
 ## Stack
 
 - React + Vite + TypeScript + Tailwind CSS

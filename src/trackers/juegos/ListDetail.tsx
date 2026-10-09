@@ -1,17 +1,18 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Globe, Link2, Lock, Share2, X } from 'lucide-react'
-import { useLists, useListGameIds } from '../hooks/useLists'
-import { useGames } from '../hooks/useGames'
-import { GameCard } from '../components/GameCard'
-import { GameCardGridSkeleton } from '../components/Skeleton'
-import { PageContainer } from '../components/PageContainer'
-import { useToast } from '../contexts/ToastContext'
-import { useConfirm } from '../contexts/ConfirmContext'
-import { BottomSheet } from '../components/BottomSheet'
-import { plural } from '../lib/text'
-import type { Game } from '../types/game'
-import { appUrl } from '../lib/appUrl'
+import { useLists, useListGameIds } from '../../hooks/useLists'
+import { useGames } from '../../hooks/useGames'
+import { GameCard } from '../../components/GameCard'
+import { GameCardGridSkeleton } from '../../components/Skeleton'
+import { PageContainer } from '../../components/PageContainer'
+import { useToast } from '../../contexts/ToastContext'
+import { useConfirm } from '../../contexts/ConfirmContext'
+import { BottomSheet } from '../../components/BottomSheet'
+import { plural } from '../../lib/text'
+import type { Game } from '../../types/game'
+import { appUrl } from '../../lib/appUrl'
+import { gamesPaths } from './paths'
 
 export function ListDetail() {
   const { id } = useParams<{ id: string }>()
@@ -106,7 +107,7 @@ export function ListDetail() {
   return (
     <PageContainer>
       <button
-        onClick={() => navigate('/lists')}
+        onClick={() => navigate(gamesPaths.lists)}
         className="-ml-2 mb-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm text-accent active:bg-primary-dark/20"
       >
         <ArrowLeft size={16} /> Mis listas
@@ -181,7 +182,7 @@ export function ListDetail() {
           <div key={game.id} className="relative">
             <GameCard
               game={game}
-              onClick={(g) => navigate(`/game/${g.id}`)}
+              onClick={(g) => navigate(gamesPaths.game(g.id))}
               className="pr-11"
             />
             <button

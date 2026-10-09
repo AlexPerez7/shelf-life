@@ -93,6 +93,8 @@ export interface MediaSection {
   emptyText: string
   /** Placeholder de las notas en el detalle. */
   notesPlaceholder: string
+  /** Etiqueta de la barra inferior para lo terminado ("Vistos", "Leídos"). */
+  completedPlural: string
 }
 
 export const mediaSections: Record<MediaSectionId, MediaSection> = {
@@ -115,6 +117,7 @@ export const mediaSections: Record<MediaSectionId, MediaSection> = {
     emptyText:
       'Agrega películas, series y anime para llevar lo que viste, lo que estás viendo y lo que tienes pendiente.',
     notesPlaceholder: 'Dónde quedaste, con quién la ves...',
+    completedPlural: 'Vistos',
   },
   libros: {
     id: 'libros',
@@ -135,6 +138,7 @@ export const mediaSections: Record<MediaSectionId, MediaSection> = {
     emptyText:
       'Agrega libros para llevar lo que leíste, lo que estás leyendo y tu pila de pendientes.',
     notesPlaceholder: 'Citas, ideas, en qué capítulo vas...',
+    completedPlural: 'Leídos',
   },
 }
 

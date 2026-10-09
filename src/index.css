@@ -13,6 +13,17 @@
   --color-warning: #f5a623;
 }
 
+/* Cada tracker tiene su color de acento: todo lo que está dentro de su
+   contenedor (data-tracker, ver src/trackers/) lo hereda. Juegos usa el del
+   tema. Acá es donde cada tracker puede ir tomando su identidad propia. */
+[data-tracker='pantalla'] {
+  --color-accent: #38bdf8;
+}
+
+[data-tracker='libros'] {
+  --color-accent: #f2b25c;
+}
+
 /* Márgenes seguros (notch, isla dinámica, indicador de inicio de iOS). */
 @utility pt-safe-6 {
   padding-top: calc(1.5rem + env(safe-area-inset-top));

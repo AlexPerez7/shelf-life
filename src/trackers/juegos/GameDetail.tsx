@@ -31,31 +31,32 @@ import {
   Trophy,
   X,
 } from 'lucide-react'
-import { useGames } from '../hooks/useGames'
-import { supabase } from '../lib/supabaseClient'
-import { usePlaySessions } from '../hooks/usePlaySessions'
-import { useLists, useGameListIds } from '../hooks/useLists'
-import { StarRating } from '../components/StarRating'
-import { TagList } from '../components/TagList'
-import { PlatformPicker } from '../components/PlatformPicker'
-import { FormatPicker } from '../components/FormatPicker'
-import { StatusSheet } from '../components/StatusSheet'
-import { ProgressRing } from '../components/ProgressRing'
-import { SectionCard } from '../components/SectionCard'
-import { GameDeals } from '../components/GameDeals'
-import { GameThumb } from '../components/GameThumb'
-import { TimeToBeat } from '../components/TimeToBeat'
-import { Skeleton } from '../components/Skeleton'
-import { PageContainer } from '../components/PageContainer'
-import { showsDeals, statusColors, statusLabels } from '../lib/status'
-import { haptic } from '../lib/haptics'
-import { formatElapsed, useNow, useSessionTimer } from '../contexts/SessionTimerContext'
-import { formatDate, sessionTimestamp, todayISO, unixToYear, yearToUnix } from '../lib/dates'
-import { useToast } from '../contexts/ToastContext'
-import { useConfirm } from '../contexts/ConfirmContext'
-import { Chip } from '../components/Chip'
-import type { PlaySession } from '../types/game'
-import type { Game } from '../types/game'
+import { useGames } from '../../hooks/useGames'
+import { supabase } from '../../lib/supabaseClient'
+import { usePlaySessions } from '../../hooks/usePlaySessions'
+import { useLists, useGameListIds } from '../../hooks/useLists'
+import { StarRating } from '../../components/StarRating'
+import { TagList } from '../../components/TagList'
+import { PlatformPicker } from '../../components/PlatformPicker'
+import { FormatPicker } from '../../components/FormatPicker'
+import { StatusSheet } from '../../components/StatusSheet'
+import { ProgressRing } from '../../components/ProgressRing'
+import { SectionCard } from '../../components/SectionCard'
+import { GameDeals } from '../../components/GameDeals'
+import { GameThumb } from '../../components/GameThumb'
+import { TimeToBeat } from '../../components/TimeToBeat'
+import { Skeleton } from '../../components/Skeleton'
+import { PageContainer } from '../../components/PageContainer'
+import { showsDeals, statusColors, statusLabels } from '../../lib/status'
+import { haptic } from '../../lib/haptics'
+import { formatElapsed, useNow, useSessionTimer } from '../../contexts/SessionTimerContext'
+import { formatDate, sessionTimestamp, todayISO, unixToYear, yearToUnix } from '../../lib/dates'
+import { useToast } from '../../contexts/ToastContext'
+import { useConfirm } from '../../contexts/ConfirmContext'
+import { Chip } from '../../components/Chip'
+import type { PlaySession } from '../../types/game'
+import type { Game } from '../../types/game'
+import { gamesPaths } from './paths'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -285,7 +286,7 @@ export function GameDetail() {
     // filtros y el scroll de la pantalla anterior. Si se abrió por link
     // directo no hay historial propio: ir a la biblioteca.
     if (location.key !== 'default') navigate(-1)
-    else navigate('/')
+    else navigate(gamesPaths.library)
   }
 
   async function handleDelete() {
@@ -304,7 +305,7 @@ export function GameDetail() {
       draftRef.current = {}
       await deleteGame(game.id)
       showToast(`"${game.title}" se eliminó de tu biblioteca`)
-      navigate('/', { replace: true })
+      navigate(gamesPaths.library, { replace: true })
     } catch (err) {
       showError(err, 'No se pudo eliminar el juego')
     }
@@ -475,7 +476,7 @@ export function GameDetail() {
     return (
       <PageContainer>
         <p className="text-sm text-lavender">No se encontró el juego.</p>
-        <button onClick={() => navigate('/')} className="mt-4 text-accent">
+        <button onClick={() => navigate(gamesPaths.library)} className="mt-4 text-accent">
           Volver a la biblioteca
         </button>
       </PageContainer>
