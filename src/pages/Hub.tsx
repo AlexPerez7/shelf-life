@@ -10,6 +10,8 @@ import { useToast } from '../contexts/ToastContext'
 import { formatElapsed, useNow, useSessionTimer } from '../contexts/SessionTimerContext'
 import { useActivity } from '../hooks/useActivity'
 import { useQuickProgress } from '../hooks/useQuickProgress'
+import { useUpcoming } from '../hooks/useUpcoming'
+import { UpcomingEpisodes } from '../trackers/pantalla/UpcomingEpisodes'
 import { PageContainer } from '../components/PageContainer'
 import { GameThumb } from '../components/GameThumb'
 import { BottomSheet } from '../components/BottomSheet'
@@ -298,6 +300,10 @@ export function Hub() {
   const now = useNow(timer != null)
   const { busyId, advance, setPage } = useQuickProgress()
   const [pageBook, setPageBook] = useState<Item | null>(null)
+  // Estrenos de los próximos 7 días de lo que sigues en Pantalla.
+  const upcoming = useUpcoming(items)
+  const [weekEnd] = useState(() => Date.now() + 7 * 24 * 60 * 60 * 1000)
+  const upcomingWeek = useMemo(() => (upcoming ?? []).filter((e) => e.date.getTime() < weekEnd), [upcoming, weekEnd])
 
   const loading = loadingGames || loadingMedia
 
@@ -492,6 +498,8 @@ export function Hub() {
             <ul className="flex flex-col gap-2">{nowEntries.map(renderEntry)}</ul>
           )}
         </section>
+
+        <UpcomingEpisodes entries={upcomingWeek} title="Esta semana sale" />
 
         <section>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">Tus trackers</h2>

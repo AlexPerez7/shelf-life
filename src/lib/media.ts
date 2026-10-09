@@ -171,6 +171,22 @@ export async function trendingMedia(type: ScreenType): Promise<MediaSearchResult
   return (await callFn<MediaSearchResult[]>('media-search', { type, mode: 'trending' })) ?? []
 }
 
+/** Próximo episodio con fecha de una serie o anime que se sigue. */
+export interface UpcomingEpisode {
+  external_id: string
+  /** 'YYYY-MM-DD' (TMDB) o fecha y hora ISO (AniList). */
+  air_date: string
+  season: number | null
+  episode: number | null
+  name: string | null
+}
+
+/** Próximos episodios de varias series (TMDB) o anime (AniList), por id externo. */
+export async function upcomingEpisodes(type: 'series' | 'anime', ids: string[]): Promise<UpcomingEpisode[]> {
+  if (ids.length === 0) return []
+  return (await callFn<UpcomingEpisode[]>('media-search', { type, mode: 'upcoming', ids })) ?? []
+}
+
 /** Detalle (duración, episodios, sinopsis): algunas búsquedas no los traen. */
 export async function getMediaDetails(result: MediaSearchResult): Promise<MediaSearchResult> {
   return callFn<MediaSearchResult>('media-search', {

@@ -8,11 +8,13 @@
 //     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
 //     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming', ids?: string[] }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
 //   - con `mode: 'trending'` -> lo que es tendencia esta semana (TMDB) o esta
 //                    temporada (AniList), para "Descubrir" en Pantalla. No
 //                    aplica a libros.
+//   - con `mode: 'upcoming'` + `ids` (hasta 40, de series o anime) -> el
+//                    próximo episodio de cada uno, si tiene fecha.
 //   - con `id`    -> detalle de un resultado (duración, episodios, sinopsis),
 //                    que se pide al agregar: algunas búsquedas no lo traen.
 //                    Para libros, `source` dice de qué API es el id.
@@ -49,6 +51,18 @@ interface MediaResult {
   isbn?: string | null
   publisher?: string | null
 }
+
+/** Próximo episodio de una serie o anime que se sigue. */
+interface Upcoming {
+  external_id: string
+  /** 'YYYY-MM-DD' (TMDB) o fecha y hora ISO (AniList). */
+  air_date: string
+  season: number | null
+  episode: number | null
+  name: string | null
+}
+
+const MAX_UPCOMING = 40
 
 // ---------------------------------------------------------------------------
 // TMDB
@@ -133,6 +147,20 @@ async function tmdbTrending(type: 'movie' | 'series'): Promise<MediaResult[]> {
         (r.genre_ids ?? []).map((id: number) => genres.get(id)).filter(Boolean)
       )
     )
+}
+
+/** Próximo episodio con fecha de una serie de TMDB (o nada). */
+async function tmdbUpcoming(id: string): Promise<Upcoming | null> {
+  const r = await tmdb(`/tv/${id}`)
+  const next = r.next_episode_to_air
+  if (!next?.air_date) return null
+  return {
+    external_id: id,
+    air_date: next.air_date,
+    season: next.season_number ?? null,
+    episode: next.episode_number ?? null,
+    name: next.name || null,
+  }
 }
 
 async function tmdbDetails(type: 'movie' | 'series', id: string): Promise<MediaResult> {
@@ -222,6 +250,27 @@ async function anilistTrending(): Promise<MediaResult[]> {
     {}
   )
   return (data.Page?.media ?? []).map(anilistToResult)
+}
+
+/** Próximos episodios de varios anime de AniList, en una consulta. */
+async function anilistUpcoming(ids: string[]): Promise<Upcoming[]> {
+  const data = await anilist(
+    `query ($ids: [Int]) {
+      Page(perPage: 50) {
+        media(id_in: $ids, type: ANIME) { id nextAiringEpisode { airingAt episode } }
+      }
+    }`,
+    { ids: ids.map(Number) }
+  )
+  return (data.Page?.media ?? [])
+    .filter((m: any) => m.nextAiringEpisode?.airingAt)
+    .map((m: any) => ({
+      external_id: String(m.id),
+      air_date: new Date(m.nextAiringEpisode.airingAt * 1000).toISOString(),
+      season: null,
+      episode: m.nextAiringEpisode.episode ?? null,
+      name: null,
+    }))
 }
 
 async function anilistDetails(id: string): Promise<MediaResult> {
@@ -386,7 +435,8 @@ serve(async (req) => {
     const auth = await requireUser(req)
     if (auth instanceof Response) return auth
 
-    const { type, query, id, source, mode } = await req.json().catch(() => ({}))
+    const body = await req.json().catch(() => ({}))
+    const { type, query, id, source, mode } = body
     if (typeof type !== 'string' || !(type in ID_PATTERN)) {
       return jsonResponse({ error: 'Tipo inválido' }, 400)
     }
@@ -398,6 +448,23 @@ serve(async (req) => {
       if (mediaType === 'book') return jsonResponse(await bookDetails(source, safeId))
       return jsonResponse(
         mediaType === 'anime' ? await anilistDetails(safeId) : await tmdbDetails(mediaType, safeId)
+      )
+    }
+
+    if (mode === 'upcoming') {
+      if (mediaType !== 'series' && mediaType !== 'anime') {
+        return jsonResponse({ error: 'Solo series y anime tienen próximos episodios' }, 400)
+      }
+      const ids = (Array.isArray(body.ids) ? body.ids : [])
+        .map(String)
+        .filter((x: string) => ID_PATTERN[mediaType].test(x))
+        .slice(0, MAX_UPCOMING)
+      if (ids.length === 0) return jsonResponse([])
+      if (mediaType === 'anime') return jsonResponse(await anilistUpcoming(ids))
+      // Una serie que falla (borrada en TMDB, etc.) no corta las demás.
+      const results = await Promise.allSettled(ids.map(tmdbUpcoming))
+      return jsonResponse(
+        results.flatMap((r) => (r.status === 'fulfilled' && r.value ? [r.value] : []))
       )
     }
 

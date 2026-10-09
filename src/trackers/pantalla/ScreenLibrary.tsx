@@ -10,6 +10,8 @@ import { ItemStatusSheet } from '../../components/ItemStatusSheet'
 import { GameThumb } from '../../components/GameThumb'
 import { Skeleton } from '../../components/Skeleton'
 import { useQuickProgress } from '../../hooks/useQuickProgress'
+import { useUpcoming } from '../../hooks/useUpcoming'
+import { UpcomingEpisodes } from './UpcomingEpisodes'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import {
@@ -257,6 +259,8 @@ export function ScreenLibrary() {
     [screenItems, typeFilter]
   )
 
+  const upcoming = useUpcoming(typed)
+
   const watching = useMemo(
     () => typed.filter((i) => i.status === 'in_progress').sort(byRecent),
     [typed]
@@ -451,6 +455,8 @@ export function ScreenLibrary() {
               </div>
             </section>
           )}
+
+          {upcoming && <UpcomingEpisodes entries={upcoming.slice(0, 12)} />}
 
           {rails.map((r) => (
             <Rail
