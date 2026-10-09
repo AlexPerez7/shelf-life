@@ -4,14 +4,14 @@ PWA mobile-first para llevar registro de juegos, películas, series, anime y lib
 
 Ver [`playdex-plan.md`](./playdex-plan.md) para el plan original de desarrollo.
 
-En producción: https://playdex.netlify.app/
+En producción: https://alexperez7.github.io/PlayDex/
 
 ## Stack
 
 - React + Vite + TypeScript + Tailwind CSS
 - PWA vía `vite-plugin-pwa`
 - Supabase (Postgres + Auth + Edge Functions + RLS)
-- Deploy: Netlify
+- Deploy: GitHub Pages (GitHub Actions)
 
 ## Integraciones externas (todas vía Edge Functions de Supabase, nunca desde el frontend)
 
@@ -59,13 +59,14 @@ En producción: https://playdex.netlify.app/
    ```
    supabase secrets set TWITCH_CLIENT_ID=xxx TWITCH_CLIENT_SECRET=xxx
    supabase secrets set STEAM_API_KEY=xxx
-   supabase functions deploy igdb-search steam-library steam-auth game-deals
+   supabase functions deploy igdb-search steam-library steam-auth game-deals media-search
    ```
    - `STEAM_API_KEY` es una sola key de la app (se obtiene en https://steamcommunity.com/dev/apikey). Ya no hace falta `STEAM_ID`: cada usuario vincula su cuenta desde la app.
    - `game-deals` no necesita secrets (API pública); usa la `SUPABASE_SERVICE_ROLE_KEY` que Supabase inyecta automáticamente para escribir en `price_cache`.
    - `steam-auth` y `steam-library` usan el JWT del usuario para leer/escribir su fila en `profiles` (RLS).
    - Todas las funciones exigen un **usuario logueado** (no alcanza con la anon key, que es pública).
-   - `steam-auth` solo acepta volver a orígenes permitidos: por defecto `https://playdex.netlify.app`. Para otros (previews, dominio propio): `supabase secrets set APP_ORIGINS=https://playdex.netlify.app,https://otro.dominio`
+   - `steam-auth` solo acepta volver a URLs base permitidas: por defecto `https://alexperez7.github.io/PlayDex` y `https://playdex.netlify.app`. Para otras (dominio propio): `supabase secrets set APP_ORIGINS=https://alexperez7.github.io/PlayDex,https://otro.dominio`
+   - `media-search` (películas, series y anime) necesita `supabase secrets set TMDB_API_KEY=...` (API Key o Read Access Token de TMDB). El anime sale de AniList, sin key.
 5. Correr en desarrollo:
    ```
    npm run dev
@@ -80,7 +81,9 @@ En producción: https://playdex.netlify.app/
 
 ## Deploy
 
-Configurado en Netlify (`netlify.toml`) con deploy automático desde la rama `main`. Variables de entorno (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) configuradas en el sitio de Netlify.
+GitHub Actions (`.github/workflows/deploy.yml`) compila y publica en GitHub Pages en cada push a `main`. La app vive en la subcarpeta `/PlayDex/` (el workflow pasa `BASE_PATH`); las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` son *variables* del repo (Settings → Secrets and variables → Actions → Variables). Para probar localmente un build igual: `BASE_PATH=/PlayDex/ npm run build`.
+
+El sitio viejo de Netlify (`netlify.toml`) queda como respaldo hasta dar de baja la integración.
 
 ## Estado
 

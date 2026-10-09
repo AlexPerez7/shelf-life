@@ -1,4 +1,5 @@
 import { BarChart3, ClipboardList, Download } from 'lucide-react'
+import { asset } from '../lib/appUrl'
 
 const features = [
   {
@@ -32,7 +33,7 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
     >
       <div className="flex flex-1 flex-col items-center">
         <img
-          src="/icons/icon-192.png"
+          src={asset('icons/icon-192.png')}
           alt="Shelf Life"
           className="h-24 w-24 rounded-3xl shadow-lg shadow-black/40"
         />

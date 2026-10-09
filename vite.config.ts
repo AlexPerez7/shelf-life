@@ -3,8 +3,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
 
+// En GitHub Pages la app vive en /PlayDex/: el workflow de deploy pasa
+// BASE_PATH. En desarrollo (y en cualquier hosting en la raíz) es '/'.
+const base = process.env.BASE_PATH ?? '/'
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   build: {
     rolldownOptions: {
       output: {
@@ -37,7 +42,8 @@ export default defineConfig({
         theme_color: '#14091f',
         background_color: '#14091f',
         display: 'standalone',
-        start_url: '/',
+        start_url: base,
+        scope: base,
         icons: [
           {
             src: 'icons/icon-192.png',
@@ -68,7 +74,9 @@ export default defineConfig({
             urlPattern: ({ url }) =>
               url.hostname === 'images.igdb.com' ||
               url.hostname.endsWith('.steamstatic.com') ||
-              url.hostname.endsWith('.steampowered.com'),
+              url.hostname.endsWith('.steampowered.com') ||
+              url.hostname === 'image.tmdb.org' ||
+              url.hostname === 's4.anilist.co',
             handler: 'CacheFirst',
             options: {
               cacheName: 'game-images',

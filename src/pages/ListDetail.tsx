@@ -11,6 +11,7 @@ import { useConfirm } from '../contexts/ConfirmContext'
 import { BottomSheet } from '../components/BottomSheet'
 import { plural } from '../lib/text'
 import type { Game } from '../types/game'
+import { appUrl } from '../lib/appUrl'
 
 export function ListDetail() {
   const { id } = useParams<{ id: string }>()
@@ -28,7 +29,7 @@ export function ListDetail() {
     return gameIds.map((gameId) => byId.get(gameId)).filter((g): g is Game => g != null)
   }, [games, gameIds])
 
-  const shareUrl = `${window.location.origin}/compartir/${id}`
+  const shareUrl = appUrl(`/compartir/${id}`)
 
   async function handleShare() {
     if (!list) return

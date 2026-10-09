@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
+import { appUrl } from '../lib/appUrl'
 
 // El link del email de recuperación vuelve a la app con `type=recovery` en el
 // hash. Se lee al cargar el módulo porque supabase-js puede emitir el evento
@@ -38,7 +39,7 @@ export function useAuth() {
   const signOut = () => supabase.auth.signOut()
 
   const sendPasswordReset = (email: string) =>
-    supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
+    supabase.auth.resetPasswordForEmail(email, { redirectTo: appUrl('/') })
 
   const updatePassword = (password: string) => supabase.auth.updateUser({ password })
 

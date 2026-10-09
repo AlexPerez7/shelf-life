@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { PasswordInput } from '../components/PasswordInput'
+import { asset } from '../lib/appUrl'
 
 type Mode = 'signin' | 'signup' | 'reset'
 
@@ -64,7 +65,7 @@ export function Login() {
       }}
     >
       <img
-        src="/icons/icon-192.png"
+        src={asset('icons/icon-192.png')}
         alt=""
         className="mb-4 h-16 w-16 rounded-2xl shadow-lg shadow-black/40"
       />

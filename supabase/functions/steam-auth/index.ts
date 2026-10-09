@@ -18,24 +18,26 @@ const STEAM_OPENID = 'https://steamcommunity.com/openid/login'
 const STEAM_API_KEY = Deno.env.get('STEAM_API_KEY')!
 const CALLBACK_PATH = '/steam-import/callback'
 
-// Orígenes a los que Steam puede devolver al usuario. Sin esta lista, la
-// función armaba un login de Steam hacia cualquier https:// que le pasaran
-// (open redirect firmado con la reputación de la app). Configurable para
-// previews: supabase secrets set APP_ORIGINS=https://a.app,https://b.app
-const ALLOWED_ORIGINS = (Deno.env.get('APP_ORIGINS') ?? 'https://playdex.netlify.app')
+// URLs base de la app a las que Steam puede devolver al usuario. Sin esta
+// lista, la función armaba un login de Steam hacia cualquier https:// que le
+// pasaran (open redirect firmado con la reputación de la app). Cada entrada es
+// un origen, con la subcarpeta si la app no vive en la raíz (GitHub Pages):
+//   supabase secrets set APP_ORIGINS=https://a.app,https://user.github.io/PlayDex
+const ALLOWED_BASES = (
+  Deno.env.get('APP_ORIGINS') ?? 'https://playdex.netlify.app,https://alexperez7.github.io/PlayDex'
+)
   .split(',')
   .map((o) => o.trim().replace(/\/$/, ''))
   .filter(Boolean)
 
-/** returnTo válido: https, origen permitido y ruta del callback. */
+/** returnTo válido: https, base permitida y ruta del callback. */
 function isAllowedReturnTo(value: unknown): value is string {
   if (typeof value !== 'string') return false
   try {
     const url = new URL(value)
     return (
       url.protocol === 'https:' &&
-      ALLOWED_ORIGINS.includes(url.origin) &&
-      url.pathname === CALLBACK_PATH
+      ALLOWED_BASES.some((base) => `${url.origin}${url.pathname}` === base + CALLBACK_PATH)
     )
   } catch {
     return false

@@ -11,6 +11,7 @@ import { SessionTimerProvider } from './contexts/SessionTimerContext'
 import { TimerBanner } from './components/TimerBanner'
 import { BottomNav } from './components/BottomNav'
 import { Library } from './pages/Library'
+import { asset } from './lib/appUrl'
 
 // La biblioteca es la pantalla de entrada y va en el bundle principal; el
 // resto se carga bajo demanda para que el primer arranque en mobile (red
@@ -41,7 +42,7 @@ function SplashScreen() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4">
       <img
-        src="/icons/icon-192.png"
+        src={asset('icons/icon-192.png')}
         alt=""
         className="h-20 w-20 animate-pulse rounded-3xl shadow-lg shadow-black/40"
       />

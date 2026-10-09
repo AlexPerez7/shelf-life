@@ -9,6 +9,7 @@ import { GameThumb } from '../components/GameThumb'
 import { Skeleton } from '../components/Skeleton'
 import type { GameStatus } from '../types/game'
 import type { ItemStatus, MediaType } from '../types/item'
+import { asset } from '../lib/appUrl'
 
 /** Lo que devuelve `get_public_list` por cada ítem (migración 0011). */
 interface PublicItem {
@@ -72,7 +73,7 @@ export function SharedList() {
       }}
     >
       <Link to="/" className="mb-6 flex items-center gap-2">
-        <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-lg" />
+        <img src={asset('icons/icon-192.png')} alt="" className="h-8 w-8 rounded-lg" />
         <span className="font-bold text-accent">Shelf Life</span>
       </Link>
 
