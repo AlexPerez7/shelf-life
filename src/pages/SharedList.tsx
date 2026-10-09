@@ -73,7 +73,7 @@ export function SharedList() {
     >
       <Link to="/" className="mb-6 flex items-center gap-2">
         <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-lg" />
-        <span className="font-bold text-accent">PlayDex</span>
+        <span className="font-bold text-accent">Shelf Life</span>
       </Link>
 
       {list === undefined && (
@@ -131,7 +131,7 @@ export function SharedList() {
         to="/"
         className="mt-10 flex min-h-12 items-center justify-center rounded-xl bg-primary font-semibold text-white"
       >
-        Arma tu propia biblioteca en PlayDex
+        Arma tu propia biblioteca en Shelf Life
       </Link>
     </div>
   )

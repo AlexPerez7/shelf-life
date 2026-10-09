@@ -5,7 +5,7 @@ const features = [
     Icon: ClipboardList,
     title: 'Gestiona tu biblioteca',
     description:
-      'Lleva un registro de todos tus juegos: pendientes, jugando, completados y más. Nunca pierdas de vista tu backlog.',
+      'Juegos, películas, series y anime en un solo lugar: lo pendiente, lo que estás jugando o viendo y lo que ya terminaste.',
   },
   {
     Icon: Download,
@@ -17,7 +17,7 @@ const features = [
     Icon: BarChart3,
     title: 'Sigue tu progreso',
     description:
-      'Consulta estadísticas de horas jugadas, puntajes y hábitos de juego desde tu dashboard.',
+      'Suma episodios con un toque, registra tus horas de juego y mira tus estadísticas.',
   },
 ]
 
@@ -33,12 +33,12 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
       <div className="flex flex-1 flex-col items-center">
         <img
           src="/icons/icon-192.png"
-          alt="PlayDex"
+          alt="Shelf Life"
           className="h-24 w-24 rounded-3xl shadow-lg shadow-black/40"
         />
 
         <p className="mt-6 text-sm text-lavender">Bienvenido a</p>
-        <h1 className="text-4xl font-bold text-accent">PlayDex</h1>
+        <h1 className="text-4xl font-bold text-accent">Shelf Life</h1>
 
         <div className="mt-10 flex w-full max-w-sm flex-col gap-6">
           {features.map(({ Icon, title, description }) => (

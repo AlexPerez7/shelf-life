@@ -440,7 +440,7 @@ function YearRecap({ games, sessions }: { games: Game[]; sessions: SessionRow[] 
   if (recap.finished.length === 0 && recap.hours === 0 && recap.added === 0) return null
 
   const lines = [
-    `Mi ${year} en PlayDex 🎮`,
+    `Mi ${year} en Shelf Life 🎮`,
     recap.finished.length > 0 &&
       `✅ ${plural(recap.finished.length, 'juego terminado', 'juegos terminados')}`,
     recap.hours > 0 && `⏱️ ${recap.hours} horas registradas`,
@@ -453,7 +453,7 @@ function YearRecap({ games, sessions }: { games: Game[]; sessions: SessionRow[] 
     const text = lines.join('\n')
     try {
       if (navigator.share) {
-        await navigator.share({ title: `Mi ${year} en PlayDex`, text })
+        await navigator.share({ title: `Mi ${year} en Shelf Life`, text })
       } else {
         await navigator.clipboard.writeText(text)
         showToast('Resumen copiado al portapapeles')

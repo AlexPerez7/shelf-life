@@ -1,6 +1,6 @@
-# PlayDex
+# Shelf Life
 
-PWA mobile-first para trackear videojuegos: backlog, progreso, horas jugadas y estadísticas personales.
+PWA mobile-first para llevar registro de juegos, películas, series, anime y libros: backlog, progreso, tiempo invertido y estadísticas personales. Antes se llamaba PlayDex (solo juegos).
 
 Ver [`playdex-plan.md`](./playdex-plan.md) para el plan original de desarrollo.
 

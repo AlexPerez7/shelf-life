@@ -30,9 +30,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
-        name: 'PlayDex',
-        short_name: 'PlayDex',
-        description: 'Trackea tu backlog, progreso y horas jugadas',
+        name: 'Shelf Life',
+        short_name: 'Shelf Life',
+        description: 'Tus juegos, películas, series y libros en un solo lugar',
         lang: 'es',
         theme_color: '#14091f',
         background_color: '#14091f',

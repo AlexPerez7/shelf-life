@@ -68,7 +68,7 @@ export function Login() {
         alt=""
         className="mb-4 h-16 w-16 rounded-2xl shadow-lg shadow-black/40"
       />
-      <h1 className="text-3xl font-bold text-accent">PlayDex</h1>
+      <h1 className="text-3xl font-bold text-accent">Shelf Life</h1>
       <p className="mb-8 mt-1 text-sm text-lavender">{title}</p>
 
       <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-3">

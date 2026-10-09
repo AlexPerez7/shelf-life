@@ -155,7 +155,7 @@ export function SteamImport() {
     setError(null)
   }
 
-  /** Juegos de la biblioteca de PlayDex que vinieron de Steam, por appid. */
+  /** Juegos de la biblioteca de Shelf Life que vinieron de Steam, por appid. */
   const importedByAppId = useMemo(() => {
     const map = new Map<number, Game>()
     for (const g of games) if (g.steam_appid != null) map.set(g.steam_appid, g)
@@ -167,7 +167,7 @@ export function SteamImport() {
     [library, importedByAppId]
   )
 
-  /** Importados cuyas horas en Steam son mayores que las de PlayDex. */
+  /** Importados cuyas horas en Steam son mayores que las de Shelf Life. */
   const outdated = useMemo(
     () =>
       library.flatMap((sg) => {
