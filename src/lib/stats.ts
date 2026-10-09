@@ -1,5 +1,5 @@
-// Cálculos de las estadísticas de Pantalla y Libros (las de Juegos viven en
-// su Dashboard). Todo a partir de `items` y de `activity_log`.
+// Cálculos de las estadísticas de los tres trackers, a partir de `items` y
+// de `activity_log`.
 
 import { parseDate } from './dates'
 import type { Item } from '../types/item'

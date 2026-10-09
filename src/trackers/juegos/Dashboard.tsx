@@ -8,7 +8,6 @@ import {
   Hourglass,
   Joystick,
   LogOut,
-  Share2,
   Star,
   Tag,
   Timer,
@@ -26,47 +25,32 @@ import { plural } from '../../lib/text'
 import { parseDate } from '../../lib/dates'
 import { statusLabels, statuses } from '../../lib/status'
 import { getTimeToBeatBatch } from '../../lib/igdb'
-import { supabase, ensureSession } from '../../lib/supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../contexts/ToastContext'
+import { useActivity } from '../../hooks/useActivity'
+import { MonthlyBars } from '../../components/stats/MonthlyBars'
+import { RankBars } from '../../components/stats/RankBars'
+import { YearRecap } from '../../components/stats/YearRecap'
+import { monthBuckets, type ActivityRow } from '../../lib/stats'
 import { useConfirm } from '../../contexts/ConfirmContext'
 import type { Game } from '../../types/game'
 import { gamesPaths } from './paths'
 
-interface SessionRow {
-  duration_minutes: number
-  played_at: string
-  game_id: string
-}
-
 const MONTHS_SHOWN = 6
+const GAME_TYPES = ['game' as const]
 
 function round1(n: number) {
   return Math.round(n * 10) / 10
 }
 
-/** Sesiones de los últimos 12 meses (gráfico mensual, ritmo y resumen anual). */
-function useRecentSessions() {
-  const [sessions, setSessions] = useState<SessionRow[] | null>(null)
-  useEffect(() => {
-    const since = new Date()
-    since.setMonth(since.getMonth() - 12, 1)
-    ensureSession().then(() =>
-      supabase
-        .from('activity_log')
-        .select('duration_minutes, played_at:occurred_at, game_id:item_id, items!inner(media_type)')
-        .eq('items.media_type', 'game')
-        .not('duration_minutes', 'is', null)
-        .gte('occurred_at', since.toISOString())
-        .then(({ data }) => setSessions((data as SessionRow[]) ?? []))
-    )
-  }, [])
-  return sessions
-}
-
 export function Dashboard() {
   const { games, loading } = useGames()
-  const sessions = useRecentSessions()
+  // Sesiones de los últimos 12 meses (gráfico mensual, ritmo y resumen anual).
+  const activity = useActivity(GAME_TYPES)
+  const sessions = useMemo(
+    () => activity?.filter((r) => (r.duration_minutes ?? 0) > 0) ?? null,
+    [activity]
+  )
 
   const stats = useMemo(() => {
     const owned = games.filter((g) => g.status !== 'deseado')
@@ -171,7 +155,16 @@ export function Dashboard() {
 
           <BacklogCard games={games} sessions={sessions} />
 
-          <MonthlyHoursChart sessions={sessions} />
+          <MonthlyBars
+            icon={Timer}
+            title="Horas jugadas por mes"
+            months={
+              sessions && monthBuckets(sessions, MONTHS_SHOWN, (r) => (r.duration_minutes ?? 0) / 60).map((m) => ({ ...m, value: round1(m.value) }))
+            }
+            format={(h) => `${h.toLocaleString('es')} h`}
+            emptyText='Registra sesiones (o usa el cronómetro "Jugar" en un juego) para ver tu ritmo mes a mes.'
+            footnote="Según las sesiones registradas (las horas importadas de Steam no tienen fecha)."
+          />
 
           <SectionCard icon={CheckCircle2} title="Por estado">
             <div className="mb-3 flex items-baseline justify-between">
@@ -180,7 +173,15 @@ export function Dashboard() {
                 <strong className="text-lg">{stats.completionRate}%</strong> de tu biblioteca
               </span>
             </div>
-            <StatusBars rows={stats.byStatus} />
+            <RankBars
+              rows={stats.byStatus
+                .filter((r) => r.count > 0)
+                .map((r) => ({
+                  label: statusLabels[r.status],
+                  value: r.count,
+                  to: `${gamesPaths.library}?estado=${r.status}`,
+                }))}
+            />
           </SectionCard>
 
           {highlights.length > 0 && (
@@ -209,7 +210,7 @@ export function Dashboard() {
             </div>
           )}
 
-          <YearRecap games={games} sessions={sessions} />
+          <GamesYearRecap games={games} sessions={sessions} />
         </div>
       )}
 
@@ -223,7 +224,7 @@ export function Dashboard() {
  * usando la duración "normal" de IGDB menos lo ya jugado. Solo cuenta juegos
  * con igdb_id; los demás se informan aparte.
  */
-function BacklogCard({ games, sessions }: { games: Game[]; sessions: SessionRow[] | null }) {
+function BacklogCard({ games, sessions }: { games: Game[]; sessions: ActivityRow[] | null }) {
   const backlog = useMemo(
     () => games.filter((g) => ['pendiente', 'en_pausa', 'jugando'].includes(g.status)),
     [games]
@@ -261,8 +262,8 @@ function BacklogCard({ games, sessions }: { games: Game[]; sessions: SessionRow[
   const since = Date.now() - 90 * 24 * 60 * 60 * 1000
   const recentHours =
     (sessions ?? [])
-      .filter((s) => new Date(s.played_at).getTime() >= since)
-      .reduce((sum, s) => sum + s.duration_minutes, 0) / 60
+      .filter((s) => new Date(s.occurred_at).getTime() >= since)
+      .reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0) / 60
   const perWeek = recentHours / (90 / 7)
   const weeks = perWeek > 0 ? Math.ceil(remaining / perWeek) : null
 
@@ -307,182 +308,28 @@ function BacklogCard({ games, sessions }: { games: Game[]; sessions: SessionRow[
   )
 }
 
-/** Barras de horas por mes (una sola serie: sin leyenda, un solo tono). */
-function MonthlyHoursChart({ sessions }: { sessions: SessionRow[] | null }) {
-  const months = useMemo(() => {
-    const now = new Date()
-    const list = Array.from({ length: MONTHS_SHOWN }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (MONTHS_SHOWN - 1 - i), 1)
-      return {
-        key: `${d.getFullYear()}-${d.getMonth()}`,
-        short: d.toLocaleDateString(undefined, { month: 'short' }).replace('.', ''),
-        long: d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
-        hours: 0,
-      }
-    })
-    const byKey = new Map(list.map((m) => [m.key, m]))
-    for (const s of sessions ?? []) {
-      const d = parseDate(s.played_at)
-      const m = byKey.get(`${d.getFullYear()}-${d.getMonth()}`)
-      if (m) m.hours += s.duration_minutes / 60
-    }
-    return list.map((m) => ({ ...m, hours: round1(m.hours) }))
-  }, [sessions])
-
-  const [selected, setSelected] = useState(MONTHS_SHOWN - 1)
-  const max = Math.max(...months.map((m) => m.hours), 1)
-  const current = months[selected]
-  const total = round1(months.reduce((sum, m) => sum + m.hours, 0))
-
-  return (
-    <SectionCard icon={Timer} title="Horas jugadas por mes">
-      {sessions == null ? (
-        <Skeleton className="h-40 w-full" />
-      ) : total === 0 ? (
-        <p className="text-sm text-lavender">
-          Registra sesiones (o usa el cronómetro "Jugar" en un juego) para ver tu ritmo mes a mes.
-        </p>
-      ) : (
-        <>
-          <p className="text-sm text-lavender first-letter:uppercase">{current.long}</p>
-          <p className="mb-3 text-2xl font-bold text-ink">{current.hours} h</p>
-          <div
-            className="flex h-32 items-end gap-2 border-b border-primary-dark/40"
-            role="list"
-            aria-label="Horas por mes"
-          >
-            {months.map((m, i) => (
-              <button
-                key={m.key}
-                type="button"
-                role="listitem"
-                onClick={() => setSelected(i)}
-                aria-label={`${m.long}: ${m.hours} horas`}
-                aria-pressed={i === selected}
-                className="flex h-full flex-1 items-end justify-center"
-              >
-                <span
-                  className={`w-full max-w-7 rounded-t transition-colors ${
-                    i === selected ? 'bg-accent' : 'bg-primary'
-                  }`}
-                  style={{ height: `${Math.max(m.hours > 0 ? 3 : 0, (m.hours / max) * 100)}%` }}
-                />
-              </button>
-            ))}
-          </div>
-          <div className="mt-1.5 flex gap-2">
-            {months.map((m, i) => (
-              <span
-                key={m.key}
-                className={`flex-1 text-center text-[11px] capitalize ${
-                  i === selected ? 'font-semibold text-ink' : 'text-lavender'
-                }`}
-              >
-                {m.short}
-              </span>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-lavender/70">
-            Según las sesiones registradas (las horas importadas de Steam no tienen fecha).
-          </p>
-        </>
-      )}
-    </SectionCard>
-  )
-}
-
-/** Distribución por estado: barras horizontales etiquetadas (magnitud, un tono). */
-function StatusBars({ rows }: { rows: { status: Game['status']; count: number }[] }) {
-  const max = Math.max(...rows.map((r) => r.count), 1)
-  return (
-    <ul className="flex flex-col gap-1">
-      {rows
-        .filter((r) => r.count > 0)
-        .map((r) => (
-          <li key={r.status}>
-            <Link
-              to={`${gamesPaths.library}?estado=${r.status}`}
-              className="flex min-h-9 items-center gap-3 rounded-lg active:bg-primary-dark/20"
-            >
-              <span className="w-24 flex-shrink-0 text-sm text-lavender">{statusLabels[r.status]}</span>
-              <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-primary-dark/20">
-                <span
-                  className="block h-full rounded-full bg-accent"
-                  style={{ width: `${(r.count / max) * 100}%` }}
-                />
-              </span>
-              <span className="w-8 flex-shrink-0 text-right text-sm font-medium tabular-nums text-ink">
-                {r.count}
-              </span>
-            </Link>
-          </li>
-        ))}
-    </ul>
-  )
-}
-
 /** Resumen del año en curso, para compartir. */
-function YearRecap({ games, sessions }: { games: Game[]; sessions: SessionRow[] | null }) {
-  const { showToast } = useToast()
+function GamesYearRecap({ games, sessions }: { games: Game[]; sessions: ActivityRow[] | null }) {
   const year = new Date().getFullYear()
 
-  const recap = useMemo(() => {
-    const finished = games.filter(
-      (g) => g.date_finished && parseDate(g.date_finished).getFullYear() === year
-    )
+  const lines = useMemo(() => {
+    const finished = games.filter((g) => g.date_finished && parseDate(g.date_finished).getFullYear() === year)
     const added = games.filter((g) => new Date(g.created_at).getFullYear() === year).length
-    const yearSessions = (sessions ?? []).filter((s) => new Date(s.played_at).getFullYear() === year)
-    const hours = round1(yearSessions.reduce((sum, s) => sum + s.duration_minutes, 0) / 60)
+    const yearSessions = (sessions ?? []).filter((s) => new Date(s.occurred_at).getFullYear() === year)
+    const hours = round1(yearSessions.reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0) / 60)
     const byGame = new Map<string, number>()
-    for (const s of yearSessions) byGame.set(s.game_id, (byGame.get(s.game_id) ?? 0) + s.duration_minutes)
+    for (const s of yearSessions) byGame.set(s.item_id, (byGame.get(s.item_id) ?? 0) + (s.duration_minutes ?? 0))
     const topId = [...byGame.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
     const top = games.find((g) => g.id === topId)
-    return { finished, added, hours, top }
+    return [
+      finished.length > 0 && `✅ ${plural(finished.length, 'juego terminado', 'juegos terminados')}`,
+      hours > 0 && `⏱️ ${hours} horas registradas`,
+      top && `🔥 Lo que más jugué: ${top.title}`,
+      added > 0 && `📚 ${plural(added, 'juego nuevo', 'juegos nuevos')} en mi biblioteca`,
+    ].filter(Boolean) as string[]
   }, [games, sessions, year])
 
-  if (recap.finished.length === 0 && recap.hours === 0 && recap.added === 0) return null
-
-  const lines = [
-    `Mi ${year} en Shelf Life 🎮`,
-    recap.finished.length > 0 &&
-      `✅ ${plural(recap.finished.length, 'juego terminado', 'juegos terminados')}`,
-    recap.hours > 0 && `⏱️ ${recap.hours} horas registradas`,
-    recap.top && `🔥 Lo que más jugué: ${recap.top.title}`,
-    recap.added > 0 &&
-      `📚 ${plural(recap.added, 'juego nuevo', 'juegos nuevos')} en mi biblioteca`,
-  ].filter(Boolean) as string[]
-
-  async function share() {
-    const text = lines.join('\n')
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: `Mi ${year} en Shelf Life`, text })
-      } else {
-        await navigator.clipboard.writeText(text)
-        showToast('Resumen copiado al portapapeles')
-      }
-    } catch {
-      /* el usuario cerró el menú de compartir */
-    }
-  }
-
-  return (
-    <div className="rounded-2xl bg-gradient-to-br from-primary-darker to-primary-dark p-4 ring-1 ring-accent/30">
-      <p className="text-xs font-semibold uppercase tracking-wide text-lavender">Tu {year}</p>
-      <ul className="mt-2 flex flex-col gap-1 text-sm text-ink">
-        {lines.slice(1).map((l) => (
-          <li key={l}>{l}</li>
-        ))}
-      </ul>
-      <button
-        type="button"
-        onClick={share}
-        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-primary-darker"
-      >
-        <Share2 size={16} /> Compartir resumen
-      </button>
-    </div>
-  )
+  return <YearRecap year={year} heading={`Mi ${year} en Shelf Life 🎮`} lines={lines} />
 }
 
 function AccountCard() {
