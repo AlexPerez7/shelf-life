@@ -11,6 +11,7 @@ import { RankBars } from '../../components/stats/RankBars'
 import { StatTile } from '../../components/stats/StatTile'
 import { Highlight } from '../../components/stats/Highlight'
 import { YearRecap } from '../../components/stats/YearRecap'
+import { GoalCard } from '../../components/stats/GoalCard'
 import { useActivity } from '../../hooks/useActivity'
 import { formatMinutes, itemStatuses, mediaSections, mediaTypePlurals } from '../../lib/media'
 import { finishedIn, maxBy, monthBuckets, started, topCounts } from '../../lib/stats'
@@ -166,6 +167,7 @@ export function ScreenStats() {
         </p>
       ) : (
         <div className="flex flex-col gap-4">
+          <GoalCard tracker="pantalla" />
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatTile icon={Clock} label="Frente a la pantalla" value={stats.minutes ? hours(stats.minutes) : '—'} />
             <StatTile

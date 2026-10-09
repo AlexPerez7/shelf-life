@@ -48,6 +48,7 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
 - Diario: línea de tiempo con altas, inicios, finalizaciones y sesiones registradas
 - Estado "Deseado" (wishlist) separado de "Pendiente", con precios de tiendas
 - Biblioteca en vista de lista o de portadas, filtro de favoritos y cambio rápido de estado desde la tarjeta
+- Metas del año, una por tracker (juegos terminados, títulos vistos, libros leídos): arriba de las estadísticas de cada tracker, con avance y si vas al día según el calendario, y en el inicio
 - Estadísticas: totales, tiempo estimado para terminar el backlog (IGDB) y a tu ritmo, horas por mes, distribución por estado, destacados y resumen del año para compartir
 - PWA instalable (manifest, ícono, service worker) y responsive (mobile-first, con ajustes para tablet)
 - Rendimiento: rutas con carga diferida, portadas cacheadas por el service worker y biblioteca/populares pintados al instante desde una cache local (se revalidan contra Supabase en segundo plano)
@@ -63,7 +64,8 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
    VITE_SUPABASE_URL=
    VITE_SUPABASE_ANON_KEY=
    ```
-3. Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, actualmente 0001 a 0010), o `supabase db push`.
+3. Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, actualmente 0001 a 0012), o `supabase db push`.
+   - La `0012` crea `goals` (metas del año). Sin ella la app funciona igual, solo no muestra las metas.
    - La `0008` crea un trigger que suma/resta las horas jugadas al registrar/borrar una sesión. El frontend ya no actualiza `hours_played` en ese caso, así que debe aplicarse **antes** de desplegar el frontend.
 4. Configurar los secrets de las Edge Functions (nunca en el frontend) y desplegarlas:
    ```

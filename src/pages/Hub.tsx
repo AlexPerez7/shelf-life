@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { BookOpen, Check, ChevronRight, ClipboardList, Play, Plus, Square } from 'lucide-react'
 import { useGames } from '../hooks/useGames'
 import { useLists } from '../hooks/useLists'
+import { useGoals } from '../hooks/useGoals'
+import { goalDone, goalUnits } from '../lib/goals'
 import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
 import { formatElapsed, useNow, useSessionTimer } from '../contexts/SessionTimerContext'
@@ -39,6 +41,51 @@ function greeting() {
 type NowEntry =
   | { kind: 'game'; tracker: 'juegos'; game: Game; updated: string }
   | { kind: 'media'; tracker: 'pantalla' | 'libros'; item: Item; updated: string }
+
+/** Metas del año que tengas puestas, con su avance; tocar una lleva a sus estadísticas. */
+function GoalsStrip({ games, items }: { games: Game[]; items: Item[] }) {
+  const year = new Date().getFullYear()
+  const { goals } = useGoals(year)
+  if (goals.length === 0) return null
+
+  return (
+    <section className="mb-6">
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">Metas {year}</h2>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {trackerIds
+          .map((id) => goals.find((g) => g.tracker === id))
+          .filter((g) => g != null)
+          .map((goal) => {
+            const { Icon, base } = trackers[goal.tracker]
+            const done = goalDone(goal.tracker, year, games, items)
+            const pct = Math.min(100, Math.round((done / goal.target) * 100))
+            return (
+              <Link
+                key={goal.tracker}
+                to={`${base}/estadisticas`}
+                data-tracker={goal.tracker}
+                className="flex items-center gap-3 rounded-2xl bg-background-surface px-3 py-2.5 ring-1 ring-primary-dark/30 active:bg-primary-dark/10"
+              >
+                <Icon size={18} className="shrink-0 text-accent" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-ink">
+                    <strong className="tabular-nums">{done}</strong>
+                    <span className="text-lavender">
+                      {' '}
+                      de {goal.target} {goalUnits[goal.tracker][1]}
+                    </span>
+                  </p>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary-dark/30">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
+      </div>
+    </section>
+  )
+}
 
 /** Números de los últimos 7 días, de los tres trackers. */
 function WeekStrip({ typeOf }: { typeOf: Map<string, MediaType> }) {
@@ -426,6 +473,7 @@ export function Hub() {
 
       <div className="md:mx-auto md:max-w-xl">
         {!loading && <WeekStrip typeOf={typeOf} />}
+        {!loading && <GoalsStrip games={games} items={items} />}
 
         <section className="mb-6">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">En curso</h2>

@@ -31,6 +31,7 @@ import { useActivity } from '../../hooks/useActivity'
 import { MonthlyBars } from '../../components/stats/MonthlyBars'
 import { RankBars } from '../../components/stats/RankBars'
 import { YearRecap } from '../../components/stats/YearRecap'
+import { GoalCard } from '../../components/stats/GoalCard'
 import { monthBuckets, type ActivityRow } from '../../lib/stats'
 import { useConfirm } from '../../contexts/ConfirmContext'
 import type { Game } from '../../types/game'
@@ -129,6 +130,7 @@ export function Dashboard() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
+          <GoalCard tracker="juegos" />
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatsCard label="En tu biblioteca" value={stats.total} icon={Gamepad2} to={gamesPaths.library} />
             <StatsCard
