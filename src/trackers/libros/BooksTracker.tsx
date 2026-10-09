@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { Bookmark, BookOpen, BookOpenCheck, Library as LibraryIcon } from 'lucide-react'
 import '@fontsource-variable/lora'
@@ -6,6 +6,7 @@ import { TrackerNav } from '../../components/TrackerNav'
 import { mediaSections } from '../../lib/media'
 import { BooksLibrary } from './BooksLibrary'
 import { shelfParam } from './bookLists'
+import { useTrackerTheme } from '../useTrackerTheme'
 
 const AddMedia = lazy(() => import('../../pages/AddMedia').then((m) => ({ default: m.AddMedia })))
 const MediaDetail = lazy(() =>
@@ -13,26 +14,6 @@ const MediaDetail = lazy(() =>
 )
 
 const section = mediaSections.libros
-/** Color de la barra de estado del sistema con el tema claro. */
-const PAPER = '#f6f2e9'
-
-/**
- * Activa el tema claro de Libros en <body> (cubre fondo, hojas inferiores y
- * avisos) y la barra de estado del teléfono, mientras se está en el tracker.
- */
-function useBooksTheme() {
-  useEffect(() => {
-    document.body.dataset.theme = 'libros'
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-    const previous = meta?.content
-    if (meta) meta.content = PAPER
-    return () => {
-      delete document.body.dataset.theme
-      if (meta && previous) meta.content = previous
-    }
-  }, [])
-}
-
 /** Estantes a los que lleva la barra inferior. */
 const shelfLink = (shelf: string) => `${section.libraryPath}?${shelfParam}=${shelf}`
 const isShelf = (shelf: string) => (pathname: string, search: URLSearchParams) =>
@@ -44,7 +25,7 @@ const isShelf = (shelf: string) => (pathname: string, search: URLSearchParams) =
  * detalle todavía son las pantallas genéricas, que toman el tema solas.
  */
 export function BooksTracker() {
-  useBooksTheme()
+  useTrackerTheme('libros')
 
   return (
     <div>

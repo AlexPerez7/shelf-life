@@ -4,6 +4,7 @@ import { BarChart3, ClipboardList, Compass, Gamepad2 } from 'lucide-react'
 import { TrackerNav } from '../../components/TrackerNav'
 import { Library } from './Library'
 import { gamesPaths } from './paths'
+import { useTrackerTheme } from '../useTrackerTheme'
 
 // La biblioteca va en el bundle del tracker; el resto se carga bajo demanda.
 const Home = lazy(() => import('./Home').then((m) => ({ default: m.Home })))
@@ -18,6 +19,8 @@ const SteamCallback = lazy(() => import('./SteamCallback').then((m) => ({ defaul
 
 /** Tracker de juegos: todo lo que vive bajo /juegos. */
 export function GamesTracker() {
+  useTrackerTheme('juegos')
+
   return (
     <div data-tracker="juegos">
       <Suspense fallback={null}>

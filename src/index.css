@@ -1,6 +1,41 @@
 @import "tailwindcss";
 
+/* Marca Shelf Life (inicio, login, bienvenida): "biblioteca de noche con
+   luz de lámpara". Azul tinta y ámbar; cada tracker redefine estos tokens
+   con su propio tema (ver más abajo). */
 @theme {
+  --color-primary: #b45f1c;
+  --color-primary-dark: #6b4a2b;
+  --color-primary-darker: #2b1606;
+  --color-accent: #f5b54a;
+  --color-lavender: #a7adbb;
+  --color-background: #0f1218;
+  --color-background-surface: #1a1e27;
+  --color-ink: #f4efe6;
+  --color-error: #f2545b;
+  --color-warning: #f5a623;
+}
+
+/* Acento de cada tracker en las tarjetas del inicio (sobre la marca). */
+[data-tracker='juegos'] {
+  --color-accent: #da3fef;
+}
+
+[data-tracker='pantalla'] {
+  --color-accent: #38bdf8;
+}
+
+/* Tarjeta de Libros en el inicio (fondo oscuro): versión clara del verde. */
+[data-tracker='libros'] {
+  --color-accent: #5cc8b8;
+}
+
+/* Tema de cada tracker: se activa en <body> mientras se está dentro (ver
+   useTrackerTheme), así también cubre el fondo, las hojas inferiores y los
+   avisos. Como toda la UI usa estos tokens, se adapta sola. */
+
+/* Juegos: el violeta y magenta originales de la app. */
+body[data-theme='juegos'] {
   --color-primary: #7e3ae8;
   --color-primary-dark: #541ea4;
   --color-primary-darker: #451c82;
@@ -9,20 +44,18 @@
   --color-background: #14091f;
   --color-background-surface: #1f1330;
   --color-ink: #f5f3ff;
-  --color-error: #f2545b;
-  --color-warning: #f5a623;
 }
 
-/* Cada tracker tiene su color de acento: todo lo que está dentro de su
-   contenedor (data-tracker, ver src/trackers/) lo hereda. Juegos usa el del
-   tema. Acá es donde cada tracker puede ir tomando su identidad propia. */
-[data-tracker='pantalla'] {
+/* Pantalla: oscuro azulado de sala de cine, con celeste. */
+body[data-theme='pantalla'] {
+  --color-primary: #2563eb;
+  --color-primary-dark: #1e3a8a;
+  --color-primary-darker: #082f49;
   --color-accent: #38bdf8;
-}
-
-/* Tarjeta de Libros en el inicio (fondo oscuro): versión clara del verde. */
-[data-tracker='libros'] {
-  --color-accent: #5cc8b8;
+  --color-lavender: #9fb0c8;
+  --color-background: #0b0f17;
+  --color-background-surface: #151b26;
+  --color-ink: #eef4fb;
 }
 
 /* Tracker de Libros: tema claro "papel y tinta", inspirado en Openreads.

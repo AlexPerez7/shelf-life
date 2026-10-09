@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { mediaSections } from '../../lib/media'
 import { MediaTrackerNav } from '../MediaTrackerNav'
+import { useTrackerTheme } from '../useTrackerTheme'
 
 const MediaLibrary = lazy(() =>
   import('../../pages/MediaLibrary').then((m) => ({ default: m.MediaLibrary }))
@@ -17,6 +18,8 @@ const section = mediaSections.pantalla
  * Tracker de Pantalla (películas, series y anime): todo lo que vive bajo /pantalla.
  */
 export function ScreenTracker() {
+  useTrackerTheme('pantalla')
+
   return (
     <div data-tracker="pantalla">
       <Suspense fallback={null}>

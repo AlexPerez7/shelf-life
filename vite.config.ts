@@ -33,14 +33,14 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: ['icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'Shelf Life',
         short_name: 'Shelf Life',
         description: 'Tus juegos, películas, series y libros en un solo lugar',
         lang: 'es',
-        theme_color: '#14091f',
-        background_color: '#14091f',
+        theme_color: '#0f1218',
+        background_color: '#0f1218',
         display: 'standalone',
         start_url: base,
         scope: base,
@@ -56,7 +56,7 @@ export default defineConfig({
             type: 'image/png',
           },
           {
-            src: 'icons/icon-512.png',
+            src: 'icons/icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
