@@ -210,7 +210,9 @@ export async function withDetails(result: MediaSearchResult): Promise<MediaSearc
 }
 
 export function resultToItem(r: MediaSearchResult): ItemWrite & Pick<Item, 'media_type' | 'title'> {
-  const total = r.media_type === 'book' ? r.pages : r.episodes
+  // Con temporadas, el total es su suma (así el avance y las temporadas cuadran).
+  const seasonsTotal = r.seasons?.reduce((s, n) => s + n, 0)
+  const total = r.media_type === 'book' ? r.pages : (seasonsTotal || r.episodes)
   return {
     media_type: r.media_type,
     title: r.title,
@@ -225,6 +227,7 @@ export function resultToItem(r: MediaSearchResult): ItemWrite & Pick<Item, 'medi
     metadata: {
       ...(r.original_title && r.original_title !== r.title ? { original_title: r.original_title } : {}),
       ...(r.runtime_minutes ? { runtime_minutes: r.runtime_minutes } : {}),
+      ...(r.seasons?.length ? { seasons: r.seasons } : {}),
       ...(r.authors?.length ? { authors: r.authors } : {}),
       ...(r.isbn ? { isbn: r.isbn } : {}),
       ...(r.publisher ? { publisher: r.publisher } : {}),
@@ -246,6 +249,42 @@ export function resultToItemWithStatus(r: MediaSearchResult, status: ItemStatus,
     if (item.progress_total) item.progress = item.progress_total
   }
   return item
+}
+
+/**
+ * Temporada y episodio del episodio número `n` (contando desde 1, de corrido)
+ * según los episodios de cada temporada. `null` si no hay temporadas o `n`
+ * se pasa del total.
+ */
+export function seasonEpisode(n: number, seasons: number[] | undefined) {
+  if (!seasons?.length || n < 1) return null
+  let left = n
+  for (let i = 0; i < seasons.length; i++) {
+    if (left <= seasons[i]) return { season: i + 1, episode: left }
+    left -= seasons[i]
+  }
+  return null
+}
+
+/** Temporadas de un ítem, solo si cuadran con su total de episodios. */
+export function itemSeasons(item: Item) {
+  const seasons = item.metadata.seasons
+  return seasons?.length && seasons.reduce((a, b) => a + b, 0) === item.progress_total ? seasons : undefined
+}
+
+/** Avance legible de una serie: "T2 · E5 · 15 de 62", "Episodio 5 de 12", "Sin empezar". */
+export function episodeProgress(item: Item) {
+  const total = item.progress_total
+  if (item.progress === 0) return total ? `${total} episodios` : 'Sin empezar'
+  const se = seasonEpisode(item.progress, itemSeasons(item))
+  if (se) return `T${se.season} · E${se.episode} · ${item.progress} de ${total}`
+  return total ? `Episodio ${item.progress} de ${total}` : `Episodio ${item.progress}`
+}
+
+/** "T2 · E5" si hay temporadas; si no, "Ep. 15". */
+export function episodeLabel(n: number, seasons: number[] | undefined) {
+  const se = seasonEpisode(n, seasons)
+  return se ? `T${se.season} · E${se.episode}` : `Ep. ${n}`
 }
 
 /** "2h 15m" / "45m". */

@@ -19,7 +19,16 @@ import { Skeleton } from '../components/Skeleton'
 import { asset } from '../lib/appUrl'
 import { haptic } from '../lib/haptics'
 import { parseDate } from '../lib/dates'
-import { formatMinutes, mediaSections, mediaTypeIcons, mediaTypeLabels, progressKind } from '../lib/media'
+import {
+  episodeLabel,
+  episodeProgress,
+  formatMinutes,
+  itemSeasons,
+  mediaSections,
+  mediaTypeIcons,
+  mediaTypeLabels,
+  progressKind,
+} from '../lib/media'
 import { ensureSession, supabase } from '../lib/supabaseClient'
 import { gamesPaths } from '../trackers/juegos/paths'
 import { listPaths } from '../lib/listPaths'
@@ -424,9 +433,7 @@ export function Hub() {
       kind === 'pages'
         ? `Página ${i.progress}${total ? ` de ${total} · ${pct}%` : ''}`
         : kind === 'episodes'
-          ? i.progress === 0
-            ? 'Sin empezar'
-            : `Episodio ${i.progress}${total ? ` de ${total}` : ''}`
+          ? episodeProgress(i)
           : i.metadata.runtime_minutes
             ? formatMinutes(i.metadata.runtime_minutes)
             : 'Película'
@@ -455,7 +462,7 @@ export function Hub() {
                 </>
               ) : (
                 <>
-                  <Plus size={14} /> Ep. {i.progress + 1}
+                  <Plus size={14} /> {episodeLabel(i.progress + 1, itemSeasons(i))}
                 </>
               )}
             </button>

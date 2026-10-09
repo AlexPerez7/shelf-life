@@ -15,7 +15,10 @@ import { UpcomingEpisodes } from './UpcomingEpisodes'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import {
+  episodeLabel,
+  episodeProgress,
   formatMinutes,
+  itemSeasons,
   itemStatuses,
   mediaSections,
   mediaTypeIcons,
@@ -75,13 +78,6 @@ function Stats({ items }: { items: Item[] }) {
   )
 }
 
-/** Avance legible de una serie o anime: "Episodio 5 de 12". */
-function episodeLine(item: Item) {
-  const total = item.progress_total
-  if (item.progress === 0) return total ? `${total} episodios` : 'Sin empezar'
-  return total ? `Episodio ${item.progress} de ${total}` : `Episodio ${item.progress}`
-}
-
 interface ContinueCardProps {
   item: Item
   busy: boolean
@@ -95,7 +91,6 @@ function ContinueCard({ item, busy, onOpen, onAdvance }: ContinueCardProps) {
   const isMovie = progressKind(type) === 'none'
   const runtime = item.metadata.runtime_minutes
   const pct = item.progress_total ? Math.min(100, (item.progress / item.progress_total) * 100) : null
-  const nextEpisode = item.progress + 1
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-background-surface ring-1 ring-primary-dark/40">
@@ -137,7 +132,7 @@ function ContinueCard({ item, busy, onOpen, onAdvance }: ContinueCardProps) {
                 ? runtime
                   ? formatMinutes(runtime)
                   : 'Película'
-                : [episodeLine(item), runtime ? `${runtime}m c/u` : null].filter(Boolean).join(' · ')}
+                : [episodeProgress(item), runtime ? `${runtime}m c/u` : null].filter(Boolean).join(' · ')}
             </p>
           </button>
 
@@ -167,7 +162,7 @@ function ContinueCard({ item, busy, onOpen, onAdvance }: ContinueCardProps) {
                 </>
               ) : (
                 <>
-                  <Plus size={16} /> Ep. {nextEpisode}
+                  <Plus size={16} /> {episodeLabel(item.progress + 1, itemSeasons(item))}
                 </>
               )}
             </button>

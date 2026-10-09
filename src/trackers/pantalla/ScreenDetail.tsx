@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -40,11 +40,15 @@ import {
   mediaSections,
   mediaTypeIcons,
   mediaTypeLabels,
+  episodeLabel,
+  getMediaDetails,
   progressChanges,
   progressKind,
+  itemSeasons,
+  seasonEpisode,
   statusChanges,
 } from '../../lib/media'
-import type { Item, ItemStatus, ItemWrite, ScreenType } from '../../types/item'
+import type { Item, ItemStatus, ItemWrite, MediaSearchResult, ScreenType } from '../../types/item'
 
 const section = mediaSections.pantalla
 
@@ -56,6 +60,107 @@ const inputClass =
 
 const isScreenType = (type: string): type is ScreenType =>
   (section.types as string[]).includes(type)
+
+interface EpisodeGridProps {
+  /** Número de corrido del primer episodio de la grilla. */
+  from: number
+  count: number
+  progress: number
+  busy: boolean
+  onSetProgress: (episode: number) => void
+}
+
+/**
+ * Una casilla por episodio. Tocar una marca todo hasta ahí; tocar el último
+ * visto lo desmarca. Muestra el número dentro de la temporada.
+ */
+function EpisodeGrid({ from, count, progress, busy, onSetProgress }: EpisodeGridProps) {
+  return (
+    <div className="mt-3 grid grid-cols-8 gap-1.5 sm:grid-cols-10" role="group" aria-label="Episodios vistos">
+      {Array.from({ length: count }, (_, i) => i).map((i) => {
+        const ep = from + i
+        const seen = ep <= progress
+        return (
+          <button
+            key={ep}
+            type="button"
+            disabled={busy}
+            onClick={() => onSetProgress(ep === progress ? ep - 1 : ep)}
+            aria-label={`Episodio ${i + 1}${seen ? ', visto' : ''}`}
+            aria-pressed={seen}
+            className={`flex aspect-square items-center justify-center rounded-lg text-xs font-semibold tabular-nums transition-colors ${
+              seen
+                ? 'bg-accent text-primary-darker'
+                : 'bg-background/40 text-lavender ring-1 ring-primary-dark/40 active:bg-primary-dark/40'
+            }`}
+          >
+            {i + 1}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Temporadas plegables: se abre la que estás viendo; cada una con su avance. */
+function SeasonList({
+  item,
+  seasons,
+  busy,
+  onSetProgress,
+}: {
+  item: Item
+  seasons: number[]
+  busy: boolean
+  onSetProgress: (episode: number) => void
+}) {
+  // La temporada del próximo episodio (o la última, si ya está todo visto).
+  const next = seasonEpisode(Math.min(item.progress + 1, seasons.reduce((a, b) => a + b, 0)), seasons)
+  const [open, setOpen] = useState<number | null>(next?.season ?? 1)
+  // Número de corrido del primer episodio de cada temporada.
+  const starts = seasons.map((_, i) => 1 + seasons.slice(0, i).reduce((a, b) => a + b, 0))
+
+  return (
+    <div className="mt-4 flex flex-col divide-y divide-primary-dark/30 overflow-hidden rounded-xl ring-1 ring-primary-dark/40">
+      {seasons.map((count, i) => {
+        const season = i + 1
+        const from = starts[i]
+        const seen = Math.max(0, Math.min(count, item.progress - from + 1))
+        const isOpen = open === season
+        return (
+          <div key={season}>
+            <button
+              type="button"
+              onClick={() => setOpen(isOpen ? null : season)}
+              aria-expanded={isOpen}
+              className="flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left active:bg-primary-dark/20"
+            >
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                {seen === count && <Check size={14} className="text-accent" />}
+                Temporada {season}
+              </span>
+              <span className="flex items-center gap-1 text-xs tabular-nums text-lavender">
+                {seen}/{count}
+                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </span>
+            </button>
+            {isOpen && (
+              <div className="px-3 pb-3">
+                <EpisodeGrid
+                  from={from}
+                  count={count}
+                  progress={item.progress}
+                  busy={busy}
+                  onSetProgress={onSetProgress}
+                />
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 interface EpisodesProps {
   item: Item
@@ -74,6 +179,9 @@ function Episodes({ item, busy, onSetProgress, onSaveTotal }: EpisodesProps) {
   const runtime = item.metadata.runtime_minutes
   const left = total != null ? Math.max(0, total - item.progress) : null
   const pct = total ? Math.min(100, (item.progress / total) * 100) : null
+  // Con temporadas (y si cuadran con el total), el avance se lee "T2 · E5".
+  const seasons = itemSeasons(item)
+  const current = seasonEpisode(item.progress, seasons)
 
   return (
     <SectionCard
@@ -98,10 +206,21 @@ function Episodes({ item, busy, onSetProgress, onSaveTotal }: EpisodesProps) {
         >
           <Minus size={20} />
         </button>
-        <p className="text-center text-3xl font-bold tabular-nums text-ink">
-          {item.progress}
-          <span className="text-lg font-normal text-lavender"> / {total ?? '?'}</span>
-        </p>
+        {current ? (
+          <div className="text-center">
+            <p className="text-3xl font-bold tabular-nums text-ink">
+              T{current.season} · E{current.episode}
+            </p>
+            <p className="text-xs text-lavender">
+              {item.progress} de {total ?? '?'} episodios
+            </p>
+          </div>
+        ) : (
+          <p className="text-center text-3xl font-bold tabular-nums text-ink">
+            {item.progress}
+            <span className="text-lg font-normal text-lavender"> / {total ?? '?'}</span>
+          </p>
+        )}
         <button
           type="button"
           onClick={() => onSetProgress(item.progress + 1)}
@@ -119,30 +238,13 @@ function Episodes({ item, busy, onSetProgress, onSaveTotal }: EpisodesProps) {
         </div>
       )}
 
-      {total != null && total <= MAX_EPISODE_GRID && (
-        <div className="mt-4 grid grid-cols-8 gap-1.5 sm:grid-cols-10" role="group" aria-label="Episodios vistos">
-          {Array.from({ length: total }, (_, i) => i + 1).map((ep) => {
-            const seen = ep <= item.progress
-            return (
-              <button
-                key={ep}
-                type="button"
-                disabled={busy}
-                // El último visto se desmarca; cualquier otro marca hasta ahí.
-                onClick={() => onSetProgress(ep === item.progress ? ep - 1 : ep)}
-                aria-label={`Episodio ${ep}${seen ? ', visto' : ''}`}
-                aria-pressed={seen}
-                className={`flex aspect-square items-center justify-center rounded-lg text-xs font-semibold tabular-nums transition-colors ${
-                  seen
-                    ? 'bg-accent text-primary-darker'
-                    : 'bg-background/40 text-lavender ring-1 ring-primary-dark/40 active:bg-primary-dark/40'
-                }`}
-              >
-                {ep}
-              </button>
-            )
-          })}
-        </div>
+      {seasons ? (
+        <SeasonList item={item} seasons={seasons} busy={busy} onSetProgress={onSetProgress} />
+      ) : (
+        total != null &&
+        total <= MAX_EPISODE_GRID && (
+          <EpisodeGrid from={1} count={total} progress={item.progress} busy={busy} onSetProgress={onSetProgress} />
+        )
       )}
 
       <label className="mt-4 flex items-center justify-between gap-3 text-sm text-lavender">
@@ -165,6 +267,39 @@ function Episodes({ item, busy, onSetProgress, onSaveTotal }: EpisodesProps) {
   )
 }
 
+/** Series de TMDB guardadas antes de que existieran las temporadas: se completan una vez al abrirlas. */
+const seasonsTried = new Set<string>()
+
+function useFillSeasons(item: Item | undefined, updateItem: (id: string, changes: ItemWrite) => Promise<Item>) {
+  useEffect(() => {
+    if (
+      !item ||
+      item.media_type !== 'series' ||
+      item.source !== 'tmdb' ||
+      !item.external_id ||
+      item.metadata.seasons?.length ||
+      seasonsTried.has(item.id)
+    ) {
+      return
+    }
+    seasonsTried.add(item.id)
+    getMediaDetails({ source: 'tmdb', external_id: item.external_id, media_type: 'series' } as MediaSearchResult)
+      .then((d) => {
+        const seasons = d.seasons
+        if (!seasons?.length) return
+        const total = seasons.reduce((a, b) => a + b, 0)
+        if (total < item.progress) return
+        return updateItem(item.id, {
+          metadata: { ...item.metadata, seasons },
+          progress_total: total,
+        })
+      })
+      .catch(() => {
+        /* sin temporadas: se sigue contando de corrido */
+      })
+  }, [item, updateItem])
+}
+
 /**
  * Detalle de una película, serie o anime, con diseño de app de streaming:
  * póster sobre su propio fondo difuminado, una acción principal (ver el
@@ -179,6 +314,7 @@ export function ScreenDetail() {
   const confirm = useConfirm()
 
   const item = items.find((i) => i.id === id)
+  useFillSeasons(item, updateItem)
   const [statusOpen, setStatusOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -324,7 +460,7 @@ export function ScreenDetail() {
     : finishedSeries
       ? { label: 'Volver a verla', Icon: RotateCcw, onClick: rewatchSeries }
       : {
-          label: `Ver episodio ${current.progress + 1}`,
+          label: `Ver ${episodeLabel(current.progress + 1, itemSeasons(current)).replace('Ep.', 'episodio')}`,
           Icon: Play,
           onClick: () => setProgress(current.progress + 1),
         }

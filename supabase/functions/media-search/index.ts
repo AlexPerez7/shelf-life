@@ -45,6 +45,8 @@ interface MediaResult {
   episodes: number | null
   /** Duración de la película, o de cada episodio, en minutos. */
   runtime_minutes: number | null
+  /** Series de TMDB (solo en el detalle): episodios de cada temporada, sin especiales. */
+  seasons?: number[]
   /** Libros. */
   pages?: number | null
   authors?: string[]
@@ -165,7 +167,16 @@ async function tmdbUpcoming(id: string): Promise<Upcoming | null> {
 
 async function tmdbDetails(type: 'movie' | 'series', id: string): Promise<MediaResult> {
   const r = await tmdb(`/${type === 'movie' ? 'movie' : 'tv'}/${id}`)
-  return tmdbToResult(r, type, (r.genres ?? []).map((g: { name: string }) => g.name))
+  const result = tmdbToResult(r, type, (r.genres ?? []).map((g: { name: string }) => g.name))
+  if (type === 'series') {
+    // La temporada 0 son los especiales: no cuentan para el avance.
+    const seasons = (r.seasons ?? [])
+      .filter((s: any) => s.season_number > 0 && s.episode_count > 0)
+      .sort((a: any, b: any) => a.season_number - b.season_number)
+      .map((s: any) => s.episode_count as number)
+    if (seasons.length > 0) result.seasons = seasons
+  }
+  return result
 }
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@ import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptics'
 import { todayISO } from '../lib/dates'
-import { progressChanges, progressKind, statusChanges } from '../lib/media'
+import { episodeLabel, itemSeasons, progressChanges, progressKind, statusChanges } from '../lib/media'
 import type { Item, NonGameType } from '../types/item'
 
 /**
@@ -34,7 +34,7 @@ export function useQuickProgress() {
           progressChanges(item, item.progress + 1, todayISO())
         )
         showToast(
-          updated.status === 'completed' ? `¡Terminaste ${item.title}!` : `${item.title}: episodio ${updated.progress}`
+          updated.status === 'completed' ? `¡Terminaste ${item.title}!` : `${item.title}: ${episodeLabel(updated.progress, itemSeasons(updated))}`
         )
       }
     } catch (err) {

@@ -33,6 +33,8 @@ export interface ItemMetadata {
   original_title?: string
   /** Duración de la película, o de cada episodio, en minutos. */
   runtime_minutes?: number
+  /** Series: episodios de cada temporada, en orden (sin especiales). */
+  seasons?: number[]
   // Libros
   authors?: string[]
   isbn?: string
@@ -87,6 +89,8 @@ export interface MediaSearchResult {
   summary: string | null
   episodes: number | null
   runtime_minutes: number | null
+  /** Series de TMDB, en el detalle: episodios de cada temporada. */
+  seasons?: number[]
   pages?: number | null
   authors?: string[]
   isbn?: string | null
