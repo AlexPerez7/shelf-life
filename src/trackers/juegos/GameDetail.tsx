@@ -30,9 +30,9 @@ import {
   X,
 } from 'lucide-react'
 import { useGames } from '../../hooks/useGames'
-import { supabase } from '../../lib/supabaseClient'
 import { usePlaySessions } from '../../hooks/usePlaySessions'
 import { ListPicker } from '../../components/ListPicker'
+import { useSaveStoppedTimer } from '../../hooks/useSaveStoppedTimer'
 import { StarRating } from '../../components/StarRating'
 import { TagList } from '../../components/TagList'
 import { PlatformPicker } from '../../components/PlatformPicker'
@@ -159,6 +159,7 @@ export function GameDetail() {
   const { showToast, showError } = useToast()
   const confirm = useConfirm()
   const sessionTimer = useSessionTimer()
+  const saveStoppedTimer = useSaveStoppedTimer()
   const timerHere = sessionTimer.timer?.gameId === id ? sessionTimer.timer : null
   const now = useNow(timerHere != null)
   const game = games.find((g) => g.id === id)
@@ -361,15 +362,12 @@ export function GameDetail() {
     if (other && other.gameId !== game.id) {
       const ok = await confirm({
         title: 'Ya hay un cronómetro corriendo',
-        message: `Se está midiendo una sesión de ${other.title}. ¿Detenerla (se guarda) y empezar con este juego?`,
+        message: `Se está midiendo ${other.kind === 'book' ? 'la lectura' : 'una sesión'} de ${other.title}. ¿Detenerla (se guarda) y empezar con este juego?`,
         confirmLabel: 'Detener y empezar',
       })
       if (!ok) return
       const stopped = sessionTimer.stop()
-      if (stopped) {
-        // La sesión es de otro juego: se inserta directo con su game_id.
-        await addSessionFor(stopped.gameId, stopped.minutes, stopped.startedAt)
-      }
+      if (stopped) await saveOtherTimer(stopped)
     }
     sessionTimer.start(game.id, game.title)
     haptic()
@@ -401,19 +399,13 @@ export function GameDetail() {
     if (ok) sessionTimer.cancel()
   }
 
-  /** Sesión para un juego distinto al que se está viendo. */
-  async function addSessionFor(gameId: string, minutes: number, startedAt: number) {
+  /** Cronómetro de otro juego o libro: se guarda en su ítem. */
+  async function saveOtherTimer(stopped: NonNullable<ReturnType<typeof sessionTimer.stop>>) {
     try {
-      const { error } = await supabase.from('activity_log').insert({
-        item_id: gameId,
-        duration_minutes: minutes,
-        occurred_at: new Date(startedAt).toISOString(),
-      })
-      if (error) throw error
-      await refreshGame(gameId)
-      showToast(`Sesión de ${minutes} min guardada`)
+      await saveStoppedTimer(stopped)
+      showToast(`${stopped.minutes} min guardados en ${stopped.kind === 'book' ? 'tu lectura' : 'la sesión anterior'}`)
     } catch (err) {
-      showError(err, 'No se pudo guardar la sesión anterior')
+      showError(err, 'No se pudo guardar el cronómetro anterior')
     }
   }
 

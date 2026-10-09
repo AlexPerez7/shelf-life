@@ -12,7 +12,10 @@ import {
   Library,
   MoreVertical,
   RotateCcw,
+  Square,
   StickyNote,
+  Timer,
+  X,
 } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { useToast } from '../../contexts/ToastContext'
@@ -32,6 +35,9 @@ import { FormatPicker } from '../../components/FormatPicker'
 import { BOOK_FORMATS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
 import { useQuickProgress } from '../../hooks/useQuickProgress'
+import { useSaveStoppedTimer } from '../../hooks/useSaveStoppedTimer'
+import { formatElapsed, useNow, useSessionTimer } from '../../contexts/SessionTimerContext'
+import { PageSheet } from '../../components/PageSheet'
 import { sizedCover } from '../../lib/images'
 import { parseDate, todayISO } from '../../lib/dates'
 import {
@@ -186,6 +192,59 @@ function Reading({ item, onSetPage, onSaveTotal }: ReadingProps) {
 }
 
 /**
+ * Cronómetro de lectura: "Leer" lo arranca (sigue contando aunque se cierre
+ * la app); "Terminar" abre la hoja de página con los minutos ya puestos.
+ */
+function ReadingTimer({
+  startedAt,
+  onStart,
+  onStop,
+  onCancel,
+}: {
+  startedAt: number | null
+  onStart: () => void
+  onStop: () => void
+  onCancel: () => void
+}) {
+  const now = useNow(startedAt != null)
+  if (startedAt == null) {
+    return (
+      <button
+        type="button"
+        onClick={onStart}
+        className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
+      >
+        <Timer size={18} /> Leer
+      </button>
+    )
+  }
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-accent/10 p-3 ring-1 ring-accent/30">
+      <Timer size={20} className="shrink-0 animate-pulse text-accent" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-lavender">Leyendo ahora</p>
+        <p className="font-book text-2xl font-bold tabular-nums text-ink">{formatElapsed(now - startedAt)}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onCancel}
+        aria-label="Descartar el cronómetro"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-lavender active:bg-primary-dark/10"
+      >
+        <X size={18} />
+      </button>
+      <button
+        type="button"
+        onClick={onStop}
+        className="flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-white"
+      >
+        <Square size={13} fill="currentColor" /> Terminar
+      </button>
+    </div>
+  )
+}
+
+/**
  * Ficha de un libro, en el tema "papel" del tracker (inspirado en
  * Openreads): portada centrada sobre la misma portada difuminada, la lectura
  * en curso y una acción según el estado (empezar a leer, releer).
@@ -198,6 +257,9 @@ export function BookDetail() {
   const { showToast, showError } = useToast()
   const confirm = useConfirm()
   const quick = useQuickProgress()
+  const sessionTimer = useSessionTimer()
+  const saveStoppedTimer = useSaveStoppedTimer()
+  const [pageMinutes, setPageMinutes] = useState<number | null>(null)
 
   const item = items.find((i) => i.id === id)
   const [statusOpen, setStatusOpen] = useState(false)
@@ -247,6 +309,49 @@ export function BookDetail() {
 
   // Página actual (con minutos opcionales): misma lógica que el inicio.
   const setPage = (page: number, minutes: number | null) => quick.setPage(current, page, minutes)
+
+  const timerHere = sessionTimer.timer?.gameId === current.id ? sessionTimer.timer : null
+
+  /** Arranca el cronómetro de lectura; si había otro corriendo, se guarda antes. */
+  async function startTimer() {
+    const other = sessionTimer.timer
+    if (other && other.gameId !== current.id) {
+      const ok = await confirm({
+        title: 'Ya hay un cronómetro corriendo',
+        message: `Se está midiendo ${other.kind === 'book' ? 'la lectura' : 'una sesión'} de ${other.title}. ¿Detenerlo (se guarda) y empezar a leer este libro?`,
+        confirmLabel: 'Detener y empezar',
+      })
+      if (!ok) return
+      const stopped = sessionTimer.stop()
+      if (stopped) {
+        try {
+          await saveStoppedTimer(stopped)
+        } catch (err) {
+          showError(err, 'No se pudo guardar el cronómetro anterior')
+        }
+      }
+    }
+    haptic()
+    sessionTimer.start(current.id, current.title, 'book')
+    if (current.status !== 'in_progress') save(statusChanges(current, 'in_progress', todayISO()))
+  }
+
+  function stopTimer() {
+    const stopped = sessionTimer.stop()
+    if (!stopped) return
+    haptic([10, 40, 10])
+    setPageMinutes(stopped.minutes)
+  }
+
+  async function cancelTimer() {
+    const ok = await confirm({
+      title: '¿Descartar el cronómetro?',
+      message: 'El tiempo medido no se va a guardar.',
+      confirmLabel: 'Descartar',
+      danger: true,
+    })
+    if (ok) sessionTimer.cancel()
+  }
 
   async function startReading() {
     haptic()
@@ -424,6 +529,15 @@ export function BookDetail() {
               </button>
             )}
 
+            {(showReading || timerHere) && (
+              <ReadingTimer
+                startedAt={timerHere?.startedAt ?? null}
+                onStart={startTimer}
+                onStop={stopTimer}
+                onCancel={cancelTimer}
+              />
+            )}
+
             {showReading && (
               <Reading
                 key={current.progress}
@@ -596,6 +710,19 @@ export function BookDetail() {
             />
           )}
         </BottomSheet>
+        <PageSheet
+          book={pageMinutes != null ? current : null}
+          minutes={pageMinutes}
+          onClose={() => {
+            // Cerrar sin guardar no pierde el tiempo leído.
+            if (pageMinutes) setPage(current.progress, pageMinutes)
+            setPageMinutes(null)
+          }}
+          onSave={(page, minutes) => {
+            setPageMinutes(null)
+            setPage(page, minutes)
+          }}
+        />
         <CoverPicker
           item={current}
           open={coverOpen}

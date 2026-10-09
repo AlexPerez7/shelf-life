@@ -2,24 +2,29 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react'
 
 /**
- * Cronómetro de sesión de juego. Se guarda en localStorage (solo la hora de
+ * Cronómetro de sesión: de juego o de lectura (uno a la vez). Se guarda en localStorage (solo la hora de
  * inicio), así que sigue contando aunque se cierre la PWA o se apague la
  * pantalla: al volver, el tiempo transcurrido se calcula de nuevo.
  * Es una comodidad por dispositivo; la sesión en sí se guarda en Supabase al
  * detenerlo.
  */
 interface RunningTimer {
+  /** Id del ítem (juego o libro); se llama así por compatibilidad con lo guardado. */
   gameId: string
+  /** Qué se está midiendo (los cronómetros viejos no lo tienen: son juegos). */
+  kind?: TimerKind
   title: string
   /** epoch ms */
   startedAt: number
 }
 
+export type TimerKind = 'game' | 'book'
+
 interface SessionTimerValue {
   timer: RunningTimer | null
-  start: (gameId: string, title: string) => void
+  start: (gameId: string, title: string, kind?: TimerKind) => void
   /** Detiene y devuelve los minutos transcurridos (mínimo 1). */
-  stop: () => { gameId: string; minutes: number; startedAt: number } | null
+  stop: () => { gameId: string; kind: TimerKind; minutes: number; startedAt: number } | null
   cancel: () => void
 }
 
@@ -61,8 +66,8 @@ export function SessionTimerProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
-  const start = useCallback((gameId: string, title: string) => {
-    const t = { gameId, title, startedAt: Date.now() }
+  const start = useCallback((gameId: string, title: string, kind: TimerKind = 'game') => {
+    const t = { gameId, title, kind, startedAt: Date.now() }
     save(t)
     setTimer(t)
   }, [])
@@ -80,6 +85,7 @@ export function SessionTimerProvider({ children }: { children: ReactNode }) {
     const elapsed = Math.min(Date.now() - current.startedAt, MAX_DURATION_MS)
     return {
       gameId: current.gameId,
+      kind: current.kind ?? 'game',
       startedAt: current.startedAt,
       minutes: Math.max(1, Math.round(elapsed / 60000)),
     }

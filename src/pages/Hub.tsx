@@ -14,7 +14,8 @@ import { useUpcoming } from '../hooks/useUpcoming'
 import { UpcomingEpisodes } from '../trackers/pantalla/UpcomingEpisodes'
 import { PageContainer } from '../components/PageContainer'
 import { GameThumb } from '../components/GameThumb'
-import { BottomSheet } from '../components/BottomSheet'
+import { PageSheet } from '../components/PageSheet'
+import { useSaveStoppedTimer } from '../hooks/useSaveStoppedTimer'
 import { Skeleton } from '../components/Skeleton'
 import { asset } from '../lib/appUrl'
 import { haptic } from '../lib/haptics'
@@ -29,7 +30,6 @@ import {
   mediaTypeLabels,
   progressKind,
 } from '../lib/media'
-import { ensureSession, supabase } from '../lib/supabaseClient'
 import { gamesPaths } from '../trackers/juegos/paths'
 import { listPaths } from '../lib/listPaths'
 import { trackers, trackerIds, type TrackerId } from '../trackers/trackers'
@@ -199,84 +199,6 @@ function NowCard({ tracker, to, cover, icon, kicker, title, progress, pct, actio
 const actionClass =
   'flex min-h-11 items-center gap-1 rounded-full bg-accent px-3.5 text-sm font-semibold text-background transition-transform active:scale-95 disabled:opacity-50'
 
-/** Hoja para anotar la página de un libro sin entrar a su ficha. */
-function PageSheet({
-  book,
-  onClose,
-  onSave,
-}: {
-  book: Item | null
-  onClose: () => void
-  onSave: (page: number, minutes: number | null) => void
-}) {
-  return (
-    <BottomSheet open={book != null} onClose={onClose} title={book?.title ?? 'Página'}>
-      {book && <PageForm key={book.id} book={book} onSave={onSave} />}
-    </BottomSheet>
-  )
-}
-
-function PageForm({ book, onSave }: { book: Item; onSave: (page: number, minutes: number | null) => void }) {
-  const [page, setPage] = useState(String(book.progress || ''))
-  const [minutes, setMinutes] = useState('')
-  const total = book.progress_total
-  const n = Number(page)
-  const valid = page !== '' && Number.isInteger(n) && n >= 0 && (total == null || n <= total) && n !== book.progress
-  const inputClass =
-    'w-full rounded-xl bg-background px-3 py-2.5 text-ink ring-1 ring-primary-dark/40 focus:outline-none focus:ring-2 focus:ring-accent'
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (!valid) return
-        const m = Number(minutes)
-        onSave(n, Number.isInteger(m) && m > 0 ? m : null)
-      }}
-      data-tracker="libros"
-    >
-      <p className="mb-3 text-sm text-lavender">
-        Vas en la página {book.progress}
-        {total ? ` de ${total}` : ''}.
-      </p>
-      <div className="flex gap-2">
-        <label className="block flex-1">
-          <span className="mb-1 block text-xs text-lavender">Voy en la página</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            autoFocus
-            min={0}
-            max={total ?? undefined}
-            value={page}
-            onChange={(e) => setPage(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="block w-28">
-          <span className="mb-1 block text-xs text-lavender">Minutos</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            value={minutes}
-            onChange={(e) => setMinutes(e.target.value)}
-            placeholder="opc."
-            className={inputClass}
-          />
-        </label>
-      </div>
-      <button
-        type="submit"
-        disabled={!valid}
-        className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-accent font-semibold text-background disabled:opacity-50"
-      >
-        Guardar
-      </button>
-    </form>
-  )
-}
-
 /** Tarjeta de cada tracker: entrar y su resumen. */
 function TrackerCard({ id, line }: { id: TrackerId; line: string }) {
   const { label, Icon, base } = trackers[id]
@@ -304,7 +226,7 @@ function TrackerCard({ id, line }: { id: TrackerId; line: string }) {
  * a cada tracker.
  */
 export function Hub() {
-  const { games, loading: loadingGames, refreshGame } = useGames()
+  const { games, loading: loadingGames } = useGames()
   const { items, loading: loadingMedia } = useMedia()
   const { lists } = useLists()
   const { showToast, showError } = useToast()
@@ -312,6 +234,8 @@ export function Hub() {
   const timer = sessionTimer.timer
   const { advance, setPage } = useQuickProgress()
   const [pageBook, setPageBook] = useState<Item | null>(null)
+  const [pageMinutes, setPageMinutes] = useState<number | null>(null)
+  const saveStoppedTimer = useSaveStoppedTimer()
   // Estrenos de los próximos 7 días de lo que sigues en Pantalla.
   const upcoming = useUpcoming(items)
   const [weekEnd] = useState(() => Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -362,24 +286,34 @@ export function Hub() {
     } satisfies Record<TrackerId, string>
   }, [games, items])
 
-  /** Termina el cronómetro desde el inicio: guarda la sesión del juego. */
+  /**
+   * Termina el cronómetro desde el inicio. Juego: guarda la sesión. Libro:
+   * abre la hoja de página con los minutos ya puestos.
+   */
   async function stopTimer() {
     const stopped = sessionTimer.stop()
     if (!stopped) return
     haptic([10, 40, 10])
+    if (stopped.kind === 'book') {
+      const book = items.find((i) => i.id === stopped.gameId)
+      if (book) {
+        setPageMinutes(stopped.minutes)
+        setPageBook(book)
+        return
+      }
+    }
     try {
-      await ensureSession()
-      const { error } = await supabase.from('activity_log').insert({
-        item_id: stopped.gameId,
-        duration_minutes: stopped.minutes,
-        occurred_at: new Date(stopped.startedAt).toISOString(),
-      })
-      if (error) throw error
-      await refreshGame(stopped.gameId)
+      await saveStoppedTimer(stopped)
       showToast(`Sesión de ${stopped.minutes} min registrada`)
     } catch (err) {
       showError(err, 'No se pudo guardar la sesión')
     }
+  }
+
+  /** Empieza a leer: cronómetro de lectura (si hay otro corriendo, no se ofrece). */
+  function startReading(book: Item) {
+    haptic()
+    sessionTimer.start(book.id, book.title, 'book')
   }
 
   function renderEntry(entry: NowEntry) {
@@ -453,9 +387,30 @@ export function Hub() {
         pct={pct}
         action={
           kind === 'pages' ? (
-            <button type="button" onClick={() => setPageBook(i)} className={actionClass}>
-              <BookOpen size={14} /> Página
-            </button>
+            timer?.gameId === i.id ? (
+              <button type="button" onClick={stopTimer} className={actionClass}>
+                <Square size={13} fill="currentColor" /> Terminar
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPageMinutes(null)
+                    setPageBook(i)
+                  }}
+                  aria-label={`Anotar la página de ${i.title}`}
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-accent ring-1 ring-primary-dark/40 active:bg-primary-dark/20"
+                >
+                  <BookOpen size={17} />
+                </button>
+                {!timer && (
+                  <button type="button" onClick={() => startReading(i)} className={actionClass}>
+                    <Play size={14} fill="currentColor" /> Leer
+                  </button>
+                )}
+              </div>
+            )
           ) : (
             <button type="button" onClick={() => advance(i)} className={actionClass}>
               {kind === 'none' ? (
@@ -540,10 +495,17 @@ export function Hub() {
 
       <PageSheet
         book={pageBook}
-        onClose={() => setPageBook(null)}
+        minutes={pageMinutes}
+        onClose={() => {
+          // Si se cierra sin guardar después del cronómetro, el tiempo no se pierde.
+          if (pageBook && pageMinutes) setPage(pageBook, pageBook.progress, pageMinutes)
+          setPageBook(null)
+          setPageMinutes(null)
+        }}
         onSave={async (page, minutes) => {
           const book = pageBook
           setPageBook(null)
+          setPageMinutes(null)
           if (book) await setPage(book, page, minutes)
         }}
       />
