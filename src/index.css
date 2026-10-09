@@ -20,8 +20,34 @@
   --color-accent: #38bdf8;
 }
 
+/* Tarjeta de Libros en el inicio (fondo oscuro): versión clara del verde. */
 [data-tracker='libros'] {
-  --color-accent: #f2b25c;
+  --color-accent: #5cc8b8;
+}
+
+/* Tracker de Libros: tema claro "papel y tinta", inspirado en Openreads.
+   Se activa en <body> mientras se está dentro del tracker (ver
+   BooksTracker), así también cubre el fondo, las hojas inferiores y los
+   avisos. Como todo usa estos tokens, el resto de la UI se adapta sola. */
+body[data-theme='libros'] {
+  color-scheme: light;
+  --color-background: #f6f2e9;
+  --color-background-surface: #fffcf5;
+  --color-ink: #2a2620;
+  --color-lavender: #6f665a;
+  --color-primary: #1f6f66;
+  --color-primary-dark: #5b7f78;
+  --color-primary-darker: #0f2f2b;
+  --color-accent: #23857a;
+  --color-star: #e2a03f;
+  --color-error: #c2413b;
+  --color-warning: #b7791f;
+}
+
+body[data-theme='libros'] .font-book,
+body[data-theme='libros'] h1,
+body[data-theme='libros'] h2 {
+  font-family: 'Lora Variable', Georgia, serif;
 }
 
 /* Márgenes seguros (notch, isla dinámica, indicador de inicio de iOS). */

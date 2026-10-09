@@ -79,7 +79,7 @@ export function MediaCoverCard({ item, onClick, onStatusClick }: MediaCoverCardP
         onClick={() => onStatusClick?.(item)}
         disabled={!onStatusClick}
         aria-label={`Estado: ${statusLabel}. Cambiar`}
-        className={`absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full shadow after:absolute after:-inset-1.5 after:content-[''] ${itemStatusColor(item.status)}`}
+        className={`absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full shadow after:absolute after:-inset-1.5 after:content-[''] ${itemStatusColor(item.status, sectionForType(type))}`}
       >
         <StatusIcon size={15} />
       </button>

@@ -12,9 +12,9 @@ El inicio (`/`) es un lanzador desde el que se entra a cada tracker. Cada uno vi
 
 - **Juegos** (`/juegos`, `src/trackers/juegos/`): biblioteca, descubrir, listas, estadísticas, diario e importación de Steam.
 - **Pantalla** (`/pantalla`, `src/trackers/pantalla/`): películas, series y anime.
-- **Libros** (`/libros`, `src/trackers/libros/`): lecturas por páginas.
+- **Libros** (`/libros`, `src/trackers/libros/`): lecturas por páginas, con tema claro propio (papel, verde azulado y serif Lora, inspirado en Openreads), listas Leyendo / Por leer / Leídos / Abandonados y vista de lista o portadas.
 
-Pantalla y Libros comparten por ahora las pantallas genéricas de `src/pages/` (`MediaLibrary`, `AddMedia`, `MediaDetail`); cada tracker puede reemplazarlas por un diseño propio sin tocar a los demás. Los datos de los tres están en la misma tabla `items`.
+Pantalla y Libros comparten por ahora el alta y el detalle genéricos de `src/pages/` (`AddMedia`, `MediaDetail`; Pantalla también `MediaLibrary`); cada tracker puede reemplazarlas por un diseño propio sin tocar a los demás. Los datos de los tres están en la misma tabla `items`.
 
 ## Stack
 

@@ -70,8 +70,8 @@ export const itemStatusIcons: Record<ItemStatus, LucideIcon> = {
   dropped: Ban,
 }
 
-export function itemStatusColor(status: ItemStatus) {
-  return statusColors[gameStatusFromItem(status)]
+export function itemStatusColor(status: ItemStatus, section?: MediaSection) {
+  return section?.statusColors?.[status] ?? statusColors[gameStatusFromItem(status)]
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +95,8 @@ export interface MediaSection {
   notesPlaceholder: string
   /** Etiqueta de la barra inferior para lo terminado ("Vistos", "Leídos"). */
   completedPlural: string
+  /** Colores de estado propios (si no, los de juegos). */
+  statusColors?: Record<ItemStatus, string>
 }
 
 export const mediaSections: Record<MediaSectionId, MediaSection> = {
@@ -139,6 +141,16 @@ export const mediaSections: Record<MediaSectionId, MediaSection> = {
       'Agrega libros para llevar lo que leíste, lo que estás leyendo y tu pila de pendientes.',
     notesPlaceholder: 'Citas, ideas, en qué capítulo vas...',
     completedPlural: 'Leídos',
+    // Paleta clásica de las apps de lectura: leyendo ámbar, leído verde,
+    // para después celeste, abandonado rosado.
+    statusColors: {
+      wishlist: 'bg-sky-100 text-sky-800 ring-1 ring-sky-300',
+      planned: 'bg-stone-200 text-stone-700',
+      in_progress: 'bg-amber-200 text-amber-900',
+      paused: 'bg-orange-100 text-orange-800 ring-1 ring-orange-200',
+      completed: 'bg-emerald-600 text-white',
+      dropped: 'bg-rose-100 text-rose-800 ring-1 ring-rose-200',
+    },
   },
 }
 

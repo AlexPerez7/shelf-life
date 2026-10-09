@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
-import { itemStatusColor, itemStatusIcons, itemStatuses } from '../lib/media'
+import { itemStatusColor, itemStatusIcons, itemStatuses, type MediaSection } from '../lib/media'
 import type { ItemStatus } from '../types/item'
 
 interface ItemStatusSheetProps {
@@ -10,6 +10,8 @@ interface ItemStatusSheetProps {
   onChange: (status: ItemStatus) => void
   /** Etiquetas de la sección ("Viendo", "Leyendo"...). */
   labels: Record<ItemStatus, string>
+  /** Sección dueña de los estados (para sus colores propios). */
+  section?: MediaSection
   title?: string
 }
 
@@ -20,6 +22,7 @@ export function ItemStatusSheet({
   value,
   onChange,
   labels,
+  section,
   title = 'Cambiar estado',
 }: ItemStatusSheetProps) {
   return (
@@ -38,7 +41,7 @@ export function ItemStatusSheet({
               }`}
             >
               <span
-                className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${itemStatusColor(s)}`}
+                className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${itemStatusColor(s, section)}`}
               >
                 <StatusIcon size={18} />
               </span>

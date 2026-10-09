@@ -358,68 +358,109 @@ export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
       ? Math.min(100, Math.round((current.progress / current.progress_total) * 100))
       : null
 
+  /** Volver y menú (editar, eliminar), sobre la portada. */
+  const heroButtons = (
+    <div
+      className="absolute inset-x-4 flex items-start justify-between"
+      style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+    >
+      <button
+        onClick={goBack}
+        aria-label="Volver"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-background/70 text-ink backdrop-blur"
+      >
+        <X size={20} />
+      </button>
+      <div className="relative">
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Más opciones"
+          aria-expanded={menuOpen}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-background/70 text-ink backdrop-blur"
+        >
+          <MoreVertical size={20} />
+        </button>
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+            <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl bg-background-surface p-1 shadow-lg ring-1 ring-primary-dark/30">
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  setEditOpen(true)
+                }}
+                className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-ink active:bg-primary-dark/10"
+              >
+                Editar datos
+              </button>
+              <button
+                onClick={handleDelete}
+                className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-error active:bg-error/10"
+              >
+                Eliminar
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+
   return (
     <>
-      <div className="relative h-72 w-full overflow-hidden bg-primary-dark/20 md:h-96">
-        <GameThumb
-          src={current.cover_url}
-          alt={current.title}
-          eager
-          className="h-full w-full object-cover"
-          placeholderClassName="text-5xl"
-          icon={TypeIcon}
-        />
+      {kind === 'pages' ? (
+        // Libros: la portada centrada, con sombra, sobre la misma portada
+        // difuminada (como en Openreads). Recortarla a todo el ancho, como en
+        // películas, corta el título y el autor impresos en la tapa.
         <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(to top, var(--color-background) 0%, transparent 55%)',
-          }}
-        />
-        <div
-          className="absolute inset-x-4 flex items-start justify-between"
-          style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+          className="relative w-full overflow-hidden pb-6"
+          style={{ paddingTop: 'calc(4.5rem + env(safe-area-inset-top))' }}
         >
-          <button
-            onClick={goBack}
-            aria-label="Volver"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-background/70 text-ink backdrop-blur"
-          >
-            <X size={20} />
-          </button>
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Más opciones"
-              aria-expanded={menuOpen}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-background/70 text-ink backdrop-blur"
-            >
-              <MoreVertical size={20} />
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl bg-background-surface p-1 shadow-lg ring-1 ring-primary-dark/30">
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false)
-                      setEditOpen(true)
-                    }}
-                    className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-ink active:bg-primary-dark/10"
-                  >
-                    Editar datos
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-error active:bg-error/10"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </>
-            )}
+          {current.cover_url && (
+            <img
+              src={current.cover_url}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full scale-125 object-cover opacity-50 blur-2xl"
+            />
+          )}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to top, var(--color-background) 5%, transparent 85%)',
+            }}
+          />
+          <div className="relative mx-auto aspect-[2/3] w-40 overflow-hidden rounded-md bg-primary-dark/20 shadow-2xl shadow-black/40 md:w-48">
+            <GameThumb
+              src={current.cover_url}
+              alt={current.title}
+              eager
+              className="h-full w-full object-cover"
+              placeholderClassName="text-5xl"
+              icon={TypeIcon}
+            />
           </div>
+          {heroButtons}
         </div>
-      </div>
+      ) : (
+        <div className="relative h-72 w-full overflow-hidden bg-primary-dark/20 md:h-96">
+          <GameThumb
+            src={current.cover_url}
+            alt={current.title}
+            eager
+            className="h-full w-full object-cover"
+            placeholderClassName="text-5xl"
+            icon={TypeIcon}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to top, var(--color-background) 0%, transparent 55%)',
+            }}
+          />
+          {heroButtons}
+        </div>
+      )}
 
       <PageContainer belowHero>
         <div className="mx-auto md:max-w-xl">
@@ -445,7 +486,7 @@ export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
           <div className="mb-4 mt-4 flex items-center gap-2">
             <button
               onClick={() => setStatusOpen(true)}
-              className={`flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-medium ${itemStatusColor(current.status)}`}
+              className={`flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-medium ${itemStatusColor(current.status, section)}`}
             >
               {statusLabels[current.status]}
               <ChevronDown size={14} />
@@ -481,6 +522,7 @@ export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
             value={current.status}
             onChange={handleStatus}
             labels={statusLabels}
+            section={section}
           />
 
           <div className="flex flex-col gap-4">

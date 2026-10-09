@@ -215,6 +215,7 @@ export function MediaLibrary({ sectionId }: { sectionId: MediaSectionId }) {
             value={statusItem?.status ?? 'planned'}
             onChange={handleQuickStatus}
             labels={section.statusLabels}
+            section={section}
             title={statusItem?.title ?? 'Cambiar estado'}
           />
         </>

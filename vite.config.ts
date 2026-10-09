@@ -66,7 +66,7 @@ export default defineConfig({
       workbox: {
         // Assets estáticos precacheados. Los datos de Supabase NUNCA pasan por
         // el service worker (siempre red).
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         runtimeCaching: [
           {
             // Portadas de IGDB y de Steam: no cambian para una misma URL, así

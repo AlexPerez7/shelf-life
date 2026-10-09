@@ -15,7 +15,7 @@ function Star({ fillPercent }: { fillPercent: number }) {
         <path d={STAR_PATH} />
       </svg>
       <div className="absolute inset-0 overflow-hidden" style={{ width: `${fillPercent}%` }}>
-        <svg viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8 text-accent">
+        <svg viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8 text-[var(--color-star,var(--color-accent))]">
           <path d={STAR_PATH} />
         </svg>
       </div>
