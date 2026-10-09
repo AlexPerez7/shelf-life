@@ -49,6 +49,7 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
 - Estado "Deseado" (wishlist) separado de "Pendiente", con precios de tiendas
 - Biblioteca en vista de lista o de portadas, filtro de favoritos y cambio rápido de estado desde la tarjeta
 - Cambiar portada (libros, películas y series): tocar la portada en el detalle (o ⋮ → Cambiar portada) muestra portadas alternativas de varias fuentes para elegir, o se pega la URL de una imagen
+- Exportar los datos desde el inicio ("Tu cuenta"): respaldo completo en JSON (biblioteca, actividad, listas y metas) o la biblioteca en CSV; en el teléfono se entrega con el menú de compartir
 - Metas del año, una por tracker (juegos terminados, títulos vistos, libros leídos): arriba de las estadísticas de cada tracker, con avance y si vas al día según el calendario, y en el inicio
 - Estadísticas: totales, tiempo estimado para terminar el backlog (IGDB) y a tu ritmo, horas por mes, distribución por estado, destacados y resumen del año para compartir
 - PWA instalable (manifest, ícono, service worker) y responsive (mobile-first, con ajustes para tablet)
