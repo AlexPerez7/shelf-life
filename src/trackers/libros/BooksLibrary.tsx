@@ -1,244 +1,173 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { BookOpen, LayoutGrid, List, Search, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, Library, Rows3, Search, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
-import { useToast } from '../../contexts/ToastContext'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
-import { MediaCoverCard } from '../../components/MediaCoverCard'
-import { ItemStatusSheet } from '../../components/ItemStatusSheet'
-import { GameThumb } from '../../components/GameThumb'
 import { Skeleton } from '../../components/Skeleton'
-import { haptic } from '../../lib/haptics'
-import { formatDate, todayISO } from '../../lib/dates'
-import { itemStatusColor, mediaSections, statusChanges } from '../../lib/media'
-import { bookListParam, bookLists, isBookList, type BookList } from './bookLists'
-import type { Item, ItemStatus } from '../../types/item'
+import { mediaSections } from '../../lib/media'
+import { Bookcase, Shelf, ShelfUnit, type ShelfMode } from './Bookshelf'
+import { buildShelves, findShelf, shelfParam } from './bookLists'
+import type { Item } from '../../types/item'
 
 const section = mediaSections.libros
-const VIEW_KEY = 'shelflife_books_view'
-type ViewMode = 'lista' | 'portadas'
+const MODE_KEY = 'shelflife_books_shelf_mode'
 
-function readView(): ViewMode {
+function readMode(): ShelfMode {
   try {
-    return localStorage.getItem(VIEW_KEY) === 'portadas' ? 'portadas' : 'lista'
+    return localStorage.getItem(MODE_KEY) === 'lomos' ? 'lomos' : 'portadas'
   } catch {
-    return 'lista'
+    return 'portadas'
   }
 }
 
-/** Puntaje 1-10 como 5 estrellas (con medias), solo lectura. */
-function MiniStars({ rating }: { rating: number }) {
+/** Franja de números del librero (como en Otium Library). */
+function Stats({ books }: { books: Item[] }) {
+  const read = books.filter((b) => b.status === 'completed').length
+  const reading = books.filter((b) => b.status === 'in_progress').length
+  const want = books.filter((b) => b.status === 'wishlist' || b.status === 'planned').length
+  const rated = books.filter((b) => b.rating != null)
+  const avg = rated.length ? rated.reduce((s, b) => s + (b.rating ?? 0), 0) / rated.length / 2 : null
+  const pages = books.reduce(
+    (s, b) => s + (b.status === 'completed' ? (b.progress_total ?? b.progress) : b.progress),
+    0
+  )
+
+  const cells: { value: string; label: string; extra?: string }[] = [
+    { value: String(books.length), label: 'Libros' },
+    {
+      value: String(read),
+      label: 'Leídos',
+      extra: books.length ? `${Math.round((read / books.length) * 100)}%` : undefined,
+    },
+    { value: String(reading), label: 'Leyendo' },
+    { value: String(want), label: 'Por leer' },
+    { value: avg != null ? avg.toFixed(1) : '—', label: 'Puntaje ★' },
+    { value: pages.toLocaleString(), label: 'Páginas' },
+  ]
+
   return (
-    <div className="flex gap-0.5" aria-label={`${rating / 2} de 5 estrellas`}>
-      {Array.from({ length: 5 }).map((_, i) => {
-        const fill = Math.max(0, Math.min(2, rating - i * 2)) * 50
-        return (
-          <span key={i} className="relative h-3.5 w-3.5">
-            <svg viewBox="0 0 24 24" className="absolute inset-0 h-full w-full fill-primary-dark/25">
-              <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" />
-            </svg>
-            <span className="absolute inset-0 overflow-hidden" style={{ width: `${fill}%` }}>
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-[var(--color-star)]">
-                <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" />
-              </svg>
-            </span>
-          </span>
-        )
-      })}
+    <div className="scrollbar-hide -mx-4 mb-4 flex overflow-x-auto px-4">
+      <div className="flex divide-x divide-primary-dark/15 rounded-2xl bg-background-surface shadow-sm ring-1 ring-primary-dark/15">
+        {cells.map((c) => (
+          <div key={c.label} className="flex min-w-[5.5rem] flex-col items-center px-3 py-2.5">
+            <p className="font-book flex items-baseline gap-1 text-xl font-bold text-accent">
+              {c.value}
+              {c.extra && (
+                <span className="rounded-full bg-accent/10 px-1.5 font-sans text-[10px] font-semibold">
+                  {c.extra}
+                </span>
+              )}
+            </p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-lavender">{c.label}</p>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
-function percentOf(item: Item) {
-  return item.progress_total
-    ? Math.min(100, Math.round((item.progress / item.progress_total) * 100))
-    : null
-}
-
-/** Fila de libro, al estilo de Openreads: portada, datos y estado a la derecha. */
-function BookRow({
-  item,
-  onOpen,
-  onStatus,
-}: {
-  item: Item
-  onOpen: () => void
-  onStatus: () => void
-}) {
-  const percent = percentOf(item)
-  const reading = item.status === 'in_progress' || item.status === 'paused'
-  return (
-    <li className="relative">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex w-full gap-3 rounded-2xl bg-background-surface p-3 pr-4 text-left shadow-sm ring-1 ring-primary-dark/15 transition-transform active:scale-[0.99]"
-      >
-        <div className="h-28 w-[4.5rem] flex-shrink-0 overflow-hidden rounded-md shadow-md shadow-black/20">
-          <GameThumb
-            src={item.cover_url}
-            alt=""
-            className="h-full w-full object-cover"
-            placeholderClassName="text-2xl"
-            icon={BookOpen}
-          />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <p className="font-book line-clamp-2 pr-20 text-[15px] font-semibold leading-snug text-ink">
-            {item.title}
-          </p>
-          {item.metadata.authors?.length ? (
-            <p className="truncate text-sm text-lavender">{item.metadata.authors.join(', ')}</p>
-          ) : null}
-          {item.release_date && (
-            <p className="text-xs text-lavender/80">{item.release_date.slice(0, 4)}</p>
-          )}
-          <div className="mt-auto pt-1.5">
-            {reading && percent != null ? (
-              <div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-primary-dark/20">
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${percent}%` }} />
-                </div>
-                <p className="mt-1 text-xs text-lavender">
-                  {percent}% · pág. {item.progress} de {item.progress_total}
-                </p>
-              </div>
-            ) : item.rating ? (
-              <MiniStars rating={item.rating} />
-            ) : null}
-          </div>
-        </div>
-        {item.status === 'completed' && item.date_finished && (
-          <div className="absolute bottom-3 right-4 text-right">
-            <p className="text-[11px] text-lavender">Leído</p>
-            <p className="text-xs font-semibold tabular-nums text-ink">{formatDate(item.date_finished)}</p>
-          </div>
-        )}
-      </button>
-      <button
-        type="button"
-        onClick={onStatus}
-        aria-label={`Estado: ${section.statusLabels[item.status]}. Cambiar`}
-        className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-semibold after:absolute after:-inset-2 after:content-[''] ${itemStatusColor(item.status, section)}`}
-      >
-        {section.statusLabels[item.status]}
-      </button>
-    </li>
-  )
-}
-
-function sortFor(list: BookList, items: Item[]) {
-  const by = (key: (i: Item) => string | null) =>
-    [...items].sort((a, b) => (key(b) ?? '').localeCompare(key(a) ?? ''))
-  if (list === 'leyendo') return by((i) => i.updated_at)
-  if (list === 'leidos') return by((i) => i.date_finished ?? i.updated_at)
-  return items // created_at desc, como llegan de la DB
-}
-
-/** Biblioteca del tracker de libros. */
+/** El librero: la única vista de la biblioteca de libros. */
 export function BooksLibrary() {
   const navigate = useNavigate()
-  const { items, loading, error, updateItem } = useMedia()
-  const { showToast, showError } = useToast()
+  const { items, loading, error } = useMedia()
   const books = useMemo(() => items.filter((i) => i.media_type === 'book'), [items])
 
   const [params, setParams] = useSearchParams()
-  const listParam = params.get(bookListParam)
-  const list: BookList = isBookList(listParam) ? listParam : 'todos'
+  const openShelfId = params.get(shelfParam)
   const search = params.get('q') ?? ''
   const [searchOpen, setSearchOpen] = useState(search !== '')
 
-  function setParam(key: string, value: string, defaultValue: string) {
+  function setParam(key: string, value: string | null) {
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev)
-        if (value === defaultValue) next.delete(key)
+        if (value == null || value === '') next.delete(key)
         else next.set(key, value)
         return next
       },
-      { replace: true }
+      { replace: key === 'q' }
     )
   }
 
-  const [view, setView] = useState<ViewMode>(readView)
-  function toggleView() {
-    const next = view === 'lista' ? 'portadas' : 'lista'
-    setView(next)
+  const [mode, setMode] = useState<ShelfMode>(readMode)
+  function changeMode(next: ShelfMode) {
+    setMode(next)
     try {
-      localStorage.setItem(VIEW_KEY, next)
+      localStorage.setItem(MODE_KEY, next)
     } catch {
       /* preferencia no persistida */
     }
   }
 
-  const counts = useMemo(() => {
-    const c = {} as Record<BookList, number>
-    for (const l of bookLists) {
-      c[l.id] = l.statuses ? books.filter((b) => l.statuses!.includes(b.status)).length : books.length
-    }
-    return c
-  }, [books])
-
-  const shown = useMemo(() => {
-    const statuses = bookLists.find((l) => l.id === list)?.statuses
+  const units = useMemo(() => buildShelves(books), [books])
+  const openShelf = useMemo(
+    () => (openShelfId ? findShelf(books, openShelfId) : null),
+    [books, openShelfId]
+  )
+  const results = useMemo(() => {
     const query = search.trim().toLowerCase()
-    const filtered = books.filter(
+    if (!query) return null
+    return books.filter(
       (b) =>
-        (!statuses || statuses.includes(b.status)) &&
-        (query === '' ||
-          b.title.toLowerCase().includes(query) ||
-          (b.metadata.authors ?? []).some((a) => a.toLowerCase().includes(query)))
+        b.title.toLowerCase().includes(query) ||
+        (b.metadata.authors ?? []).some((a) => a.toLowerCase().includes(query))
     )
-    return sortFor(list, filtered)
-  }, [books, list, search])
+  }, [books, search])
 
-  const [statusItem, setStatusItem] = useState<Item | null>(null)
-  const closeStatusSheet = useCallback(() => setStatusItem(null), [])
-  async function handleQuickStatus(status: ItemStatus) {
-    const item = statusItem
-    setStatusItem(null)
-    if (!item || item.status === status) return
-    haptic()
-    try {
-      await updateItem(item.id, statusChanges(item, status, todayISO()))
-      showToast(`${item.title}: ${section.statusLabels[status]}`)
-    } catch (err) {
-      showError(err, 'No se pudo cambiar el estado')
-    }
-  }
-
+  const openBook = (item: Item) => navigate(section.detailPath(item.id))
   const isEmpty = !loading && !error && books.length === 0
+
+  const modeToggle = (
+    <div
+      role="group"
+      aria-label="Cómo se ven los libros"
+      className="flex rounded-full bg-background-surface p-0.5 shadow-sm ring-1 ring-primary-dark/15"
+    >
+      {(
+        [
+          ['portadas', Library, 'Portadas'],
+          ['lomos', Rows3, 'Lomos'],
+        ] as const
+      ).map(([m, Icon, label]) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => changeMode(m)}
+          aria-pressed={mode === m}
+          className={`flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium ${
+            mode === m ? 'bg-accent text-white' : 'text-lavender'
+          }`}
+        >
+          <Icon size={15} />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
 
   return (
     <PageContainer>
       <TrackerBar tracker="libros" />
 
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold text-ink">Mis libros</h1>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div>
+          <h1 className="text-3xl font-bold text-ink">Mi librero</h1>
+          <p className="text-sm text-lavender">Tu colección de lecturas</p>
+        </div>
         {!isEmpty && (
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                if (searchOpen) setParam('q', '', '')
-                setSearchOpen((v) => !v)
-              }}
-              aria-label={searchOpen ? 'Cerrar búsqueda' : 'Buscar'}
-              aria-pressed={searchOpen}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-primary-dark/15"
-            >
-              {searchOpen ? <X size={20} /> : <Search size={20} />}
-            </button>
-            <button
-              type="button"
-              onClick={toggleView}
-              aria-label={view === 'lista' ? 'Ver como portadas' : 'Ver como lista'}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-primary-dark/15"
-            >
-              {view === 'lista' ? <LayoutGrid size={20} /> : <List size={20} />}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (searchOpen) setParam('q', null)
+              setSearchOpen((v) => !v)
+            }}
+            aria-label={searchOpen ? 'Cerrar búsqueda' : 'Buscar'}
+            aria-pressed={searchOpen}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-primary-dark/15"
+          >
+            {searchOpen ? <X size={20} /> : <Search size={20} />}
+          </button>
         )}
       </div>
 
@@ -248,101 +177,97 @@ export function BooksLibrary() {
           autoFocus
           enterKeyHint="search"
           value={search}
-          onChange={(e) => setParam('q', e.target.value, '')}
+          onChange={(e) => setParam('q', e.target.value)}
           placeholder="Título o autor..."
-          aria-label="Buscar en tus libros"
+          aria-label="Buscar en tu librero"
           className="mb-3 w-full rounded-xl bg-background-surface px-4 py-2.5 text-sm text-ink ring-1 ring-primary-dark/25 [&::-webkit-search-cancel-button]:hidden focus:outline-none focus:ring-2 focus:ring-primary md:max-w-sm"
         />
       )}
 
-      {isEmpty ? (
-        <div className="mt-8 flex flex-col items-center rounded-3xl bg-background-surface px-6 py-12 text-center shadow-sm ring-1 ring-primary-dark/15">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10 text-accent">
-            <BookOpen size={30} />
-          </div>
-          <h2 className="text-xl font-semibold text-ink">Tu biblioteca está vacía</h2>
-          <p className="mt-2 max-w-xs text-sm text-lavender">{section.emptyText}</p>
+      {error && <p className="mb-3 text-sm text-error">{error}</p>}
+
+      {loading ? (
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-80 w-full rounded-3xl" />
+        </div>
+      ) : isEmpty ? (
+        <div className="flex flex-col gap-4">
+          <ShelfUnit title="Tu librero está vacío">
+            <Shelf
+              id="vacio"
+              category="Estado"
+              name="Por leer"
+              items={[]}
+              mode={mode}
+              onOpenBook={openBook}
+              emptyText={section.emptyText}
+            />
+          </ShelfUnit>
           <Link
             to={section.addPath}
-            className="mt-6 flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-white"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-white"
           >
             <Search size={18} /> Buscar un libro
           </Link>
         </div>
+      ) : results ? (
+        <>
+          <p className="mb-3 text-sm text-lavender">
+            {results.length === 0
+              ? 'Ningún libro coincide con la búsqueda.'
+              : `${results.length} ${results.length === 1 ? 'libro' : 'libros'}`}
+          </p>
+          {results.length > 0 && <Bookcase items={results} mode={mode} onOpenBook={openBook} />}
+        </>
+      ) : openShelf ? (
+        <>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => (window.history.length > 1 ? navigate(-1) : setParam(shelfParam, null))}
+              className="-ml-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm text-accent active:bg-primary-dark/15"
+            >
+              <ArrowLeft size={16} /> Librero
+            </button>
+            {modeToggle}
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-lavender">{openShelf.category}</p>
+          <h2 className="mb-3 text-2xl font-bold text-ink">
+            {openShelf.name}{' '}
+            <span className="font-sans text-base font-normal text-lavender">· {openShelf.items.length}</span>
+          </h2>
+          {openShelf.items.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-3xl bg-background-surface p-8 text-center ring-1 ring-primary-dark/15">
+              <BookOpen size={28} className="text-lavender" />
+              <p className="text-sm text-lavender">Este estante está vacío.</p>
+            </div>
+          ) : (
+            <Bookcase items={openShelf.items} mode={mode} onOpenBook={openBook} />
+          )}
+        </>
       ) : (
         <>
-          {/* Pestañas subrayadas, como las listas de Openreads. */}
-          <div
-            role="tablist"
-            aria-label="Listas"
-            className="scrollbar-hide -mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-primary-dark/20 px-4"
-          >
-            {bookLists.map((l) => {
-              const active = l.id === list
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setParam(bookListParam, l.id, 'todos')}
-                  className={`relative flex min-h-11 shrink-0 items-center gap-1.5 px-3 text-sm font-medium ${
-                    active ? 'text-accent' : 'text-lavender'
-                  }`}
-                >
-                  {l.label}
-                  <span className="text-xs opacity-70">{counts[l.id]}</span>
-                  {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />}
-                </button>
-              )
-            })}
+          <Stats books={books} />
+          <div className="mb-4 flex justify-end">{modeToggle}</div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {units.map((unit) => (
+              <ShelfUnit key={unit.title} title={unit.title}>
+                {unit.shelves.map((shelf) => (
+                  <Shelf
+                    key={shelf.id}
+                    id={shelf.id}
+                    category={shelf.category}
+                    name={shelf.name}
+                    items={shelf.items}
+                    mode={mode}
+                    onOpenBook={openBook}
+                    onOpenShelf={() => setParam(shelfParam, shelf.id)}
+                  />
+                ))}
+              </ShelfUnit>
+            ))}
           </div>
-
-          {error && <p className="mb-3 text-sm text-error">{error}</p>}
-
-          {loading ? (
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full rounded-2xl" />
-              ))}
-            </div>
-          ) : shown.length === 0 ? (
-            <p className="mt-10 text-center text-sm text-lavender">
-              {search ? 'Ningún libro coincide con la búsqueda.' : 'No hay libros en esta lista.'}
-            </p>
-          ) : view === 'lista' ? (
-            <ul className="flex flex-col gap-3 md:grid md:grid-cols-2">
-              {shown.map((item) => (
-                <BookRow
-                  key={item.id}
-                  item={item}
-                  onOpen={() => navigate(section.detailPath(item.id))}
-                  onStatus={() => setStatusItem(item)}
-                />
-              ))}
-            </ul>
-          ) : (
-            <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4 lg:grid-cols-6">
-              {shown.map((item) => (
-                <MediaCoverCard
-                  key={item.id}
-                  item={item}
-                  onClick={(i) => navigate(section.detailPath(i.id))}
-                  onStatusClick={setStatusItem}
-                />
-              ))}
-            </div>
-          )}
-
-          <ItemStatusSheet
-            open={statusItem != null}
-            onClose={closeStatusSheet}
-            value={statusItem?.status ?? 'planned'}
-            onChange={handleQuickStatus}
-            labels={section.statusLabels}
-            section={section}
-            title={statusItem?.title ?? 'Cambiar estado'}
-          />
         </>
       )}
     </PageContainer>

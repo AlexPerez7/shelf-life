@@ -5,7 +5,7 @@ import '@fontsource-variable/lora'
 import { TrackerNav } from '../../components/TrackerNav'
 import { mediaSections } from '../../lib/media'
 import { BooksLibrary } from './BooksLibrary'
-import { bookListParam, type BookList } from './bookLists'
+import { shelfParam } from './bookLists'
 
 const AddMedia = lazy(() => import('../../pages/AddMedia').then((m) => ({ default: m.AddMedia })))
 const MediaDetail = lazy(() =>
@@ -33,13 +33,14 @@ function useBooksTheme() {
   }, [])
 }
 
-const listLink = (list: BookList) => `${section.libraryPath}?${bookListParam}=${list}`
-const isList = (list: BookList) => (pathname: string, search: URLSearchParams) =>
-  pathname === section.libraryPath && search.get(bookListParam) === list
+/** Estantes a los que lleva la barra inferior. */
+const shelfLink = (shelf: string) => `${section.libraryPath}?${shelfParam}=${shelf}`
+const isShelf = (shelf: string) => (pathname: string, search: URLSearchParams) =>
+  pathname === section.libraryPath && search.get(shelfParam) === shelf
 
 /**
  * Tracker de libros: todo lo que vive bajo /libros. Tiene su propio tema
- * (claro, serif, inspirado en Openreads) y su biblioteca propia; el alta y el
+ * (claro, serif, inspirado en Openreads) y su biblioteca es un librero; el alta y el
  * detalle todavía son las pantallas genéricas, que toman el tema solas.
  */
 export function BooksTracker() {
@@ -58,18 +59,18 @@ export function BooksTracker() {
         left={[
           {
             to: section.libraryPath,
-            label: 'Biblioteca',
+            label: 'Librero',
             Icon: LibraryIcon,
             isActive: (pathname, search) =>
               pathname === section.libraryPath
-                ? !search.get(bookListParam) || search.get(bookListParam) === 'todos'
+                ? !search.get(shelfParam)
                 : pathname.startsWith(`${section.libraryPath}/`) && pathname !== section.addPath,
           },
-          { to: listLink('leyendo'), label: 'Leyendo', Icon: BookOpen, isActive: isList('leyendo') },
+          { to: shelfLink('leyendo'), label: 'Leyendo', Icon: BookOpen, isActive: isShelf('leyendo') },
         ]}
         right={[
-          { to: listLink('por-leer'), label: 'Por leer', Icon: Bookmark, isActive: isList('por-leer') },
-          { to: listLink('leidos'), label: 'Leídos', Icon: BookOpenCheck, isActive: isList('leidos') },
+          { to: shelfLink('por-leer'), label: 'Por leer', Icon: Bookmark, isActive: isShelf('por-leer') },
+          { to: shelfLink('leidos'), label: 'Leídos', Icon: BookOpenCheck, isActive: isShelf('leidos') },
         ]}
         add={{ to: section.addPath, label: 'Agregar libro' }}
       />
