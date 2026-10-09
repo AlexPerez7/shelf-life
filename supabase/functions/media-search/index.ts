@@ -8,7 +8,7 @@
 //     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
 //     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers', ids?: string[], title?: string, author?: string }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[] }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
 //   - con `mode: 'trending'` -> lo que es tendencia esta semana (TMDB) o esta
 //                    temporada (AniList), para "Descubrir" en Pantalla. No
@@ -19,6 +19,12 @@
 //                    `title`/`author` (y `id` si es de Open Library) en Open
 //                    Library (todas sus ediciones), Apple Books y Google
 //                    Books; películas y series por `id` en TMDB.
+//   - con `mode: 'match'` + `titles` (hasta 20 películas, con su año) -> la
+//                    película de TMDB que corresponde a cada título, con el
+//                    detalle, o `null`; en el mismo orden. Para importar de
+//                    Letterboxd.
+//   - con `mode: 'mal'` + `ids` (hasta 50 ids de MyAnimeList) -> el anime de
+//                    AniList de cada uno, con `mal_id`. Para importar de MAL.
 //   - con `id`    -> detalle de un resultado (duración, episodios, sinopsis),
 //                    que se pide al agregar: algunas búsquedas no lo traen.
 //                    Para libros, `source` dice de qué API es el id.
@@ -69,6 +75,8 @@ interface Upcoming {
 }
 
 const MAX_UPCOMING = 40
+const MAX_MATCH = 20
+const MAX_MAL = 50
 
 // ---------------------------------------------------------------------------
 // TMDB
@@ -83,9 +91,14 @@ async function tmdb(path: string, params: Record<string, string> = {}): Promise<
   const isBearer = TMDB_API_KEY.startsWith('eyJ')
   const search = new URLSearchParams({ language: TMDB_LANGUAGE, ...params })
   if (!isBearer) search.set('api_key', TMDB_API_KEY)
-  const res = await fetch(`https://api.themoviedb.org/3${path}?${search}`, {
-    headers: isBearer ? { Authorization: `Bearer ${TMDB_API_KEY}` } : {},
-  })
+  const url = `https://api.themoviedb.org/3${path}?${search}`
+  const headers = isBearer ? { Authorization: `Bearer ${TMDB_API_KEY}` } : {}
+  let res = await fetch(url, { headers })
+  // Límite de pedidos (importaciones grandes): se espera y se reintenta.
+  for (let retry = 1; res.status === 429 && retry <= 2; retry++) {
+    await new Promise((r) => setTimeout(r, 1000 * retry))
+    res = await fetch(url, { headers })
+  }
   if (!res.ok) throw new Error(`Error de TMDB (${res.status})`)
   return res.json()
 }
@@ -181,6 +194,33 @@ async function tmdbDetails(type: 'movie' | 'series', id: string): Promise<MediaR
     if (seasons.length > 0) result.seasons = seasons
   }
   return result
+}
+
+/** Año de una fecha 'YYYY-MM-DD' de TMDB. */
+const yearOf = (date?: string | null) => (date ? Number(date.slice(0, 4)) : null)
+
+/**
+ * La película de TMDB para un título y año (de Letterboxd): primero con ese
+ * año de estreno; si no aparece, sin año, aceptando un año de diferencia
+ * (los estrenos por país varían). `null` si no hay ninguna.
+ */
+async function tmdbMatchMovie(title: string, year: number | null): Promise<MediaResult | null> {
+  let results: any[] = []
+  if (year) {
+    const params = { query: title, include_adult: 'false', primary_release_year: String(year) }
+    results = (await tmdb('/search/movie', params)).results ?? []
+  }
+  if (results.length === 0) {
+    const all = (await tmdb('/search/movie', { query: title, include_adult: 'false' })).results ?? []
+    results = year
+      ? all.filter((r: any) => {
+          const y = yearOf(r.release_date)
+          return y != null && Math.abs(y - year) <= 1
+        })
+      : all
+  }
+  if (results.length === 0) return null
+  return tmdbDetails('movie', String(results[0].id))
 }
 
 // ---------------------------------------------------------------------------
@@ -286,6 +326,19 @@ async function anilistUpcoming(ids: string[]): Promise<Upcoming[]> {
       episode: m.nextAiringEpisode.episode ?? null,
       name: null,
     }))
+}
+
+/** Anime de AniList por id de MyAnimeList (hasta 50 en una consulta). */
+async function anilistByMal(ids: string[]): Promise<(MediaResult & { mal_id: string })[]> {
+  const data = await anilist(
+    `query ($ids: [Int]) {
+      Page(perPage: 50) {
+        media(idMal_in: $ids, type: ANIME) { idMal ${ANILIST_FIELDS} }
+      }
+    }`,
+    { ids: ids.map(Number) }
+  )
+  return (data.Page?.media ?? []).map((m: any) => ({ ...anilistToResult(m), mal_id: String(m.idMal) }))
 }
 
 async function anilistDetails(id: string): Promise<MediaResult> {
@@ -586,6 +639,29 @@ serve(async (req) => {
         return jsonResponse(await collectCovers([tmdbCovers(mediaType, safeId)]))
       }
       return jsonResponse([])
+    }
+
+    if (mode === 'match') {
+      if (mediaType !== 'movie') return jsonResponse({ error: 'Solo películas' }, 400)
+      const titles = (Array.isArray(body.titles) ? body.titles : []).slice(0, MAX_MATCH)
+      // Una película que falla no corta las demás: queda sin coincidencia.
+      const results = await Promise.allSettled(
+        titles.map((t: any) => {
+          const title = typeof t?.title === 'string' ? t.title.trim().slice(0, MAX_TEXT) : ''
+          const year = Number.isInteger(t?.year) && t.year > 1800 && t.year < 3000 ? t.year : null
+          return title ? tmdbMatchMovie(title, year) : Promise.resolve(null)
+        })
+      )
+      return jsonResponse(results.map((r) => (r.status === 'fulfilled' ? r.value : null)))
+    }
+
+    if (mode === 'mal') {
+      if (mediaType !== 'anime') return jsonResponse({ error: 'Solo anime' }, 400)
+      const ids = (Array.isArray(body.ids) ? body.ids : [])
+        .map(String)
+        .filter((x: string) => ID_PATTERN.anime.test(x))
+        .slice(0, MAX_MAL)
+      return jsonResponse(ids.length ? await anilistByMal(ids) : [])
     }
 
     if (mode === 'upcoming') {

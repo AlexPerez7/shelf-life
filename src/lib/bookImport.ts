@@ -4,6 +4,7 @@
 // el archivo no sale del navegador; solo se guardan los libros en `items`.
 
 import type { Item, ItemStatus, ItemWrite } from '../types/item'
+import { parseCsv } from './csv'
 
 export type ImportSource = 'goodreads' | 'storygraph'
 
@@ -23,49 +24,6 @@ export interface ImportedBook {
   review: string | null
   notes: string | null
   rereads: number
-}
-
-/** CSV según RFC 4180: comillas dobles, comas y saltos de línea dentro de campos. */
-export function parseCsv(text: string): string[][] {
-  const rows: string[][] = []
-  let row: string[] = []
-  let field = ''
-  let quoted = false
-  const src = text.replace(/^﻿/, '')
-
-  for (let i = 0; i < src.length; i++) {
-    const c = src[i]
-    if (quoted) {
-      if (c === '"') {
-        if (src[i + 1] === '"') {
-          field += '"'
-          i++
-        } else {
-          quoted = false
-        }
-      } else {
-        field += c
-      }
-    } else if (c === '"') {
-      quoted = true
-    } else if (c === ',') {
-      row.push(field)
-      field = ''
-    } else if (c === '\n' || c === '\r') {
-      if (c === '\r' && src[i + 1] === '\n') i++
-      row.push(field)
-      rows.push(row)
-      row = []
-      field = ''
-    } else {
-      field += c
-    }
-  }
-  if (field !== '' || row.length > 0) {
-    row.push(field)
-    rows.push(row)
-  }
-  return rows.filter((r) => r.some((f) => f.trim() !== ''))
 }
 
 const clean = (v: string | undefined) => {

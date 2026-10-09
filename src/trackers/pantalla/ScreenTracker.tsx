@@ -8,6 +8,7 @@ import { ScreenLibrary } from './ScreenLibrary'
 const ScreenAdd = lazy(() => import('./ScreenAdd').then((m) => ({ default: m.ScreenAdd })))
 const ScreenStats = lazy(() => import('./ScreenStats').then((m) => ({ default: m.ScreenStats })))
 const ScreenHistory = lazy(() => import('./ScreenHistory').then((m) => ({ default: m.ScreenHistory })))
+const ScreenImport = lazy(() => import('./ScreenImport').then((m) => ({ default: m.ScreenImport })))
 const ScreenDetail = lazy(() => import('./ScreenDetail').then((m) => ({ default: m.ScreenDetail })))
 
 const section = mediaSections.pantalla
@@ -26,6 +27,7 @@ export function ScreenTracker() {
         <Routes>
           <Route index element={<ScreenLibrary />} />
           <Route path="agregar" element={<ScreenAdd />} />
+          <Route path="importar" element={<ScreenImport />} />
           <Route path="estadisticas" element={<ScreenStats />} />
           <Route path="historial" element={<ScreenHistory />} />
           <Route path=":id" element={<ScreenDetail />} />

@@ -2,23 +2,7 @@
 
 Lo que quedó anotado para hacer más adelante, en el orden recomendado. El plan original (fase solo juegos) está en `shelf-life-plan.md` y ya está completo.
 
-## 1. Revisión en el navegador
-
-Todo lo publicado el 2026-10-09 pasó build, lint y tests, pero no se probó en pantalla: Pantalla y Libros propios (biblioteca, alta, detalle), estadísticas, historial, inicio con "En curso", listas comunes, metas, formatos y plataformas, importar de Goodreads/StoryGraph, escanear ISBN, próximos episodios, temporadas, cambiar portada, guardado optimista, episodio a mano, cronómetro de lectura y exportar.
-
-- Requiere la extensión de Chrome conectada y la sesión iniciada en `localhost:5199` (la base es la de producción: no se crean cuentas de prueba).
-- Recorrer cada pantalla en tamaño de teléfono, revisar la consola y corregir lo que aparezca.
-- Prioridad: tocar "+1" varias veces seguidas, anotar un episodio a mano, el cronómetro de lectura (cerrar la app y volver), cambiar portada, exportar el JSON y el link público de una lista con varios tipos.
-
-## 2. Importar Pantalla desde Letterboxd y MyAnimeList
-
-Como `/libros/importar`, pero para películas, series y anime.
-
-- **MyAnimeList**: el export es un XML con el id de MAL de cada anime, estado, episodios vistos, puntaje y fechas. AniList busca por `idMal`, así que el anime entra con portada, episodios y avance exactos (un modo nuevo en `media-search` que reciba varios ids de MAL).
-- **Letterboxd**: el export (zip) trae CSV de lo visto (`watched.csv`, `diary.csv`, `ratings.csv`, `watchlist.csv`) con título, año y puntaje. Cada película se busca en TMDB por título + año (en tandas, desde la Edge Function); las que no coincidan se muestran para revisarlas o saltarlas.
-- Reusar lo de Libros: resumen antes de importar, duplicados que se saltan, `addItems` en tandas, archivo procesado en el dispositivo, tests del parser en `src/lib`.
-
-## 3. Guardar sin conexión
+## 1. Guardar sin conexión
 
 Hoy un cambio sin señal se ve un momento (guardado optimista) y vuelve atrás con un error.
 
@@ -26,14 +10,14 @@ Hoy un cambio sin señal se ve un momento (guardado optimista) y vuelve atrás c
 - Indicador discreto de "cambios sin guardar" y qué pasa si el usuario cierra sesión con cambios pendientes.
 - Cuidar el orden: los cambios de un mismo ítem se aplican en el orden en que se hicieron; la actividad (`activity_log`) no se debe duplicar al reintentar.
 
-## 4. "Cambiar portada" en Juegos
+## 2. "Cambiar portada" en Juegos
 
 Igual que en Libros y Pantalla (`components/CoverPicker.tsx`).
 
 - Un modo en `igdb-search` (o en `media-search`) que traiga las portadas y artes alternativos de un juego en IGDB, y quizás la portada de Steam (`library_600x900`) si tiene `steam_appid`.
 - En el detalle de juegos: tocar la portada o ⋮ → Cambiar portada.
 
-## 5. Ordenar el detalle de juegos
+## 3. Ordenar el detalle de juegos
 
 `src/trackers/juegos/GameDetail.tsx` tiene más de 1000 líneas: lo más difícil de mantener del proyecto.
 

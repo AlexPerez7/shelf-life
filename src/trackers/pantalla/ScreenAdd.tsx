@@ -1,6 +1,19 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Bookmark, Check, Eye, Flame, Loader2, PenLine, Play, Search, X } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Bookmark,
+  Check,
+  ChevronRight,
+  Eye,
+  FileUp,
+  Flame,
+  Loader2,
+  PenLine,
+  Play,
+  Search,
+  X,
+} from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { useToast } from '../../contexts/ToastContext'
 import { PageContainer } from '../../components/PageContainer'
@@ -289,6 +302,18 @@ export function ScreenAdd() {
       <p className="mt-2 text-xs text-lavender md:max-w-md">
         Para lo que no aparece en la búsqueda: completas tú los datos.
       </p>
+
+      <Link
+        to={`${section.libraryPath}/importar`}
+        className="mt-6 flex items-center gap-3 rounded-2xl bg-background-surface p-3.5 ring-1 ring-primary-dark/40 active:bg-primary-dark/30 md:max-w-md"
+      >
+        <FileUp size={20} className="shrink-0 text-accent" />
+        <span className="min-w-0 flex-1 text-sm">
+          <span className="block font-semibold text-ink">¿Vienes de Letterboxd o MyAnimeList?</span>
+          <span className="text-lavender">Importa todo lo que viste de una vez</span>
+        </span>
+        <ChevronRight size={18} className="shrink-0 text-lavender" />
+      </Link>
 
       <BottomSheet open={preview != null} onClose={() => setPreview(null)} title={shown?.title ?? 'Vista previa'}>
         {shown && (

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronRight, Plus, Search, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, FileUp, Plus, Search, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { useToast } from '../../contexts/ToastContext'
 import { PageContainer } from '../../components/PageContainer'
@@ -403,6 +403,12 @@ export function ScreenLibrary() {
             className="mt-6 flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-accent font-semibold text-primary-darker"
           >
             <Search size={18} /> Buscar
+          </Link>
+          <Link
+            to={`${section.libraryPath}/importar`}
+            className="mt-3 flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl text-sm font-medium text-accent ring-1 ring-primary-dark/50 active:bg-primary-dark/30"
+          >
+            <FileUp size={16} /> Importar de Letterboxd o MyAnimeList
           </Link>
         </div>
       ) : grid ? (
