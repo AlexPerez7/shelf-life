@@ -11,10 +11,10 @@ En producción: https://alexperez7.github.io/shelf-life/
 El inicio (`/`) es un lanzador desde el que se entra a cada tracker. Cada uno vive bajo su propia ruta, con su barra de navegación, su color de acento (`[data-tracker]` en `src/index.css`) y su carpeta en `src/trackers/`:
 
 - **Juegos** (`/juegos`, `src/trackers/juegos/`): biblioteca, descubrir, listas, estadísticas, diario e importación de Steam.
-- **Pantalla** (`/pantalla`, `src/trackers/pantalla/`): películas, series y anime.
+- **Pantalla** (`/pantalla`, `src/trackers/pantalla/`): películas, series y anime, con una biblioteca estilo app de streaming: "Seguir viendo" con avance rápido (+1 episodio, "la vi"), una fila de pósters por estado y números del tracker (episodios, horas frente a la pantalla).
 - **Libros** (`/libros`, `src/trackers/libros/`): lecturas por páginas, con tema claro propio (papel, verde azulado y serif Lora, inspirado en Openreads), y una biblioteca que es un librero: muebles con repisas por estado, colecciones, géneros y autores, libros en portada o lomo, y estantes que se abren completos.
 
-Pantalla y Libros comparten por ahora el alta y el detalle genéricos de `src/pages/` (`AddMedia`, `MediaDetail`; Pantalla también `MediaLibrary`); cada tracker puede reemplazarlas por un diseño propio sin tocar a los demás. Los datos de los tres están en la misma tabla `items`.
+Pantalla y Libros comparten por ahora el alta y el detalle genéricos de `src/pages/` (`AddMedia`, `MediaDetail`); cada tracker puede reemplazarlas por un diseño propio sin tocar a los demás. Los datos de los tres están en la misma tabla `items`.
 
 ## Stack
 
