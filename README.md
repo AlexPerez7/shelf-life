@@ -83,8 +83,6 @@ En producción: https://alexperez7.github.io/shelf-life/
 
 GitHub Actions (`.github/workflows/deploy.yml`) compila y publica en GitHub Pages en cada push a `main`. La app vive en la subcarpeta `/shelf-life/` (el workflow pasa `BASE_PATH`); las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` son *variables* del repo (Settings → Secrets and variables → Actions → Variables). Para probar localmente un build igual: `BASE_PATH=/shelf-life/ npm run build`.
 
-El sitio viejo de Netlify (`netlify.toml`) queda como respaldo hasta dar de baja la integración.
-
 ## Estado
 
 Todas las fases del plan original (`shelf-life-plan.md`) están completas y en producción. El desarrollo actual es iterativo, agregando mejoras e integraciones sobre la base ya funcionando.
