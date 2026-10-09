@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptics'
@@ -10,37 +9,34 @@ import type { Item, NonGameType } from '../types/item'
  * Avance rápido sin entrar al detalle (biblioteca de Pantalla, inicio):
  * +1 episodio, película vista o página actual de un libro. Registra la
  * actividad (el tiempo lo suma el trigger) y avanza el estado con las reglas
- * de lib/media.ts. `busyId` es el ítem que se está guardando.
+ * de lib/media.ts. Es optimista: se ve al instante y se puede tocar seguido.
  */
 export function useQuickProgress() {
   const { logActivity, updateItem } = useMedia()
   const { showToast, showError } = useToast()
-  const [busyId, setBusyId] = useState<string | null>(null)
 
   /** Película: vista. Serie o anime: el siguiente episodio. */
   async function advance(item: Item) {
-    if (busyId) return
-    setBusyId(item.id)
     haptic()
     const runtime = item.metadata.runtime_minutes ?? null
     try {
       if (progressKind(item.media_type as NonGameType) === 'none') {
-        await logActivity(item.id, { duration_minutes: runtime }, statusChanges(item, 'completed', todayISO()))
+        const pending = logActivity(item.id, { duration_minutes: runtime }, statusChanges(item, 'completed', todayISO()))
         showToast(`${item.title}: vista`)
+        await pending
       } else {
-        const updated = await logActivity(
-          item.id,
-          { duration_minutes: runtime, progress_delta: 1 },
-          progressChanges(item, item.progress + 1, todayISO())
-        )
+        const next = item.progress + 1
+        const changes = progressChanges(item, next, todayISO())
+        const pending = logActivity(item.id, { duration_minutes: runtime, progress_delta: 1 }, changes)
         showToast(
-          updated.status === 'completed' ? `¡Terminaste ${item.title}!` : `${item.title}: ${episodeLabel(updated.progress, itemSeasons(updated))}`
+          changes.status === 'completed' && item.status !== 'completed'
+            ? `¡Terminaste ${item.title}!`
+            : `${item.title}: ${episodeLabel(next, itemSeasons(item))}`
         )
+        await pending
       }
     } catch (err) {
       showError(err, 'No se pudo registrar')
-    } finally {
-      setBusyId(null)
     }
   }
 
@@ -49,28 +45,31 @@ export function useQuickProgress() {
    * opcionales); retroceder es una corrección y no registra nada.
    */
   async function setPage(item: Item, page: number, minutes: number | null) {
-    if (busyId || page === item.progress) return
-    setBusyId(item.id)
+    if (page === item.progress && !minutes) return
     haptic()
     try {
-      if (page > item.progress) {
-        const updated = await logActivity(
+      if (page > item.progress || minutes) {
+        const changes = page > item.progress ? progressChanges(item, page, todayISO()) : {}
+        const pending = logActivity(
           item.id,
-          { duration_minutes: minutes, progress_delta: page - item.progress },
-          progressChanges(item, page, todayISO())
+          { duration_minutes: minutes, progress_delta: Math.max(0, page - item.progress) || null },
+          changes
         )
         showToast(
-          updated.status === 'completed' ? `¡Terminaste ${item.title}!` : `${item.title}: página ${updated.progress}`
+          changes.status === 'completed' && item.status !== 'completed'
+            ? `¡Terminaste ${item.title}!`
+            : page > item.progress
+              ? `${item.title}: página ${page}`
+              : `${item.title}: ${minutes} min de lectura`
         )
+        await pending
       } else {
         await updateItem(item.id, { progress: page })
       }
     } catch (err) {
       showError(err, 'No se pudo guardar la página')
-    } finally {
-      setBusyId(null)
     }
   }
 
-  return { busyId, advance, setPage }
+  return { advance, setPage }
 }

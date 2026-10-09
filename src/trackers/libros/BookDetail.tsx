@@ -31,13 +31,13 @@ import { CoverPicker } from '../../components/CoverPicker'
 import { FormatPicker } from '../../components/FormatPicker'
 import { BOOK_FORMATS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
+import { useQuickProgress } from '../../hooks/useQuickProgress'
 import { sizedCover } from '../../lib/images'
 import { parseDate, todayISO } from '../../lib/dates'
 import {
   formatMinutes,
   itemStatusColor,
   mediaSections,
-  progressChanges,
   statusChanges,
 } from '../../lib/media'
 import type { Item, ItemStatus, ItemWrite } from '../../types/item'
@@ -57,7 +57,6 @@ function minutesPerPage(item: Item) {
 
 interface ReadingProps {
   item: Item
-  busy: boolean
   onSetPage: (page: number, minutes: number | null) => void
   onSaveTotal: (total: number | null) => void
 }
@@ -67,7 +66,7 @@ interface ReadingProps {
  * el registro de la página actual, con minutos opcionales. Se monta con
  * `key` = página actual, así el campo vuelve a ella después de guardar.
  */
-function Reading({ item, busy, onSetPage, onSaveTotal }: ReadingProps) {
+function Reading({ item, onSetPage, onSaveTotal }: ReadingProps) {
   const [page, setPage] = useState(String(item.progress || ''))
   const [minutes, setMinutes] = useState('')
 
@@ -158,7 +157,7 @@ function Reading({ item, busy, onSetPage, onSaveTotal }: ReadingProps) {
           ))}
           <button
             type="submit"
-            disabled={!valid || busy}
+            disabled={!valid}
             className="ml-auto min-h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-white disabled:opacity-50"
           >
             Guardar
@@ -195,16 +194,16 @@ export function BookDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { items, loading, updateItem, deleteItem, logActivity } = useMedia()
+  const { items, loading, updateItem, deleteItem } = useMedia()
   const { showToast, showError } = useToast()
   const confirm = useConfirm()
+  const quick = useQuickProgress()
 
   const item = items.find((i) => i.id === id)
   const [statusOpen, setStatusOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [coverOpen, setCoverOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
 
   function goBack() {
     if (location.key !== 'default') navigate(-1)
@@ -246,33 +245,8 @@ export function BookDetail() {
     await save(statusChanges(current, status, todayISO()))
   }
 
-  /**
-   * Nueva página actual. Avanzar registra la lectura (páginas y minutos
-   * opcionales); retroceder es una corrección y no registra nada.
-   */
-  async function setPage(page: number, minutes: number | null) {
-    if (busy || page === current.progress) return
-    setBusy(true)
-    haptic()
-    try {
-      if (page > current.progress) {
-        const updated = await logActivity(
-          current.id,
-          { duration_minutes: minutes, progress_delta: page - current.progress },
-          progressChanges(current, page, todayISO())
-        )
-        if (updated.status === 'completed' && current.status !== 'completed') {
-          showToast(`¡Terminaste ${current.title}!`)
-        }
-      } else {
-        await updateItem(current.id, { progress: page })
-      }
-    } catch (err) {
-      showError(err, 'No se pudo guardar la página')
-    } finally {
-      setBusy(false)
-    }
-  }
+  // Página actual (con minutos opcionales): misma lógica que el inicio.
+  const setPage = (page: number, minutes: number | null) => quick.setPage(current, page, minutes)
 
   async function startReading() {
     haptic()
@@ -454,7 +428,6 @@ export function BookDetail() {
               <Reading
                 key={current.progress}
                 item={current}
-                busy={busy}
                 onSetPage={setPage}
                 onSaveTotal={(progress_total) => save({ progress_total })}
               />

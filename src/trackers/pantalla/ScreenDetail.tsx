@@ -68,7 +68,6 @@ interface EpisodeGridProps {
   from: number
   count: number
   progress: number
-  busy: boolean
   onSetProgress: (episode: number) => void
 }
 
@@ -76,7 +75,7 @@ interface EpisodeGridProps {
  * Una casilla por episodio. Tocar una marca todo hasta ahí; tocar el último
  * visto lo desmarca. Muestra el número dentro de la temporada.
  */
-function EpisodeGrid({ from, count, progress, busy, onSetProgress }: EpisodeGridProps) {
+function EpisodeGrid({ from, count, progress, onSetProgress }: EpisodeGridProps) {
   return (
     <div className="mt-3 grid grid-cols-8 gap-1.5 sm:grid-cols-10" role="group" aria-label="Episodios vistos">
       {Array.from({ length: count }, (_, i) => i).map((i) => {
@@ -86,7 +85,6 @@ function EpisodeGrid({ from, count, progress, busy, onSetProgress }: EpisodeGrid
           <button
             key={ep}
             type="button"
-            disabled={busy}
             onClick={() => onSetProgress(ep === progress ? ep - 1 : ep)}
             aria-label={`Episodio ${i + 1}${seen ? ', visto' : ''}`}
             aria-pressed={seen}
@@ -108,12 +106,10 @@ function EpisodeGrid({ from, count, progress, busy, onSetProgress }: EpisodeGrid
 function SeasonList({
   item,
   seasons,
-  busy,
   onSetProgress,
 }: {
   item: Item
   seasons: number[]
-  busy: boolean
   onSetProgress: (episode: number) => void
 }) {
   // La temporada del próximo episodio (o la última, si ya está todo visto).
@@ -152,7 +148,7 @@ function SeasonList({
                   from={from}
                   count={count}
                   progress={item.progress}
-                  busy={busy}
+                 
                   onSetProgress={onSetProgress}
                 />
               </div>
@@ -164,10 +160,85 @@ function SeasonList({
   )
 }
 
+/**
+ * Anotar el episodio a mano: para saltar lejos (series largas, o algo que
+ * ya venías viendo) sin tocar +1 mil veces. Por defecto no suma tiempo de
+ * hoy; "Lo vi hoy" lo registra como visto ahora.
+ */
+function ManualEpisode({
+  item,
+  seasons,
+  onSave,
+}: {
+  item: Item
+  seasons: number[] | undefined
+  onSave: (episode: number, count?: boolean) => void
+}) {
+  const [value, setValue] = useState('')
+  const [today, setToday] = useState(false)
+  const total = item.progress_total
+  const n = Number(value)
+  const valid = value !== '' && Number.isInteger(n) && n >= 0 && (total == null || n <= total) && n !== item.progress
+  const se = valid ? seasonEpisode(n, seasons) : null
+
+  return (
+    <form
+      className="mt-4 rounded-xl bg-background/40 p-3 ring-1 ring-primary-dark/40"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!valid) return
+        onSave(n, today && n > item.progress)
+        setValue('')
+        setToday(false)
+      }}
+    >
+      <div className="flex items-end gap-2">
+        <label className="block flex-1">
+          <span className="mb-1 block text-xs text-lavender">Voy en el episodio</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={total ?? undefined}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={String(item.progress)}
+            className="w-full rounded-lg bg-background/60 px-3 py-2 text-ink ring-1 ring-primary-dark/40 focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={!valid}
+          className="min-h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-primary-darker disabled:opacity-40"
+        >
+          Guardar
+        </button>
+      </div>
+      {se && (
+        <p className="mt-1 text-xs text-lavender">
+          = Temporada {se.season}, episodio {se.episode}
+        </p>
+      )}
+      {valid && n > item.progress && (
+        <label className="mt-2 flex min-h-9 items-center gap-2 text-xs text-lavender">
+          <input
+            type="checkbox"
+            checked={today}
+            onChange={(e) => setToday(e.target.checked)}
+            className="h-4 w-4 accent-[var(--color-accent)]"
+          />
+          Los vi hoy (suma {n - item.progress === 1 ? 'el episodio' : `los ${n - item.progress} episodios`} a mi
+          tiempo e historial)
+        </label>
+      )}
+    </form>
+  )
+}
+
 interface EpisodesProps {
   item: Item
-  busy: boolean
-  onSetProgress: (episode: number) => void
+  /** `count` = registrar lo visto con su tiempo (falso al anotarlo a mano). */
+  onSetProgress: (episode: number, count?: boolean) => void
   onSaveTotal: (total: number | null) => void
 }
 
@@ -176,7 +247,7 @@ interface EpisodesProps {
  * episodio. Tocar una casilla marca todo hasta ahí; tocar el último visto lo
  * desmarca.
  */
-function Episodes({ item, busy, onSetProgress, onSaveTotal }: EpisodesProps) {
+function Episodes({ item, onSetProgress, onSaveTotal }: EpisodesProps) {
   const total = item.progress_total
   const runtime = item.metadata.runtime_minutes
   const left = total != null ? Math.max(0, total - item.progress) : null
@@ -202,7 +273,7 @@ function Episodes({ item, busy, onSetProgress, onSaveTotal }: EpisodesProps) {
         <button
           type="button"
           onClick={() => onSetProgress(item.progress - 1)}
-          disabled={busy || item.progress === 0}
+          disabled={item.progress === 0}
           aria-label="Quitar un episodio"
           className="flex h-12 w-12 items-center justify-center rounded-full bg-background/40 text-lavender ring-1 ring-primary-dark/40 disabled:opacity-40"
         >
@@ -226,7 +297,7 @@ function Episodes({ item, busy, onSetProgress, onSaveTotal }: EpisodesProps) {
         <button
           type="button"
           onClick={() => onSetProgress(item.progress + 1)}
-          disabled={busy || (total != null && item.progress >= total)}
+          disabled={total != null && item.progress >= total}
           aria-label="Sumar un episodio"
           className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-primary-darker disabled:opacity-40"
         >
@@ -241,13 +312,15 @@ function Episodes({ item, busy, onSetProgress, onSaveTotal }: EpisodesProps) {
       )}
 
       {seasons ? (
-        <SeasonList item={item} seasons={seasons} busy={busy} onSetProgress={onSetProgress} />
+        <SeasonList item={item} seasons={seasons} onSetProgress={onSetProgress} />
       ) : (
         total != null &&
         total <= MAX_EPISODE_GRID && (
-          <EpisodeGrid from={1} count={total} progress={item.progress} busy={busy} onSetProgress={onSetProgress} />
+          <EpisodeGrid from={1} count={total} progress={item.progress} onSetProgress={onSetProgress} />
         )
       )}
+
+      <ManualEpisode item={item} seasons={seasons} onSave={onSetProgress} />
 
       <label className="mt-4 flex items-center justify-between gap-3 text-sm text-lavender">
         Total de episodios
@@ -321,7 +394,6 @@ export function ScreenDetail() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [coverOpen, setCoverOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
 
   function goBack() {
     if (location.key !== 'default') navigate(-1)
@@ -366,64 +438,59 @@ export function ScreenDetail() {
   }
 
   /**
-   * Lleva el avance a `episode`. Avanzar registra lo visto (episodios y su
-   * tiempo); retroceder es una corrección y no descuenta nada.
+   * Lleva el avance a `episode`. Avanzar con `count` registra lo visto
+   * (episodios y su tiempo); sin `count` (anotarlo a mano, ej. saltar al
+   * 1085 de One Piece) solo mueve el avance, sin sumar tiempo de hoy.
+   * Retroceder es una corrección y no descuenta nada. Es optimista.
    */
-  async function setProgress(episode: number) {
+  async function setProgress(episode: number, count = true) {
     const next = Math.max(0, total != null ? Math.min(total, episode) : episode)
-    if (busy || next === current.progress) return
-    setBusy(true)
+    if (next === current.progress) return
     haptic()
     try {
       if (next > current.progress) {
         const delta = next - current.progress
-        const updated = await logActivity(
-          current.id,
-          { duration_minutes: runtime ? runtime * delta : null, progress_delta: delta },
-          progressChanges(current, next, todayISO())
-        )
-        if (updated.status === 'completed' && current.status !== 'completed') {
+        const changes = progressChanges(current, next, todayISO())
+        const pending = count
+          ? logActivity(current.id, { duration_minutes: runtime ? runtime * delta : null, progress_delta: delta }, changes)
+          : updateItem(current.id, changes)
+        if (changes.status === 'completed' && current.status !== 'completed') {
           showToast(`¡Terminaste ${current.title}!`)
+        } else if (!count) {
+          showToast(`${current.title}: ${episodeLabel(next, itemSeasons(current))}`)
         }
+        await pending
       } else {
         await updateItem(current.id, { progress: next })
       }
     } catch (err) {
       showError(err, 'No se pudo guardar el avance')
-    } finally {
-      setBusy(false)
     }
   }
 
   /** Película vista (o vuelta a ver). */
   async function markWatched() {
-    if (busy) return
-    setBusy(true)
     haptic()
     const rewatch = current.status === 'completed'
     const changes: ItemWrite = rewatch
       ? { replays: current.replays + 1 }
       : statusChanges(current, 'completed', todayISO())
+    const pending = logActivity(current.id, { duration_minutes: runtime }, changes)
+    showToast(rewatch ? `Volviste a ver ${current.title}` : `${current.title}: vista`)
     try {
-      await logActivity(current.id, { duration_minutes: runtime }, changes)
-      showToast(rewatch ? `Volviste a ver ${current.title}` : `${current.title}: vista`)
+      await pending
     } catch (err) {
       showError(err, 'No se pudo guardar')
-    } finally {
-      setBusy(false)
     }
   }
 
   /** Serie terminada: empezar a verla de nuevo desde el episodio 1. */
   async function rewatchSeries() {
-    if (busy) return
-    setBusy(true)
     haptic()
     await save(
       { progress: 0, status: 'in_progress', replays: current.replays + 1 },
       `Empezaste de nuevo ${current.title}`
     )
-    setBusy(false)
   }
 
   async function handleDelete() {
@@ -592,7 +659,6 @@ export function ScreenDetail() {
           <button
             type="button"
             onClick={primary.onClick}
-            disabled={busy}
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent font-semibold text-primary-darker transition-transform active:scale-[0.98] disabled:opacity-60"
           >
             <primary.Icon size={18} fill={primary.Icon === Play ? 'currentColor' : 'none'} />
@@ -625,7 +691,7 @@ export function ScreenDetail() {
             {!isMovie && (
               <Episodes
                 item={current}
-                busy={busy}
+               
                 onSetProgress={setProgress}
                 onSaveTotal={(progress_total) => save({ progress_total })}
               />

@@ -81,13 +81,12 @@ function Stats({ items }: { items: Item[] }) {
 
 interface ContinueCardProps {
   item: Item
-  busy: boolean
   onOpen: () => void
   onAdvance: () => void
 }
 
 /** Tarjeta de "Seguir viendo": portada sobre su propio fondo difuminado y avance rápido. */
-function ContinueCard({ item, busy, onOpen, onAdvance }: ContinueCardProps) {
+function ContinueCard({ item, onOpen, onAdvance }: ContinueCardProps) {
   const type = item.media_type as ScreenType
   const isMovie = progressKind(type) === 'none'
   const runtime = item.metadata.runtime_minutes
@@ -155,7 +154,6 @@ function ContinueCard({ item, busy, onOpen, onAdvance }: ContinueCardProps) {
             <button
               type="button"
               onClick={onAdvance}
-              disabled={busy}
               className="flex min-h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-primary-darker transition-transform active:scale-95 disabled:opacity-60"
             >
               {isMovie ? (
@@ -312,7 +310,7 @@ export function ScreenLibrary() {
   }
 
   // Avance rápido desde "Seguir viendo" (misma lógica que el inicio).
-  const { busyId, advance } = useQuickProgress()
+  const { advance } = useQuickProgress()
 
   const isEmpty = !loading && !error && screenItems.length === 0
   const gridTitle = statusFilter
@@ -449,7 +447,6 @@ export function ScreenLibrary() {
                   <ContinueCard
                     key={item.id}
                     item={item}
-                    busy={busyId === item.id}
                     onOpen={() => open(item)}
                     onAdvance={() => advance(item)}
                   />

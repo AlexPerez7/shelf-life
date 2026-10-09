@@ -202,23 +202,21 @@ const actionClass =
 /** Hoja para anotar la página de un libro sin entrar a su ficha. */
 function PageSheet({
   book,
-  busy,
   onClose,
   onSave,
 }: {
   book: Item | null
-  busy: boolean
   onClose: () => void
   onSave: (page: number, minutes: number | null) => void
 }) {
   return (
     <BottomSheet open={book != null} onClose={onClose} title={book?.title ?? 'Página'}>
-      {book && <PageForm key={book.id} book={book} busy={busy} onSave={onSave} />}
+      {book && <PageForm key={book.id} book={book} onSave={onSave} />}
     </BottomSheet>
   )
 }
 
-function PageForm({ book, busy, onSave }: { book: Item; busy: boolean; onSave: (page: number, minutes: number | null) => void }) {
+function PageForm({ book, onSave }: { book: Item; onSave: (page: number, minutes: number | null) => void }) {
   const [page, setPage] = useState(String(book.progress || ''))
   const [minutes, setMinutes] = useState('')
   const total = book.progress_total
@@ -270,7 +268,7 @@ function PageForm({ book, busy, onSave }: { book: Item; busy: boolean; onSave: (
       </div>
       <button
         type="submit"
-        disabled={!valid || busy}
+        disabled={!valid}
         className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-accent font-semibold text-background disabled:opacity-50"
       >
         Guardar
@@ -312,7 +310,7 @@ export function Hub() {
   const { showToast, showError } = useToast()
   const sessionTimer = useSessionTimer()
   const timer = sessionTimer.timer
-  const { busyId, advance, setPage } = useQuickProgress()
+  const { advance, setPage } = useQuickProgress()
   const [pageBook, setPageBook] = useState<Item | null>(null)
   // Estrenos de los próximos 7 días de lo que sigues en Pantalla.
   const upcoming = useUpcoming(items)
@@ -433,7 +431,6 @@ export function Hub() {
     const kind = progressKind(type)
     const total = i.progress_total
     const pct = total ? Math.min(100, Math.round((i.progress / total) * 100)) : null
-    const busy = busyId === i.id
     const progress =
       kind === 'pages'
         ? `Página ${i.progress}${total ? ` de ${total} · ${pct}%` : ''}`
@@ -460,7 +457,7 @@ export function Hub() {
               <BookOpen size={14} /> Página
             </button>
           ) : (
-            <button type="button" onClick={() => advance(i)} disabled={busy} className={actionClass}>
+            <button type="button" onClick={() => advance(i)} className={actionClass}>
               {kind === 'none' ? (
                 <>
                   <Check size={14} /> La vi
@@ -543,7 +540,6 @@ export function Hub() {
 
       <PageSheet
         book={pageBook}
-        busy={busyId != null}
         onClose={() => setPageBook(null)}
         onSave={async (page, minutes) => {
           const book = pageBook

@@ -139,9 +139,17 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return created
   }, [])
 
-  // Último cambio pedido por ítem: si llegan respuestas fuera de orden (dos
-  // toques seguidos), solo la del último manda.
+  // Último cambio pedido por ítem: solo la respuesta del último actualiza el
+  // estado (las anteriores ya quedaron superadas por el cambio optimista).
   const updateSeq = useRef(new Map<string, number>())
+  // Guardados en fila por ítem: con dos toques rápidos ("+1", "+1") la base
+  // recibe los cambios en el mismo orden en que se hicieron.
+  const queues = useRef(new Map<string, Promise<unknown>>())
+  const enqueue = useCallback(<T,>(id: string, task: () => Promise<T>): Promise<T> => {
+    const next = (queues.current.get(id) ?? Promise.resolve()).catch(() => {}).then(task)
+    queues.current.set(id, next.catch(() => {}))
+    return next
+  }, [])
   // Estado actual, para tener el "antes" de un cambio optimista.
   const itemsRef = useRef<Item[]>([])
   useEffect(() => {
@@ -149,33 +157,46 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   }, [items])
 
   /**
-   * Optimista: el cambio se ve al instante y se guarda en segundo plano (la
-   * ida y vuelta a Supabase en el teléfono puede tardar segundos). Si falla,
-   * vuelve a como estaba y el error sube para mostrarlo.
+   * Aplica `local` al instante, guarda con `write` (en fila) y deja la fila
+   * que devuelve la base. Si falla, vuelve a como estaba y el error sube.
    */
-  const updateItem = useCallback<MediaContextValue['updateItem']>(async (id, changes) => {
-    const seq = (updateSeq.current.get(id) ?? 0) + 1
-    updateSeq.current.set(id, seq)
-    const previous = itemsRef.current.find((i) => i.id === id)
-    setItems((prev) => prev.map((i) => (i.id === id ? ({ ...i, ...changes } as Item) : i)))
-
-    const { data, error } = await supabase
-      .from('items')
-      .update(changes)
-      .eq('id', id)
-      .select()
-      .single()
-    const isLatest = updateSeq.current.get(id) === seq
-    if (error) {
-      if (isLatest && previous) {
-        const before = previous
-        setItems((prev) => prev.map((i) => (i.id === id ? before : i)))
+  const optimistic = useCallback(
+    async (id: string, local: (item: Item) => Item, write: () => Promise<Item>) => {
+      const seq = (updateSeq.current.get(id) ?? 0) + 1
+      updateSeq.current.set(id, seq)
+      const previous = itemsRef.current.find((i) => i.id === id)
+      setItems((prev) => prev.map((i) => (i.id === id ? local(i) : i)))
+      try {
+        const saved = await enqueue(id, write)
+        if (updateSeq.current.get(id) === seq) setItems((prev) => prev.map((i) => (i.id === id ? saved : i)))
+        return saved
+      } catch (err) {
+        if (updateSeq.current.get(id) === seq && previous) {
+          setItems((prev) => prev.map((i) => (i.id === id ? previous : i)))
+        }
+        throw err
       }
-      throw error
-    }
-    if (isLatest) setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
-    return data as Item
-  }, [])
+    },
+    [enqueue]
+  )
+
+  /**
+   * Optimista: el cambio se ve al instante y se guarda en segundo plano (la
+   * ida y vuelta a Supabase en el teléfono puede tardar segundos).
+   */
+  const updateItem = useCallback<MediaContextValue['updateItem']>(
+    (id, changes) =>
+      optimistic(
+        id,
+        (i) => ({ ...i, ...changes }) as Item,
+        async () => {
+          const { data, error } = await supabase.from('items').update(changes).eq('id', id).select().single()
+          if (error) throw error
+          return data as Item
+        }
+      ),
+    [optimistic]
+  )
 
   const deleteItem = useCallback<MediaContextValue['deleteItem']>(async (id) => {
     const { error } = await supabase.from('items').delete().eq('id', id)
@@ -183,24 +204,37 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     setItems((prev) => prev.filter((i) => i.id !== id))
   }, [])
 
+  /**
+   * También optimista: el avance (y el tiempo, que en la base suma un
+   * trigger) se ve al instante; el registro y el cambio se guardan en fila.
+   */
   const logActivity = useCallback<MediaContextValue['logActivity']>(
-    async (id, activity, changes) => {
-      const { error } = await supabase.from('activity_log').insert({
-        item_id: id,
-        duration_minutes: activity.duration_minutes || null,
-        progress_delta: activity.progress_delta ?? null,
-      })
-      if (error) throw error
-      // Aunque no haya cambios propios, el select trae el tiempo actualizado.
-      const { data, error: updateError } =
-        Object.keys(changes).length > 0
-          ? await supabase.from('items').update(changes).eq('id', id).select().single()
-          : await supabase.from('items').select('*').eq('id', id).single()
-      if (updateError) throw updateError
-      setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
-      return data as Item
-    },
-    []
+    (id, activity, changes) =>
+      optimistic(
+        id,
+        (i) =>
+          ({
+            ...i,
+            ...changes,
+            time_spent_minutes: i.time_spent_minutes + (activity.duration_minutes || 0),
+          }) as Item,
+        async () => {
+          const { error } = await supabase.from('activity_log').insert({
+            item_id: id,
+            duration_minutes: activity.duration_minutes || null,
+            progress_delta: activity.progress_delta ?? null,
+          })
+          if (error) throw error
+          // Aunque no haya cambios propios, el select trae el tiempo actualizado.
+          const { data, error: updateError } =
+            Object.keys(changes).length > 0
+              ? await supabase.from('items').update(changes).eq('id', id).select().single()
+              : await supabase.from('items').select('*').eq('id', id).single()
+          if (updateError) throw updateError
+          return data as Item
+        }
+      ),
+    [optimistic]
   )
 
   const value = useMemo<MediaContextValue>(
