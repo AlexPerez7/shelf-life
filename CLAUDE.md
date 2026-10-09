@@ -13,7 +13,7 @@ PWA mobile-first para registrar juegos, películas, series, anime y libros. Deta
 - `npm run dev`: servidor de desarrollo.
 - `npm run build`: type-check (`tsc -b`) + build de Vite. Correrlo antes de commitear.
 - `npm run lint`: oxlint. Hay warnings viejos (`set-state-in-effect`, etc.); no sumar nuevos.
-- No hay tests automatizados.
+- `npm test`: Vitest con los tests de la lógica pura (`src/lib/*.test.ts`; datos de prueba en `src/test/factories.ts`). Corre también en el deploy y lo frena si falla. Al tocar algo de `src/lib`, sumar o ajustar su test.
 
 ## Stack
 

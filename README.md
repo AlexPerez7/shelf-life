@@ -92,6 +92,7 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
 - `npm run build` — build de producción (type-check + Vite build)
 - `npm run preview` — preview del build
 - `npm run lint` — lint con oxlint
+- `npm test` — tests de la lógica (Vitest); también corren en el deploy
 
 ## Deploy
 
