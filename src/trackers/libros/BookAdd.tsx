@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   FileUp,
   Loader2,
   PenLine,
+  ScanBarcode,
   Search,
   X,
 } from 'lucide-react'
@@ -26,6 +27,8 @@ import { todayISO } from '../../lib/dates'
 import { mediaSections, needsDetails, resultToItemWithStatus, withDetails } from '../../lib/media'
 import { BOOK_FORMATS, readLastBookFormat, saveLastBookFormat } from '../../lib/formats'
 import { FormatPicker } from '../../components/FormatPicker'
+import { IsbnScanner } from './IsbnScanner'
+import { canScanBarcodes } from '../../lib/barcode'
 import type { Item, ItemStatus, ItemWrite, MediaSearchResult } from '../../types/item'
 
 const section = mediaSections.libros
@@ -95,6 +98,16 @@ export function BookAdd() {
   // Formato con el que se agrega (el último usado, para no marcarlo cada vez).
   const [format, setFormat] = useState(readLastBookFormat)
 
+  // Escanear el ISBN: el libro se busca por ese número y, como está en la
+  // mano, el formato pasa a "Físico".
+  const [scanSupported] = useState(canScanBarcodes)
+  const [scanning, setScanning] = useState(false)
+  const handleDetected = useCallback((isbn: string) => {
+    setScanning(false)
+    setQuery(isbn)
+    setFormat('Físico')
+  }, [])
+
   function openPreview(result: MediaSearchResult) {
     setPreview(result)
     const key = resultKey(result)
@@ -149,32 +162,45 @@ export function BookAdd() {
       <p className="mb-4 text-sm text-lavender">Busca por título, autor o ISBN</p>
 
       <div className="md:max-w-xl">
-        <div className="relative mb-4">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lavender"
-          />
-          <input
-            type="search"
-            enterKeyHint="search"
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Título, autor o ISBN..."
-            aria-label="Buscar un libro"
-            className="w-full rounded-xl bg-background-surface py-3 pl-9 pr-10 text-base text-ink shadow-sm ring-1 ring-primary-dark/25 [&::-webkit-search-cancel-button]:hidden focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery('')}
-              aria-label="Borrar búsqueda"
-              className="absolute right-0 top-0 flex h-full w-11 items-center justify-center text-lavender"
-            >
-              <X size={16} />
-            </button>
-          )}
+        <div className="mb-4 flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lavender"
+            />
+            <input
+              type="search"
+              enterKeyHint="search"
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Título, autor o ISBN..."
+              aria-label="Buscar un libro"
+              className="w-full rounded-xl bg-background-surface py-3 pl-9 pr-10 text-base text-ink shadow-sm ring-1 ring-primary-dark/25 [&::-webkit-search-cancel-button]:hidden focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                aria-label="Borrar búsqueda"
+                className="absolute right-0 top-0 flex h-full w-11 items-center justify-center text-lavender"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        {scanSupported && (
+          <button
+            type="button"
+            onClick={() => setScanning(true)}
+            aria-label="Escanear el código de barras"
+            className="flex w-12 shrink-0 items-center justify-center rounded-xl bg-background-surface text-accent shadow-sm ring-1 ring-primary-dark/25 active:bg-primary-dark/10"
+          >
+            <ScanBarcode size={20} />
+          </button>
+        )}
         </div>
+        {scanning && <IsbnScanner onDetected={handleDetected} onClose={() => setScanning(false)} />}
 
         {searchError && <p className="mb-3 rounded-xl bg-error/10 p-3 text-sm text-error">{searchError}</p>}
 
