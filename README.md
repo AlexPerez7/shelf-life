@@ -48,6 +48,7 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
 - Diario: línea de tiempo con altas, inicios, finalizaciones y sesiones registradas
 - Estado "Deseado" (wishlist) separado de "Pendiente", con precios de tiendas
 - Biblioteca en vista de lista o de portadas, filtro de favoritos y cambio rápido de estado desde la tarjeta
+- Cambiar portada (libros, películas y series): tocar la portada en el detalle (o ⋮ → Cambiar portada) muestra portadas alternativas de varias fuentes para elegir, o se pega la URL de una imagen
 - Metas del año, una por tracker (juegos terminados, títulos vistos, libros leídos): arriba de las estadísticas de cada tracker, con avance y si vas al día según el calendario, y en el inicio
 - Estadísticas: totales, tiempo estimado para terminar el backlog (IGDB) y a tu ritmo, horas por mes, distribución por estado, destacados y resumen del año para compartir
 - PWA instalable (manifest, ícono, service worker) y responsive (mobile-first, con ajustes para tablet)
@@ -78,7 +79,7 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
    - `steam-auth` y `steam-library` usan el JWT del usuario para leer/escribir su fila en `profiles` (RLS).
    - Todas las funciones exigen un **usuario logueado** (no alcanza con la anon key, que es pública).
    - `steam-auth` solo acepta volver a URLs base permitidas: por defecto `https://alexperez7.github.io/shelf-life`. Para otras (dominio propio): `supabase secrets set APP_ORIGINS=https://alexperez7.github.io/shelf-life,https://otro.dominio`
-   - `media-search` (películas, series y anime) necesita `supabase secrets set TMDB_API_KEY=...` (API Key o Read Access Token de TMDB). El anime sale de AniList y los libros de Open Library, ambos sin key. Opcional: `GOOGLE_BOOKS_API_KEY` para buscar libros primero en Google Books. Con `mode: 'trending'` devuelve las tendencias de la semana (TMDB) o de la temporada (AniList), que el alta de Pantalla muestra antes de escribir. Con `mode: 'upcoming'` e `ids` devuelve el próximo episodio con fecha de cada serie (TMDB) o anime (AniList).
+   - `media-search` (películas, series y anime) necesita `supabase secrets set TMDB_API_KEY=...` (API Key o Read Access Token de TMDB). El anime sale de AniList y los libros de Open Library, ambos sin key. Opcional: `GOOGLE_BOOKS_API_KEY` para buscar libros primero en Google Books. Con `mode: 'trending'` devuelve las tendencias de la semana (TMDB) o de la temporada (AniList), que el alta de Pantalla muestra antes de escribir. Con `mode: 'upcoming'` e `ids` devuelve el próximo episodio con fecha de cada serie (TMDB) o anime (AniList). Con `mode: 'covers'` devuelve portadas alternativas: para libros, las ediciones de Open Library (primero en español), Apple Books (sin key) y Google Books (con key); para películas y series, los pósters de TMDB.
 5. Correr en desarrollo:
    ```
    npm run dev

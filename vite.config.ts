@@ -73,8 +73,9 @@ export default defineConfig({
         globIgnores: ['**/lora-{cyrillic,cyrillic-ext,vietnamese,math,symbols}-*.woff2'],
         runtimeCaching: [
           {
-            // Portadas de IGDB y de Steam: no cambian para una misma URL, así
-            // que se sirven desde cache (instantáneas y disponibles offline).
+            // Portadas (IGDB, Steam, TMDB, AniList, Open Library, Google y
+            // Apple Books): no cambian para una misma URL, así que se sirven
+            // desde cache (instantáneas y disponibles offline).
             urlPattern: ({ url }) =>
               url.hostname === 'images.igdb.com' ||
               url.hostname.endsWith('.steamstatic.com') ||
@@ -82,7 +83,8 @@ export default defineConfig({
               url.hostname === 'image.tmdb.org' ||
               url.hostname === 's4.anilist.co' ||
               url.hostname === 'covers.openlibrary.org' ||
-              url.hostname === 'books.google.com',
+              url.hostname === 'books.google.com' ||
+              url.hostname.endsWith('.mzstatic.com'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'game-images',

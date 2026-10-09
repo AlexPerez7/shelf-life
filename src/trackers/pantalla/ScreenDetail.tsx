@@ -30,6 +30,7 @@ import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
 import { Synopsis } from '../../components/Synopsis'
 import { ListPicker } from '../../components/ListPicker'
+import { CoverPicker } from '../../components/CoverPicker'
 import { FormatPicker } from '../../components/FormatPicker'
 import { SCREEN_PLATFORMS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
@@ -319,6 +320,7 @@ export function ScreenDetail() {
   const [statusOpen, setStatusOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [coverOpen, setCoverOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   function goBack() {
@@ -488,7 +490,12 @@ export function ScreenDetail() {
         />
 
         <div className="relative mx-auto flex max-w-md items-end gap-4 px-4 pb-2 md:max-w-xl">
-          <div className="aspect-[2/3] w-32 shrink-0 overflow-hidden rounded-xl bg-primary-dark/30 shadow-2xl shadow-black/60 ring-1 ring-white/10 md:w-40">
+          <button
+            type="button"
+            onClick={() => setCoverOpen(true)}
+            aria-label="Cambiar portada"
+            className="block transition-transform active:scale-[0.98] aspect-[2/3] w-32 shrink-0 overflow-hidden rounded-xl bg-primary-dark/30 shadow-2xl shadow-black/60 ring-1 ring-white/10 md:w-40"
+          >
             <GameThumb
               src={current.cover_url}
               alt={current.title}
@@ -497,7 +504,7 @@ export function ScreenDetail() {
               placeholderClassName="text-5xl"
               icon={TypeIcon}
             />
-          </div>
+          </button>
           <div className="min-w-0 pb-1">
             <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-accent">
               <TypeIcon size={13} /> {mediaTypeLabels[type]}
@@ -543,6 +550,15 @@ export function ScreenDetail() {
                     className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-ink active:bg-primary-dark/30"
                   >
                     Editar datos
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setCoverOpen(true)
+                    }}
+                    className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-ink active:bg-primary-dark/30"
+                  >
+                    Cambiar portada
                   </button>
                   <button
                     onClick={handleDelete}
@@ -707,6 +723,16 @@ export function ScreenDetail() {
             />
           )}
         </BottomSheet>
+        <CoverPicker
+          item={current}
+          open={coverOpen}
+          onClose={() => setCoverOpen(false)}
+          icon={TypeIcon}
+          onPick={(cover_url) => {
+            setCoverOpen(false)
+            save({ cover_url }, 'Portada cambiada')
+          }}
+        />
         <ItemStatusSheet
           open={statusOpen}
           onClose={() => setStatusOpen(false)}

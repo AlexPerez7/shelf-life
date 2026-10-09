@@ -187,6 +187,31 @@ export async function upcomingEpisodes(type: 'series' | 'anime', ids: string[]):
   return (await callFn<UpcomingEpisode[]>('media-search', { type, mode: 'upcoming', ids })) ?? []
 }
 
+/** Una portada alternativa para elegir. */
+export interface CoverOption {
+  url: string
+  source: 'openlibrary' | 'apple' | 'google_books' | 'tmdb'
+  /** Edición o idioma ("Salamandra · 2000", "ES"). */
+  label: string | null
+}
+
+/**
+ * Portadas alternativas de un ítem: ediciones de Open Library, Apple Books y
+ * Google Books para libros; pósters de TMDB para películas y series.
+ */
+export async function coverOptions(item: Item): Promise<CoverOption[]> {
+  return (
+    (await callFn<CoverOption[]>('media-search', {
+      type: item.media_type,
+      mode: 'covers',
+      id: item.external_id ?? undefined,
+      source: item.source ?? undefined,
+      title: item.title,
+      author: item.metadata.authors?.[0] ?? '',
+    })) ?? []
+  )
+}
+
 /** Detalle (duración, episodios, sinopsis): algunas búsquedas no los traen. */
 export async function getMediaDetails(result: MediaSearchResult): Promise<MediaSearchResult> {
   return callFn<MediaSearchResult>('media-search', {

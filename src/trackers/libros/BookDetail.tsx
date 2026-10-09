@@ -27,6 +27,7 @@ import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
 import { Synopsis } from '../../components/Synopsis'
 import { ListPicker } from '../../components/ListPicker'
+import { CoverPicker } from '../../components/CoverPicker'
 import { FormatPicker } from '../../components/FormatPicker'
 import { BOOK_FORMATS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
@@ -202,6 +203,7 @@ export function BookDetail() {
   const [statusOpen, setStatusOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [coverOpen, setCoverOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   function goBack() {
@@ -331,7 +333,12 @@ export function BookDetail() {
           className="absolute inset-0"
           style={{ background: 'linear-gradient(to top, var(--color-background) 5%, transparent 85%)' }}
         />
-        <div className="relative mx-auto aspect-[2/3] w-40 overflow-hidden rounded-[4px] bg-primary-dark/20 shadow-[0_18px_30px_-8px_rgba(42,38,32,0.55)] md:w-48">
+        <button
+          type="button"
+          onClick={() => setCoverOpen(true)}
+          aria-label="Cambiar portada"
+          className="block transition-transform active:scale-[0.98] relative mx-auto aspect-[2/3] w-40 overflow-hidden rounded-[4px] bg-primary-dark/20 shadow-[0_18px_30px_-8px_rgba(42,38,32,0.55)] md:w-48"
+        >
           <GameThumb
             src={current.cover_url}
             alt={current.title}
@@ -347,7 +354,7 @@ export function BookDetail() {
               {current.title}
             </span>
           )}
-        </div>
+        </button>
 
         <div
           className="absolute inset-x-4 flex items-start justify-between"
@@ -381,6 +388,15 @@ export function BookDetail() {
                     className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-ink active:bg-primary-dark/10"
                   >
                     Editar datos
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setCoverOpen(true)
+                    }}
+                    className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-ink active:bg-primary-dark/10"
+                  >
+                    Cambiar portada
                   </button>
                   <button
                     onClick={handleDelete}
@@ -607,6 +623,16 @@ export function BookDetail() {
             />
           )}
         </BottomSheet>
+        <CoverPicker
+          item={current}
+          open={coverOpen}
+          onClose={() => setCoverOpen(false)}
+          icon={BookOpen}
+          onPick={(cover_url) => {
+            setCoverOpen(false)
+            save({ cover_url }, 'Portada cambiada')
+          }}
+        />
         <ItemStatusSheet
           open={statusOpen}
           onClose={() => setStatusOpen(false)}

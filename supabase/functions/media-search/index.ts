@@ -8,13 +8,17 @@
 //     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
 //     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming', ids?: string[] }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers', ids?: string[], title?: string, author?: string }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
 //   - con `mode: 'trending'` -> lo que es tendencia esta semana (TMDB) o esta
 //                    temporada (AniList), para "Descubrir" en Pantalla. No
 //                    aplica a libros.
 //   - con `mode: 'upcoming'` + `ids` (hasta 40, de series o anime) -> el
 //                    próximo episodio de cada uno, si tiene fecha.
+//   - con `mode: 'covers'` -> portadas alternativas para elegir: libros por
+//                    `title`/`author` (y `id` si es de Open Library) en Open
+//                    Library (todas sus ediciones), Apple Books y Google
+//                    Books; películas y series por `id` en TMDB.
 //   - con `id`    -> detalle de un resultado (duración, episodios, sinopsis),
 //                    que se pide al agregar: algunas búsquedas no lo traen.
 //                    Para libros, `source` dice de qué API es el id.
@@ -429,6 +433,117 @@ async function bookDetails(source: unknown, id: string): Promise<MediaResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Portadas alternativas
+// ---------------------------------------------------------------------------
+
+interface CoverOption {
+  url: string
+  source: 'openlibrary' | 'apple' | 'google_books' | 'tmdb'
+  /** Edición o idioma, para distinguirlas ("Salamandra · 2000", "ES"). */
+  label: string | null
+}
+
+const MAX_COVERS = 60
+
+/** Portadas de las ediciones de una obra en Open Library, primero las en español. */
+async function olCovers(workId: string | null, title: string, author: string): Promise<CoverOption[]> {
+  let works = workId ? [workId] : []
+  if (works.length === 0 && title) {
+    // `q` busca también en los títulos de cada edición (ej. el título en
+    // español); solo la primera obra: las siguientes suelen ser otros libros.
+    const params = new URLSearchParams({ q: [title, author].filter(Boolean).join(' '), limit: '1', fields: 'key' })
+    const data = await openLibrary(`/search.json?${params}`)
+    works = (data.docs ?? []).map((d: any) => String(d.key ?? '').replace('/works/', '')).filter(Boolean)
+  }
+  const out: (CoverOption & { spanish: boolean })[] = []
+  for (const work of works.slice(0, 1)) {
+    const data = await openLibrary(`/works/${work}/editions.json?limit=100`)
+    for (const e of data.entries ?? []) {
+      const cover = (e.covers ?? []).find((c: number) => c > 0)
+      if (!cover) continue
+      out.push({
+        url: `https://covers.openlibrary.org/b/id/${cover}-L.jpg`,
+        source: 'openlibrary',
+        label: [e.publishers?.[0], e.publish_date].filter(Boolean).join(' · ') || null,
+        spanish: (e.languages ?? []).some((l: any) => l.key === '/languages/spa'),
+      })
+    }
+  }
+  return out.sort((a, b) => Number(b.spanish) - Number(a.spanish)).map(({ spanish: _, ...c }) => c)
+}
+
+/** Portadas de Apple Books (ebooks), de las tiendas de España, México y EE. UU. */
+async function appleCovers(title: string, author: string): Promise<CoverOption[]> {
+  const term = [title, author].filter(Boolean).join(' ')
+  if (!term) return []
+  const results = await Promise.allSettled(
+    ['es', 'mx', 'us'].map(async (country) => {
+      const params = new URLSearchParams({ term, entity: 'ebook', limit: '15', country })
+      const res = await fetch(`https://itunes.apple.com/search?${params}`)
+      if (!res.ok) return []
+      const data = await res.json()
+      return (data.results ?? [])
+        // Fuera guías de lectura y resúmenes de terceros.
+        .filter((r: any) => r.artworkUrl100 && !/resumen|gu[ií]a de lectura|summary|study guide/i.test(r.trackName ?? ''))
+        .map((r: any) => ({
+          // La URL acepta el tamaño: 600 px alcanza para el detalle.
+          url: String(r.artworkUrl100).replace(/\/\d+x\d+bb\./, '/600x900bb.'),
+          source: 'apple' as const,
+          label: `Apple Books · ${country.toUpperCase()}`,
+        }))
+    })
+  )
+  return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+}
+
+/** Portadas de Google Books (solo con key). */
+async function googleCovers(title: string, author: string): Promise<CoverOption[]> {
+  if (!GOOGLE_BOOKS_API_KEY || !title) return []
+  const q = [`intitle:${title}`, author ? `inauthor:${author}` : ''].filter(Boolean).join('+')
+  const data = await googleBooks('/volumes', { q, maxResults: '20', printType: 'books' })
+  return (data.items ?? [])
+    .map((v: any) => {
+      const info = v.volumeInfo ?? {}
+      const cover = info.imageLinks?.thumbnail
+      if (!cover) return null
+      return {
+        url: String(cover).replace(/^http:/, 'https:').replace('&edge=curl', ''),
+        source: 'google_books' as const,
+        label: [info.publisher, info.publishedDate?.slice(0, 4)].filter(Boolean).join(' · ') || null,
+      }
+    })
+    .filter(Boolean)
+}
+
+/** Pósters de TMDB de una película o serie: español, inglés y sin texto. */
+async function tmdbCovers(type: 'movie' | 'series', id: string): Promise<CoverOption[]> {
+  const data = await tmdb(`/${type === 'movie' ? 'movie' : 'tv'}/${id}/images`, {
+    include_image_language: 'es,en,null',
+  })
+  return (data.posters ?? []).map((p: any) => ({
+    url: `https://image.tmdb.org/t/p/w500${p.file_path}`,
+    source: 'tmdb' as const,
+    label: p.iso_639_1 ? String(p.iso_639_1).toUpperCase() : 'Sin texto',
+  }))
+}
+
+/** Sin repetidas y con un tope; si una fuente falla, quedan las demás. */
+async function collectCovers(sources: Promise<CoverOption[]>[]): Promise<CoverOption[]> {
+  const results = await Promise.allSettled(sources)
+  const seen = new Set<string>()
+  const out: CoverOption[] = []
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue
+    for (const c of r.value) {
+      if (seen.has(c.url)) continue
+      seen.add(c.url)
+      out.push(c)
+    }
+  }
+  return out.slice(0, MAX_COVERS)
+}
+
+// ---------------------------------------------------------------------------
 
 /** Ids aceptados: numéricos (TMDB, AniList) o alfanuméricos (libros). */
 const ID_PATTERN: Record<MediaType, RegExp> = {
@@ -460,6 +575,26 @@ serve(async (req) => {
       return jsonResponse(
         mediaType === 'anime' ? await anilistDetails(safeId) : await tmdbDetails(mediaType, safeId)
       )
+    }
+
+    if (mode === 'covers') {
+      const title = typeof body.title === 'string' ? body.title.slice(0, MAX_TEXT) : ''
+      const author = typeof body.author === 'string' ? body.author.slice(0, MAX_TEXT) : ''
+      const safeId = id != null && ID_PATTERN[mediaType].test(String(id)) ? String(id) : null
+      if (mediaType === 'book') {
+        const workId = source === 'openlibrary' && safeId && /^OL\d+W$/.test(safeId) ? safeId : null
+        return jsonResponse(
+          await collectCovers([
+            olCovers(workId, title, author),
+            appleCovers(title, author),
+            googleCovers(title, author),
+          ])
+        )
+      }
+      if ((mediaType === 'movie' || mediaType === 'series') && safeId) {
+        return jsonResponse(await collectCovers([tmdbCovers(mediaType, safeId)]))
+      }
+      return jsonResponse([])
     }
 
     if (mode === 'upcoming') {
