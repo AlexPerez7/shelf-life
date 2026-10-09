@@ -1,12 +1,17 @@
 // Piezas del librero: repisas, muebles y libros (portada o lomo). Todo el
 // tracker de libros se ve como un librero; acá vive ese diseño.
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ChevronRight, BookOpen } from 'lucide-react'
 import { GameThumb } from '../../components/GameThumb'
 import type { Item } from '../../types/item'
 
 export type ShelfMode = 'portadas' | 'lomos'
+
+/** Libros por repisa en el librero (el resto, en el estante completo). */
+const SHELF_PREVIEW = 30
+/** Libros por tanda en el estante completo. */
+const BOOKCASE_PAGE = 60
 
 /** Hash estable de un texto (para colores, alturas y adornos). */
 function hash(text: string) {
@@ -101,6 +106,7 @@ export function ShelfBook({
       className="relative h-[7.5rem] w-20 flex-shrink-0 overflow-hidden rounded-[3px] bg-primary-dark/20 shadow-[0_3px_6px_rgba(0,0,0,0.3)] transition-transform active:-translate-y-1"
     >
       <GameThumb
+        size="poster"
         src={item.cover_url}
         alt=""
         className="h-full w-full object-cover"
@@ -159,8 +165,11 @@ export function Shelf({
   onOpenShelf?: () => void
   emptyText?: string
 }) {
+  // Repisas largas: se muestran los primeros y el resto está en el estante completo.
+  const shown = items.slice(0, SHELF_PREVIEW)
+  const hidden = items.length - shown.length
   // Un adorno en el medio de las repisas largas y otro al final.
-  const midDecor = items.length >= 5 ? (hash(id) % (items.length - 2)) + 1 : -1
+  const midDecor = shown.length >= 5 ? (hash(id) % (shown.length - 2)) + 1 : -1
 
   return (
     <div>
@@ -180,13 +189,24 @@ export function Shelf({
         {items.length === 0 && (
           <p className="self-center px-2 text-xs italic text-[#f1dfc4]/80">{emptyText}</p>
         )}
-        {items.map((item, i) => (
+        {shown.map((item, i) => (
           <div key={item.id} className="contents">
             {i === midDecor && <Decor seed={`${id}-mid`} />}
             <ShelfBook item={item} mode={mode} onOpen={() => onOpenBook(item)} />
           </div>
         ))}
-        <Decor seed={id} />
+        {hidden > 0 && onOpenShelf ? (
+          <button
+            type="button"
+            onClick={onOpenShelf}
+            className="shelf-label mb-2 flex h-[7.5rem] w-20 flex-shrink-0 flex-col items-center justify-center rounded-[3px] px-1 text-center"
+          >
+            <span className="font-book text-lg font-bold text-[#2a2620]">+{hidden}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8a6a45]">Ver todos</span>
+          </button>
+        ) : (
+          <Decor seed={id} />
+        )}
         <div className="w-2 flex-shrink-0" aria-hidden="true" />
       </div>
       {/* La tabla llega a los costados del mueble. */}
@@ -198,7 +218,7 @@ export function Shelf({
 /** Mueble de madera: marco, fondo de tablas y varias repisas. */
 export function ShelfUnit({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="wood-frame rounded-xl p-2.5 pt-2">
+    <section className="wood-frame cv-auto rounded-xl p-2.5 pt-2">
       <h2 className="mb-2 px-2 text-base font-bold text-[#f6e7cf] [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
         {title}
       </h2>
@@ -223,11 +243,14 @@ export function Bookcase({
   mode: ShelfMode
   onOpenBook: (item: Item) => void
 }) {
+  // De a tandas: cientos de libros (cada uno con su tramo de madera) a la vez traban el teléfono.
+  const [limit, setLimit] = useState(BOOKCASE_PAGE)
+  const shown = items.slice(0, limit)
   return (
     <section className="wood-frame rounded-xl p-2.5">
       <div className="wood-back overflow-hidden rounded-[4px] px-2 pt-4">
         <div className="-mx-2 flex flex-wrap items-end" style={{ rowGap: '1.5rem' }}>
-          {items.map((item) => (
+          {shown.map((item) => (
             <div key={item.id} className="flex flex-col">
               <div className="flex justify-center px-[3px] pt-1 first:pl-2">
                 <ShelfBook item={item} mode={mode} onOpen={() => onOpenBook(item)} />
@@ -242,6 +265,15 @@ export function Bookcase({
             <Board />
           </div>
         </div>
+        {items.length > limit && (
+          <button
+            type="button"
+            onClick={() => setLimit((n) => n + BOOKCASE_PAGE)}
+            className="shelf-label mx-auto my-4 flex min-h-11 items-center rounded-[4px] px-4 text-sm font-semibold text-[#2a2620]"
+          >
+            Mostrar más ({items.length - limit})
+          </button>
+        )}
       </div>
     </section>
   )

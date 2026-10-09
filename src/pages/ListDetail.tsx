@@ -190,6 +190,7 @@ export function ListDetail() {
             <Link to={e.to} className="block transition-transform active:scale-[0.97]">
               <div className="aspect-[2/3] w-full overflow-hidden rounded-lg bg-primary-dark/20 ring-1 ring-primary-dark/30">
                 <GameThumb
+                  size="poster"
                   src={e.cover}
                   alt=""
                   className="h-full w-full object-cover"
@@ -205,7 +206,7 @@ export function ListDetail() {
             <button
               onClick={() => handleRemove(e)}
               aria-label={`Quitar ${e.title} de la lista`}
-              className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-ink shadow backdrop-blur after:absolute after:-inset-1.5 after:content-[''] active:text-error"
+              className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-background/90 text-ink shadow after:absolute after:-inset-1.5 after:content-[''] active:text-error"
             >
               <X size={15} />
             </button>

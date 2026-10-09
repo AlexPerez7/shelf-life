@@ -33,6 +33,7 @@ import { ListPicker } from '../../components/ListPicker'
 import { FormatPicker } from '../../components/FormatPicker'
 import { SCREEN_PLATFORMS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
+import { sizedCover } from '../../lib/images'
 import { todayISO } from '../../lib/dates'
 import {
   formatMinutes,
@@ -475,7 +476,7 @@ export function ScreenDetail() {
       >
         {current.cover_url && (
           <img
-            src={current.cover_url}
+            src={sizedCover(current.cover_url, 'thumb') ?? undefined}
             alt=""
             aria-hidden="true"
             className="absolute inset-0 h-full w-full scale-125 object-cover opacity-40 blur-2xl"

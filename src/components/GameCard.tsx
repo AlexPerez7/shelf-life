@@ -30,6 +30,7 @@ export function GameCard({ game, onClick, onStatusClick, className = '' }: GameC
       />
       <div className="pointer-events-none h-20 w-14 flex-shrink-0 overflow-hidden rounded bg-primary-dark/20">
         <GameThumb
+          size="thumb"
           src={game.cover_url}
           alt=""
           className="h-full w-full object-cover"

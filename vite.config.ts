@@ -67,6 +67,10 @@ export default defineConfig({
         // Assets estáticos precacheados. Los datos de Supabase NUNCA pasan por
         // el service worker (siempre red).
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // De Lora solo se precargan latín y latín extendido: las demás (cirílico,
+        // vietnamita, símbolos, matemática) son ~120 KB que casi nunca se usan;
+        // si aparece uno de esos caracteres, el navegador baja la fuente en el momento.
+        globIgnores: ['**/lora-{cyrillic,cyrillic-ext,vietnamese,math,symbols}-*.woff2'],
         runtimeCaching: [
           {
             // Portadas de IGDB y de Steam: no cambian para una misma URL, así
@@ -85,7 +89,8 @@ export default defineConfig({
               // Las respuestas opacas ocupan bastante cuota en Chrome: límite
               // moderado y purga automática si el navegador se queda sin espacio.
               expiration: {
-                maxEntries: 300,
+                // Cada portada puede estar en tamaño chico y grande (lib/images.ts).
+                maxEntries: 500,
                 maxAgeSeconds: 60 * 60 * 24 * 60,
                 purgeOnQuotaError: true,
               },

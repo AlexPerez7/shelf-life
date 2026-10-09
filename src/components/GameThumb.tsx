@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Gamepad2, type LucideIcon } from 'lucide-react'
+import { sizedCover, type CoverSize } from '../lib/images'
 
 interface GameThumbProps {
   src: string | null
@@ -14,6 +15,8 @@ interface GameThumbProps {
   eager?: boolean
   /** Ícono del placeholder (por defecto, un control de juego). */
   icon?: LucideIcon
+  /** Tamaño a pedir al CDN (ver lib/images.ts); sin él, la URL tal cual. */
+  size?: CoverSize
 }
 
 /**
@@ -30,8 +33,11 @@ export function GameThumb({
   placeholderClassName = '',
   eager = false,
   icon: Icon = Gamepad2,
+  size,
 }: GameThumbProps) {
-  const chain = src ? [src, ...fallbacks] : []
+  const sized = size ? sizedCover(src, size) : src
+  // Si el tamaño chico no existe, se prueba el original antes que los fallbacks.
+  const chain = sized ? [...new Set([sized, src!, ...fallbacks])] : []
   const [index, setIndex] = useState(0)
 
   if (index >= chain.length) {

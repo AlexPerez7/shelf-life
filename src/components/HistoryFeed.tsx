@@ -56,7 +56,7 @@ export function HistoryFeed({ section, items, activity, loading, emptyText, titl
       {days.slice(0, shown).map((day) => (
         <section key={day.key} className="mb-4">
           <h2
-            className="sticky z-10 -mx-4 flex items-baseline justify-between gap-2 bg-background/90 px-4 py-2 backdrop-blur"
+            className="sticky z-10 -mx-4 flex items-baseline justify-between gap-2 bg-background/95 px-4 py-2"
             style={{ top: 'env(safe-area-inset-top)' }}
           >
             <span className="text-xs font-semibold uppercase tracking-wide text-lavender first-letter:uppercase">
@@ -78,6 +78,7 @@ export function HistoryFeed({ section, items, activity, loading, emptyText, titl
                     <div className="relative h-14 w-10 shrink-0">
                       <div className="h-full w-full overflow-hidden rounded-md bg-primary-dark/20">
                         <GameThumb
+                          size="thumb"
                           src={e.item.cover_url}
                           alt=""
                           className="h-full w-full object-cover"

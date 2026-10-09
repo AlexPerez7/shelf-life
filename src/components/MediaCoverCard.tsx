@@ -47,6 +47,7 @@ export function MediaCoverCard({ item, onClick, onStatusClick }: MediaCoverCardP
       >
         <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-primary-dark/20 ring-1 ring-primary-dark/30">
           <GameThumb
+            size="poster"
             src={item.cover_url}
             alt=""
             className="h-full w-full object-cover"

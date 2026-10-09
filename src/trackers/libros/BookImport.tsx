@@ -189,6 +189,7 @@ export function BookImport() {
                         className="relative h-24 w-16 shrink-0 overflow-hidden rounded-[3px] bg-primary-dark/20 shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
                       >
                         <GameThumb
+                          size="thumb"
                           src={importedToItem(b).cover_url ?? null}
                           alt=""
                           className="h-full w-full object-cover"

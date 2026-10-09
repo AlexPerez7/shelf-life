@@ -145,6 +145,7 @@ export function ScreenAdd() {
       >
         <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-primary-dark/30 ring-1 ring-primary-dark/40">
           <GameThumb
+            size="poster"
             src={r.cover_url}
             alt=""
             className="h-full w-full object-cover"
@@ -295,6 +296,7 @@ export function ScreenAdd() {
             <div className="flex gap-4">
               <div className="aspect-[2/3] w-28 shrink-0 overflow-hidden rounded-lg bg-primary-dark/30 shadow-lg shadow-black/40 ring-1 ring-white/10">
                 <GameThumb
+                  size="poster"
                   src={shown.cover_url}
                   alt=""
                   className="h-full w-full object-cover"

@@ -37,6 +37,7 @@ export function UpcomingEpisodes({
           >
             <div className="h-16 w-11 shrink-0 overflow-hidden rounded-md bg-primary-dark/30">
               <GameThumb
+                size="thumb"
                 src={item.cover_url}
                 alt=""
                 className="h-full w-full object-cover"

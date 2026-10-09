@@ -44,7 +44,7 @@ export function TrackerNav({ left, right, add }: TrackerNavProps) {
       className="fixed inset-x-0 z-30 px-4"
       style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
     >
-      <ul className="mx-auto flex max-w-md items-center rounded-full bg-background-surface/95 px-2 py-1 shadow-lg shadow-black/40 ring-1 ring-primary-dark/30 backdrop-blur md:max-w-3xl lg:max-w-5xl">
+      <ul className="mx-auto flex max-w-md items-center rounded-full bg-background-surface px-2 py-1 shadow-lg shadow-black/40 ring-1 ring-primary-dark/30 md:max-w-3xl lg:max-w-5xl">
         {left.map((item) => (
           <NavItemLink key={item.to} item={item} />
         ))}

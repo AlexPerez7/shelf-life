@@ -56,7 +56,7 @@ function ReadThisYear({ books, year }: { books: Item[]; year: number }) {
               aria-label={b.title}
               className="relative h-28 w-[4.6rem] shrink-0 overflow-hidden rounded-[3px] bg-primary-dark/20 shadow-[0_3px_6px_rgba(0,0,0,0.25)] transition-transform active:-translate-y-1"
             >
-              <GameThumb src={b.cover_url} alt="" className="h-full w-full object-cover" icon={BookOpenCheck} />
+              <GameThumb size="poster" src={b.cover_url} alt="" className="h-full w-full object-cover" icon={BookOpenCheck} />
               {!b.cover_url && (
                 <span className="font-book absolute inset-x-1 bottom-1 line-clamp-3 text-center text-[9px] font-semibold leading-tight text-ink">
                   {b.title}

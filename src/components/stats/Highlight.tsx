@@ -19,7 +19,7 @@ export function Highlight({ icon: Icon, label, title, detail, cover, to }: Highl
       className="flex items-center gap-3 rounded-2xl bg-background-surface p-2.5 ring-1 ring-primary-dark/30 active:bg-primary-dark/20"
     >
       <div className="h-16 w-11 shrink-0 overflow-hidden rounded-md bg-primary-dark/20">
-        <GameThumb src={cover ?? null} alt="" className="h-full w-full object-cover" icon={Icon} />
+        <GameThumb size="thumb" src={cover ?? null} alt="" className="h-full w-full object-cover" icon={Icon} />
       </div>
       <div className="min-w-0">
         <p className="flex items-center gap-1 text-xs text-lavender">

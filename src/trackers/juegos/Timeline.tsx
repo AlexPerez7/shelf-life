@@ -139,7 +139,7 @@ export function Timeline() {
         groups.map((group) => (
           <section key={group.label} className="mb-4">
             <h2
-              className="sticky z-10 -mx-4 bg-background/90 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-lavender backdrop-blur"
+              className="sticky z-10 -mx-4 bg-background/95 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-lavender"
               style={{ top: 'env(safe-area-inset-top)' }}
             >
               {group.label}

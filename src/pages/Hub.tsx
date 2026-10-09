@@ -161,9 +161,15 @@ interface NowCardProps {
   icon: typeof Play
   kicker: string
   title: string
-  progress: string
+  progress: React.ReactNode
   pct: number | null
   action: React.ReactNode
+}
+
+/** Tiempo del cronómetro: lo único que se vuelve a dibujar cada segundo. */
+function Elapsed({ startedAt }: { startedAt: number }) {
+  const now = useNow(true)
+  return <span className="tabular-nums">{formatElapsed(now - startedAt)}</span>
 }
 
 /** Tarjeta de "En curso": portada, avance y una acción rápida, con el acento de su tracker. */
@@ -172,7 +178,7 @@ function NowCard({ tracker, to, cover, icon, kicker, title, progress, pct, actio
     <li data-tracker={tracker} className="flex items-center gap-3 rounded-2xl bg-background-surface p-2.5 ring-1 ring-primary-dark/30">
       <Link to={to} className="flex min-w-0 flex-1 items-center gap-3 active:opacity-80">
         <div className="h-[4.5rem] w-12 shrink-0 overflow-hidden rounded-lg bg-primary-dark/20">
-          <GameThumb src={cover} alt="" className="h-full w-full object-cover" placeholderClassName="text-xl" icon={icon} />
+          <GameThumb size="thumb" src={cover} alt="" className="h-full w-full object-cover" placeholderClassName="text-xl" icon={icon} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-accent">{kicker}</p>
@@ -306,7 +312,6 @@ export function Hub() {
   const { showToast, showError } = useToast()
   const sessionTimer = useSessionTimer()
   const timer = sessionTimer.timer
-  const now = useNow(timer != null)
   const { busyId, advance, setPage } = useQuickProgress()
   const [pageBook, setPageBook] = useState<Item | null>(null)
   // Estrenos de los próximos 7 días de lo que sigues en Pantalla.
@@ -394,7 +399,7 @@ export function Hub() {
           title={g.title}
           progress={
             running
-              ? `Jugando ahora · ${formatElapsed(now - timer.startedAt)}`
+              ? <>Jugando ahora · <Elapsed startedAt={timer.startedAt} /></>
               : g.hours_played > 0
                 ? `${g.hours_played.toLocaleString('es')} h jugadas`
                 : 'Sin horas todavía'

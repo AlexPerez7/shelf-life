@@ -35,6 +35,12 @@ React 19 + Vite + TypeScript + Tailwind CSS v4 (config en `src/index.css` con `@
 - Cada tracker activa su tema con `useTrackerTheme(id)`, que pone `body[data-theme]`. Los colores son tokens (`primary`, `accent`, `lavender`, `background`, `background-surface`, `ink`...) redefinidos por tema en `src/index.css`. Usar siempre los tokens, nunca colores fijos, para que la UI se adapte sola.
 - Juegos: violeta/magenta. Pantalla: oscuro azulado con celeste. Libros: tema claro "papel" con serif Lora. Marca (inicio/login): azul tinta y ámbar.
 - Mobile-first: áreas táctiles de al menos 44 px (`min-h-11`), `PageContainer` para márgenes seguros y espacio de la barra inferior, `haptic()` en acciones, `scrollbar-hide` en filas horizontales.
+- Rendimiento (se nota en teléfonos de gama media):
+  - Portadas con `GameThumb size="thumb"` (miniaturas, fondos difuminados) o `size="poster"` (cuadrículas, repisas): `lib/images.ts` pide al CDN el tamaño justo.
+  - Nada de `backdrop-blur` en lo que queda fijo al hacer scroll (barras, encabezados sticky): fondo casi opaco en su lugar.
+  - Listas que pueden ser largas (librero, estantes) se muestran por tandas o con `cv-auto` (`content-visibility`).
+  - Datos que no viven en un contexto (`useActivity`, `useGoals`, `useUpcoming`, `useTrending`) se cachean a nivel de módulo y se revalidan al montar.
+  - Lo que cambia cada segundo (cronómetro) va en un componente chico propio, no en la pantalla entera.
 - Feedback con `useToast` (`showToast` / `showError`) y confirmaciones con `useConfirm`, nunca `alert`/`confirm`.
 - Filtros y vistas en la URL (`useSearchParams`), así se conservan al volver de un detalle. `localStorage` solo para preferencias de vista (siempre en try/catch); los datos van a Supabase.
 

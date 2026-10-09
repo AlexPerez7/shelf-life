@@ -246,6 +246,13 @@ body {
     inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
+/* Muebles fuera de pantalla: el navegador no los dibuja hasta acercarse
+   (cada repisa tiene decenas de portadas y madera con textura). */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
+}
+
 /* Etiqueta de repisa: placa de papel sobre la madera. */
 .shelf-label {
   background: linear-gradient(to bottom, #fbf5e8, #efe4cc);

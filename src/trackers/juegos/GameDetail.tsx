@@ -1030,7 +1030,7 @@ function CompactHeader({
   return (
     <div
       aria-hidden={!visible}
-      className={`fixed inset-x-0 top-0 z-30 border-b border-primary-dark/30 bg-background/90 backdrop-blur transition-transform duration-200 ${
+      className={`fixed inset-x-0 top-0 z-30 border-b border-primary-dark/30 bg-background/95 transition-transform duration-200 ${
         visible ? 'translate-y-0' : 'pointer-events-none -translate-y-full'
       }`}
       style={{ paddingTop: 'env(safe-area-inset-top)' }}

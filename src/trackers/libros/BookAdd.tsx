@@ -54,6 +54,7 @@ function Cover({ result, className }: { result: MediaSearchResult; className: st
       className={`relative shrink-0 overflow-hidden rounded-[3px] bg-primary-dark/20 shadow-[0_3px_6px_rgba(0,0,0,0.25)] ${className}`}
     >
       <GameThumb
+        size="poster"
         src={result.cover_url}
         alt=""
         className="h-full w-full object-cover"

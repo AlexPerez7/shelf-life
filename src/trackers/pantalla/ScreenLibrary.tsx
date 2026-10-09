@@ -13,6 +13,7 @@ import { useQuickProgress } from '../../hooks/useQuickProgress'
 import { useUpcoming } from '../../hooks/useUpcoming'
 import { UpcomingEpisodes } from './UpcomingEpisodes'
 import { haptic } from '../../lib/haptics'
+import { sizedCover } from '../../lib/images'
 import { todayISO } from '../../lib/dates'
 import {
   episodeLabel,
@@ -96,7 +97,7 @@ function ContinueCard({ item, busy, onOpen, onAdvance }: ContinueCardProps) {
     <div className="relative overflow-hidden rounded-2xl bg-background-surface ring-1 ring-primary-dark/40">
       {item.cover_url && (
         <img
-          src={item.cover_url}
+          src={sizedCover(item.cover_url, 'thumb') ?? undefined}
           alt=""
           aria-hidden="true"
           loading="lazy"
@@ -113,6 +114,7 @@ function ContinueCard({ item, busy, onOpen, onAdvance }: ContinueCardProps) {
           className="w-20 shrink-0 overflow-hidden rounded-lg shadow-lg shadow-black/40 ring-1 ring-white/10 transition-transform active:scale-[0.97]"
         >
           <GameThumb
+            size="poster"
             src={item.cover_url}
             alt=""
             className="aspect-[2/3] w-full object-cover"
@@ -254,7 +256,12 @@ export function ScreenLibrary() {
     [screenItems, typeFilter]
   )
 
-  const upcoming = useUpcoming(typed)
+  // Una sola consulta para todo Pantalla; las pestañas de tipo filtran acá.
+  const allUpcoming = useUpcoming(screenItems)
+  const upcoming = useMemo(
+    () => allUpcoming?.filter((e) => typeFilter === 'todos' || e.item.media_type === typeFilter) ?? null,
+    [allUpcoming, typeFilter]
+  )
 
   const watching = useMemo(
     () => typed.filter((i) => i.status === 'in_progress').sort(byRecent),
