@@ -25,6 +25,8 @@ import { SectionCard } from '../components/SectionCard'
 import { StarRating } from '../components/StarRating'
 import { TagList } from '../components/TagList'
 import { ItemStatusSheet } from '../components/ItemStatusSheet'
+import { BottomSheet } from '../components/BottomSheet'
+import { MediaForm } from '../components/MediaForm'
 import { haptic } from '../lib/haptics'
 import { todayISO } from '../lib/dates'
 import {
@@ -208,6 +210,7 @@ export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
   const item = items.find((i) => i.id === id)
   const [statusOpen, setStatusOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   function goBack() {
@@ -397,6 +400,15 @@ export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                 <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl bg-background-surface p-1 shadow-lg ring-1 ring-primary-dark/30">
                   <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setEditOpen(true)
+                    }}
+                    className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-ink active:bg-primary-dark/10"
+                  >
+                    Editar datos
+                  </button>
+                  <button
                     onClick={handleDelete}
                     className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-error active:bg-error/10"
                   >
@@ -449,6 +461,20 @@ export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
               <Heart size={18} fill={current.is_favorite ? 'currentColor' : 'none'} />
             </button>
           </div>
+          <BottomSheet open={editOpen} onClose={() => setEditOpen(false)} title="Editar datos">
+            {editOpen && (
+              <MediaForm
+                section={section}
+                item={current}
+                submitLabel="Guardar cambios"
+                onSubmit={async (data) => {
+                  await updateItem(current.id, data)
+                  setEditOpen(false)
+                  showToast('Datos actualizados')
+                }}
+              />
+            )}
+          </BottomSheet>
           <ItemStatusSheet
             open={statusOpen}
             onClose={() => setStatusOpen(false)}

@@ -4,6 +4,7 @@ import { igdbResultToNewGame, searchGames } from '../lib/igdb'
 import { PlatformPicker } from './PlatformPicker'
 import { StatusPicker } from './StatusPicker'
 import { TagList } from './TagList'
+import { unixToYear, yearToUnix } from '../lib/dates'
 import type { GameStatus, IgdbSearchResult, NewGame } from '../types/game'
 
 /** Espera tras la última tecla antes de consultar IGDB. */
@@ -34,6 +35,8 @@ export function GameForm({ onSubmit, existingIgdbIds }: GameFormProps) {
   const [error, setError] = useState<string | null>(null)
 
   const [form, setForm] = useState<NewGame>(emptyForm)
+  // El año se edita como texto; se traduce a first_release_date al escribir.
+  const [yearText, setYearText] = useState('')
   const [searched, setSearched] = useState(false)
   // Id de la última búsqueda lanzada: descarta respuestas que llegan tarde
   // (una búsqueda vieja no debe pisar los resultados de una más nueva).
@@ -71,7 +74,9 @@ export function GameForm({ onSubmit, existingIgdbIds }: GameFormProps) {
   }, [query])
 
   function applyResult(result: IgdbSearchResult) {
-    setForm((prev) => ({ ...prev, ...igdbResultToNewGame(result) }))
+    const next = igdbResultToNewGame(result)
+    setForm((prev) => ({ ...prev, ...next }))
+    setYearText(unixToYear(next.first_release_date))
     setQuery('')
     // Cerrar el teclado para que se vea la ficha elegida.
     ;(document.activeElement as HTMLElement | null)?.blur()
@@ -85,6 +90,7 @@ export function GameForm({ onSubmit, existingIgdbIds }: GameFormProps) {
     try {
       await onSubmit(form)
       setForm(emptyForm)
+      setYearText('')
       setQuery('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar')
@@ -224,6 +230,34 @@ export function GameForm({ onSubmit, existingIgdbIds }: GameFormProps) {
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           className="w-full rounded-xl bg-background-surface px-3 py-2.5 text-ink ring-1 ring-primary-dark/30 focus:outline-none focus:ring-2 focus:ring-primary"
         />
+      </div>
+
+      <div className="grid grid-cols-[1fr_6rem] gap-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-lavender">Portada (URL)</label>
+          <input
+            type="url"
+            inputMode="url"
+            value={form.cover_url ?? ''}
+            onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
+            placeholder="https://..."
+            className="w-full rounded-xl bg-background-surface px-3 py-2.5 text-ink ring-1 ring-primary-dark/30 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-lavender">Año</label>
+          <input
+            inputMode="numeric"
+            maxLength={4}
+            value={yearText}
+            onChange={(e) => {
+              setYearText(e.target.value)
+              setForm({ ...form, first_release_date: yearToUnix(e.target.value) })
+            }}
+            placeholder="2024"
+            className="w-full rounded-xl bg-background-surface px-3 py-2.5 text-ink ring-1 ring-primary-dark/30 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
       </div>
 
       <div>

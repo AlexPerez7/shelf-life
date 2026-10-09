@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, Loader2, Plus, Search, X } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, PenLine, Plus, Search, X } from 'lucide-react'
 import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
 import { PageContainer } from '../components/PageContainer'
 import { GameThumb } from '../components/GameThumb'
 import { Skeleton } from '../components/Skeleton'
+import { BottomSheet } from '../components/BottomSheet'
+import { MediaForm } from '../components/MediaForm'
+import { todayISO } from '../lib/dates'
 import {
   getMediaDetails,
   mediaSections,
@@ -16,7 +19,7 @@ import {
   searchMedia,
   type MediaSectionId,
 } from '../lib/media'
-import type { MediaSearchResult, NonGameType } from '../types/item'
+import type { Item, ItemWrite, MediaSearchResult, NonGameType } from '../types/item'
 
 const SEARCH_DELAY_MS = 350
 
@@ -106,17 +109,16 @@ export function AddMedia({ sectionId }: { sectionId: MediaSectionId }) {
     }
   }
 
-  async function handleManualAdd() {
-    const title = query.trim()
-    if (!title) return
-    setAdding('manual')
-    try {
-      const created = await addItem({ media_type: type, title, status: 'planned' })
-      navigate(section.detailPath(created.id), { replace: true })
-    } catch (err) {
-      showError(err, 'No se pudo agregar')
-      setAdding(null)
-    }
+  const [manualOpen, setManualOpen] = useState(false)
+
+  /** Alta manual: lo que no está en ninguna API (o se prefiere cargar a mano). */
+  async function handleManualAdd(data: ItemWrite & Pick<Item, 'media_type' | 'title'>) {
+    const today = todayISO()
+    if (data.status === 'in_progress') data.date_started = today
+    if (data.status === 'completed') data.date_finished = today
+    const created = await addItem(data)
+    showToast(`Agregaste ${created.title} a tu biblioteca`)
+    navigate(section.detailPath(created.id), { replace: true })
   }
 
   const TypeIcon = mediaTypeIcons[type]
@@ -261,18 +263,31 @@ export function AddMedia({ sectionId }: { sectionId: MediaSectionId }) {
           })}
         </ul>
 
-        {query.trim().length >= 2 && !searching && (
-          <button
-            type="button"
-            onClick={handleManualAdd}
-            disabled={adding != null}
-            className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium text-accent ring-1 ring-primary-dark/40 active:bg-primary-dark/20 disabled:opacity-50"
-          >
-            <TypeIcon size={16} />
-            Agregar “{query.trim()}” a mano
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setManualOpen(true)}
+          disabled={adding != null}
+          className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium text-accent ring-1 ring-primary-dark/40 active:bg-primary-dark/20 disabled:opacity-50"
+        >
+          {query.trim().length >= 2 ? <TypeIcon size={16} /> : <PenLine size={16} />}
+          {query.trim().length >= 2 ? `Agregar “${query.trim()}” a mano` : 'Agregar a mano'}
+        </button>
+        <p className="mt-2 text-center text-xs text-lavender">
+          Para lo que no aparece en la búsqueda: completas tú los datos.
+        </p>
       </div>
+
+      <BottomSheet open={manualOpen} onClose={() => setManualOpen(false)} title="Agregar a mano">
+        {manualOpen && (
+          <MediaForm
+            section={section}
+            initialTitle={query.trim()}
+            initialType={type}
+            submitLabel="Agregar"
+            onSubmit={handleManualAdd}
+          />
+        )}
+      </BottomSheet>
     </PageContainer>
   )
 }

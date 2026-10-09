@@ -46,3 +46,12 @@ export function sessionTimestamp(day: string): string {
   d.setHours(12, 0, 0, 0)
   return d.toISOString()
 }
+
+/** Año (texto) <-> segundos unix al 1 de enero UTC, como guarda IGDB. */
+export function yearToUnix(year: string): number | undefined {
+  return /^\d{4}$/.test(year.trim()) ? Date.UTC(Number(year.trim()), 0, 1) / 1000 : undefined
+}
+
+export function unixToYear(seconds: number | null | undefined): string {
+  return seconds != null ? String(new Date(seconds * 1000).getUTCFullYear()) : ''
+}
