@@ -9,6 +9,7 @@ import { MediaCoverCard } from '../../components/MediaCoverCard'
 import { ItemStatusSheet } from '../../components/ItemStatusSheet'
 import { GameThumb } from '../../components/GameThumb'
 import { Skeleton } from '../../components/Skeleton'
+import { useQuickProgress } from '../../hooks/useQuickProgress'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import {
@@ -18,7 +19,6 @@ import {
   mediaTypeIcons,
   mediaTypeLabels,
   mediaTypePlurals,
-  progressChanges,
   progressKind,
   statusChanges,
 } from '../../lib/media'
@@ -220,7 +220,7 @@ function Rail({ title, items, onSeeAll, onOpen, onStatusClick }: RailProps) {
  */
 export function ScreenLibrary() {
   const navigate = useNavigate()
-  const { items, loading, error, updateItem, logActivity } = useMedia()
+  const { items, loading, error, updateItem } = useMedia()
   const { showToast, showError } = useToast()
 
   const screenItems = useMemo(
@@ -305,36 +305,8 @@ export function ScreenLibrary() {
     }
   }
 
-  // Avance rápido desde "Seguir viendo" (misma lógica que el detalle).
-  const [busyId, setBusyId] = useState<string | null>(null)
-  async function advance(item: Item) {
-    if (busyId) return
-    setBusyId(item.id)
-    haptic()
-    const runtime = item.metadata.runtime_minutes ?? null
-    const isMovie = progressKind(item.media_type as ScreenType) === 'none'
-    try {
-      if (isMovie) {
-        await logActivity(item.id, { duration_minutes: runtime }, statusChanges(item, 'completed', todayISO()))
-        showToast(`${item.title}: vista`)
-      } else {
-        const updated = await logActivity(
-          item.id,
-          { duration_minutes: runtime, progress_delta: 1 },
-          progressChanges(item, item.progress + 1, todayISO())
-        )
-        showToast(
-          updated.status === 'completed'
-            ? `¡Terminaste ${item.title}!`
-            : `${item.title}: episodio ${updated.progress}`
-        )
-      }
-    } catch (err) {
-      showError(err, 'No se pudo registrar')
-    } finally {
-      setBusyId(null)
-    }
-  }
+  // Avance rápido desde "Seguir viendo" (misma lógica que el inicio).
+  const { busyId, advance } = useQuickProgress()
 
   const isEmpty = !loading && !error && screenItems.length === 0
   const gridTitle = statusFilter

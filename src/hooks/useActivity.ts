@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { ensureSession, supabase } from '../lib/supabaseClient'
 import type { ActivityRow } from '../lib/stats'
-import type { NonGameType } from '../types/item'
+import type { MediaType } from '../types/item'
 
 /**
- * Actividad de los últimos `months` meses de ciertos tipos (episodios y
- * películas vistas, páginas leídas), para las estadísticas y el historial;
+ * Actividad de los últimos `months` meses de ciertos tipos (sesiones de
+ * juego, episodios y películas vistas, páginas leídas), para las
+ * estadísticas, el historial y el inicio;
  * con `months` = null, toda. `null` mientras carga; si falla, queda vacía.
  */
-export function useActivity(types: NonGameType[], months: number | null = 12) {
+export function useActivity(types: MediaType[], months: number | null = 12) {
   const [rows, setRows] = useState<ActivityRow[] | null>(null)
   const typesKey = types.join(',')
 

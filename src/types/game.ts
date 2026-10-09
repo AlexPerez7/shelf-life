@@ -32,11 +32,13 @@ export interface Game {
   replays: number
   franchise: string | null
   created_at: string
+  /** Última modificación (para ordenar por actividad reciente). */
+  updated_at: string
 }
 
 export type NewGame = Pick<Game, 'title'> &
   Partial<
-    Omit<Game, 'id' | 'user_id' | 'created_at' | 'title'>
+    Omit<Game, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'title'>
   >
 
 export interface PlaySession {
@@ -54,6 +56,8 @@ export interface GameList {
   /** Visible por link público (migración 0010). */
   is_public?: boolean
   created_at: string
+  /** Última modificación (para ordenar por actividad reciente). */
+  updated_at: string
 }
 
 export interface IgdbSearchResult {

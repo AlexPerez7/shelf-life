@@ -67,6 +67,7 @@ export function itemToGame(item: Item): Game {
     replays: item.replays,
     franchise: item.franchise,
     created_at: item.created_at,
+    updated_at: item.updated_at,
   }
 }
 
