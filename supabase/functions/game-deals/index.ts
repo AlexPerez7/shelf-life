@@ -61,7 +61,7 @@ async function fetchDeals(title: string, steamAppId?: number): Promise<Deal[]> {
   let res: Response | null = null
   for (let attempt = 0; attempt < 2; attempt++) {
     res = await fetch(`https://www.cheapshark.com/api/1.0/deals?${params}`, {
-      headers: { 'User-Agent': 'PlayDex/1.0 (+https://playdex.netlify.app)' },
+      headers: { 'User-Agent': 'ShelfLife/1.0 (+https://alexperez7.github.io/shelf-life/)' },
     })
     if (res.status !== 429) break
     await sleep(800)

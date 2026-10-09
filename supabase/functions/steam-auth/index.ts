@@ -22,9 +22,9 @@ const CALLBACK_PATH = '/steam-import/callback'
 // lista, la función armaba un login de Steam hacia cualquier https:// que le
 // pasaran (open redirect firmado con la reputación de la app). Cada entrada es
 // un origen, con la subcarpeta si la app no vive en la raíz (GitHub Pages):
-//   supabase secrets set APP_ORIGINS=https://a.app,https://user.github.io/PlayDex
+//   supabase secrets set APP_ORIGINS=https://a.app,https://user.github.io/shelf-life
 const ALLOWED_BASES = (
-  Deno.env.get('APP_ORIGINS') ?? 'https://playdex.netlify.app,https://alexperez7.github.io/PlayDex'
+  Deno.env.get('APP_ORIGINS') ?? 'https://alexperez7.github.io/shelf-life'
 )
   .split(',')
   .map((o) => o.trim().replace(/\/$/, ''))

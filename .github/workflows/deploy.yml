@@ -33,7 +33,7 @@ jobs:
           BASE_PATH: /${{ github.event.repository.name }}/
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-      # GitHub Pages no tiene rewrites: un link directo a /PlayDex/game/123
+      # GitHub Pages no tiene rewrites: un link directo a /shelf-life/game/123
       # cae en 404.html, que es la misma app y resuelve la ruta en el cliente.
       - run: cp dist/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3

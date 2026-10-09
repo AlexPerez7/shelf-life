@@ -49,7 +49,7 @@ type SteamSort = 'horas' | 'nombre'
 
 // Appids que IGDB no reconoció: no se vuelven a ofrecer para "Completar datos"
 // (si no, el botón quedaría para siempre por juegos que IGDB no tiene).
-const IGDB_MISS_KEY = 'playdex_igdb_steam_miss'
+const IGDB_MISS_KEY = 'shelflife_igdb_steam_miss'
 
 function readMisses(): Set<number> {
   try {

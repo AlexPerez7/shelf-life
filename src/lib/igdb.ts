@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient'
 import { readCache, writeCache } from './localCache'
 import type { IgdbSearchResult, NewGame, TimeToBeat } from '../types/game'
 
-const POPULAR_CACHE_KEY = 'playdex_popular_v1'
+const POPULAR_CACHE_KEY = 'shelflife_popular_v1'
 /** Los populares cambian poco: se reutilizan por 6 h sin volver a pedirlos. */
 const POPULAR_TTL_MS = 6 * 60 * 60 * 1000
 

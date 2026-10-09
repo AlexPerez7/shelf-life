@@ -3,7 +3,7 @@
 
 export type Section = 'juegos' | 'pantalla'
 
-const SECTION_KEY = 'playdex_section'
+const SECTION_KEY = 'shelflife_section'
 
 export const sectionPaths: Record<Section, { library: string; add: string }> = {
   juegos: { library: '/', add: '/add' },

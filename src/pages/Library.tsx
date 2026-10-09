@@ -22,7 +22,7 @@ type StatusFilter = GameStatus | 'todos'
 type SortOption = 'recientes' | 'titulo' | 'horas' | 'puntaje'
 type ViewMode = 'lista' | 'portadas'
 
-const VIEW_KEY = 'playdex_library_view'
+const VIEW_KEY = 'shelflife_library_view'
 
 function readViewPref(): ViewMode {
   try {

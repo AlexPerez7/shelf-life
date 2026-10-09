@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
 
-// En GitHub Pages la app vive en /PlayDex/: el workflow de deploy pasa
+// En GitHub Pages la app vive en /shelf-life/: el workflow de deploy pasa
 // BASE_PATH. En desarrollo (y en cualquier hosting en la raíz) es '/'.
 const base = process.env.BASE_PATH ?? '/'
 

@@ -23,7 +23,7 @@ interface SessionTimerValue {
   cancel: () => void
 }
 
-const STORAGE_KEY = 'playdex_session_timer'
+const STORAGE_KEY = 'shelflife_session_timer'
 /** Un cronómetro olvidado más de un día no es una sesión real. */
 const MAX_DURATION_MS = 24 * 60 * 60 * 1000
 

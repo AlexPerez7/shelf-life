@@ -1,8 +1,8 @@
-// La app puede vivir en una subcarpeta (GitHub Pages: /PlayDex/). Vite expone
+// La app puede vivir en una subcarpeta (GitHub Pages: /shelf-life/). Vite expone
 // esa base en BASE_URL ('/' en desarrollo); todo lo que arme URLs absolutas o
 // apunte a archivos de public/ tiene que pasar por acá.
 
-/** Base sin la barra final: '' o '/PlayDex'. */
+/** Base sin la barra final: '' o '/shelf-life'. */
 export const basePath = import.meta.env.BASE_URL.replace(/\/$/, '')
 
 /** URL absoluta de una ruta de la app (links compartidos, redirecciones). */

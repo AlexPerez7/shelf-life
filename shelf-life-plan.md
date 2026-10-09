@@ -1,4 +1,4 @@
-# PlayDex — Plan de Desarrollo
+# Shelf Life — Plan de Desarrollo original (fase solo juegos)
 
 ## Resumen del Proyecto
 PWA (Progressive Web App) mobile-first para trackear videojuegos: backlog, progreso, horas jugadas y estadísticas personales. Uso personal por ahora, pero el modelo de datos debe quedar preparado para soportar múltiples usuarios en el futuro sin necesidad de migraciones mayores.
@@ -70,7 +70,7 @@ create policy "Users can manage sessions of their own games"
 ## Estructura de Carpetas Sugerida
 
 ```
-playdex/
+shelf-life/
 ├── src/
 │   ├── components/
 │   │   ├── GameCard.tsx

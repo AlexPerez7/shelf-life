@@ -74,7 +74,7 @@ const AUTOSAVE_DELAY = 800
 /** Duraciones rápidas para registrar una sesión sin teclear. */
 const QUICK_MINUTES = [15, 30, 45, 60, 90, 120]
 
-const MORE_DETAILS_KEY = 'playdex_detail_more_open'
+const MORE_DETAILS_KEY = 'shelflife_detail_more_open'
 
 const inputClass =
   'w-full rounded-xl bg-background/40 px-3 py-2.5 text-sm text-ink ring-1 ring-primary-dark/30 focus:outline-none focus:ring-2 focus:ring-primary'

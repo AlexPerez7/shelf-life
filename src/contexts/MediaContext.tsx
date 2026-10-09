@@ -27,7 +27,7 @@ interface MediaContextValue {
 
 const MediaContext = createContext<MediaContextValue | null>(null)
 
-const CACHE_PREFIX = 'playdex_media_v1:'
+const CACHE_PREFIX = 'shelflife_media_v1:'
 
 /**
  * Biblioteca de las secciones que no son juegos. Mismo esquema que

@@ -1,10 +1,10 @@
 # Shelf Life
 
-PWA mobile-first para llevar registro de juegos, películas, series, anime y libros: backlog, progreso, tiempo invertido y estadísticas personales. Antes se llamaba PlayDex (solo juegos).
+PWA mobile-first para llevar registro de juegos, películas, series, anime y libros: backlog, progreso, tiempo invertido y estadísticas personales.
 
-Ver [`playdex-plan.md`](./playdex-plan.md) para el plan original de desarrollo.
+Ver [`shelf-life-plan.md`](./shelf-life-plan.md) para el plan original de desarrollo.
 
-En producción: https://alexperez7.github.io/PlayDex/
+En producción: https://alexperez7.github.io/shelf-life/
 
 ## Stack
 
@@ -65,7 +65,7 @@ En producción: https://alexperez7.github.io/PlayDex/
    - `game-deals` no necesita secrets (API pública); usa la `SUPABASE_SERVICE_ROLE_KEY` que Supabase inyecta automáticamente para escribir en `price_cache`.
    - `steam-auth` y `steam-library` usan el JWT del usuario para leer/escribir su fila en `profiles` (RLS).
    - Todas las funciones exigen un **usuario logueado** (no alcanza con la anon key, que es pública).
-   - `steam-auth` solo acepta volver a URLs base permitidas: por defecto `https://alexperez7.github.io/PlayDex` y `https://playdex.netlify.app`. Para otras (dominio propio): `supabase secrets set APP_ORIGINS=https://alexperez7.github.io/PlayDex,https://otro.dominio`
+   - `steam-auth` solo acepta volver a URLs base permitidas: por defecto `https://alexperez7.github.io/shelf-life`. Para otras (dominio propio): `supabase secrets set APP_ORIGINS=https://alexperez7.github.io/shelf-life,https://otro.dominio`
    - `media-search` (películas, series y anime) necesita `supabase secrets set TMDB_API_KEY=...` (API Key o Read Access Token de TMDB). El anime sale de AniList, sin key.
 5. Correr en desarrollo:
    ```
@@ -81,10 +81,10 @@ En producción: https://alexperez7.github.io/PlayDex/
 
 ## Deploy
 
-GitHub Actions (`.github/workflows/deploy.yml`) compila y publica en GitHub Pages en cada push a `main`. La app vive en la subcarpeta `/PlayDex/` (el workflow pasa `BASE_PATH`); las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` son *variables* del repo (Settings → Secrets and variables → Actions → Variables). Para probar localmente un build igual: `BASE_PATH=/PlayDex/ npm run build`.
+GitHub Actions (`.github/workflows/deploy.yml`) compila y publica en GitHub Pages en cada push a `main`. La app vive en la subcarpeta `/shelf-life/` (el workflow pasa `BASE_PATH`); las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` son *variables* del repo (Settings → Secrets and variables → Actions → Variables). Para probar localmente un build igual: `BASE_PATH=/shelf-life/ npm run build`.
 
 El sitio viejo de Netlify (`netlify.toml`) queda como respaldo hasta dar de baja la integración.
 
 ## Estado
 
-Todas las fases del plan original (`playdex-plan.md`) están completas y en producción. El desarrollo actual es iterativo, agregando mejoras e integraciones sobre la base ya funcionando.
+Todas las fases del plan original (`shelf-life-plan.md`) están completas y en producción. El desarrollo actual es iterativo, agregando mejoras e integraciones sobre la base ya funcionando.

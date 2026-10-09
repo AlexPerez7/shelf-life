@@ -51,7 +51,7 @@ function SplashScreen() {
   )
 }
 
-const ONBOARDING_KEY = 'playdex_onboarding_seen'
+const ONBOARDING_KEY = 'shelflife_onboarding_seen'
 
 function App() {
   const { session, loading, recovering, finishRecovery } = useAuth()

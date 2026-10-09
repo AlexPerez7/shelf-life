@@ -25,9 +25,7 @@ const GamesContext = createContext<GamesContextValue | null>(null)
 // La DB guarda `items` (multimedia); las pantallas de juegos ven `Game`.
 // El estado guarda los Item crudos (hacen falta para combinar `metadata`) y
 // expone los juegos ya traducidos.
-const CACHE_PREFIX = 'playdex_items_v1:'
-/** Cache del modelo anterior (filas de `games`): se descarta. */
-const LEGACY_CACHE_PREFIX = 'playdex_games_v1:'
+const CACHE_PREFIX = 'shelflife_items_v1:'
 
 export function GamesProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([])
@@ -71,7 +69,6 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     // Se ignoran TOKEN_REFRESHED y USER_UPDATED: en mobile el token se renueva
     // cada vez que la PWA vuelve del segundo plano, y recargar ahí hacía
     // parpadear toda la app con esqueletos.
-    removeCacheByPrefix(LEGACY_CACHE_PREFIX)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
