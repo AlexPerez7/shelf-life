@@ -25,6 +25,7 @@ import { BottomSheet } from '../../components/BottomSheet'
 import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
 import { Synopsis } from '../../components/Synopsis'
+import { ListPicker } from '../../components/ListPicker'
 import { haptic } from '../../lib/haptics'
 import { parseDate, todayISO } from '../../lib/dates'
 import {
@@ -548,6 +549,8 @@ export function BookDetail() {
                 </label>
               </div>
             </SectionCard>
+
+            <ListPicker itemId={current.id} inactiveClassName="bg-background text-lavender ring-1 ring-primary-dark/25" />
 
             {(current.metadata.publisher || current.metadata.isbn || current.metadata.original_title) && (
               <SectionCard icon={Library} title="Edición">

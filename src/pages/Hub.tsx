@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Check, ChevronRight, Play, Plus, Square } from 'lucide-react'
+import { BookOpen, Check, ChevronRight, ClipboardList, Play, Plus, Square } from 'lucide-react'
 import { useGames } from '../hooks/useGames'
+import { useLists } from '../hooks/useLists'
 import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
 import { formatElapsed, useNow, useSessionTimer } from '../contexts/SessionTimerContext'
@@ -17,6 +18,7 @@ import { parseDate } from '../lib/dates'
 import { formatMinutes, mediaSections, mediaTypeIcons, mediaTypeLabels, progressKind } from '../lib/media'
 import { ensureSession, supabase } from '../lib/supabaseClient'
 import { gamesPaths } from '../trackers/juegos/paths'
+import { listPaths } from '../lib/listPaths'
 import { trackers, trackerIds, type TrackerId } from '../trackers/trackers'
 import type { Game } from '../types/game'
 import type { Item, MediaType, NonGameType } from '../types/item'
@@ -242,6 +244,7 @@ function TrackerCard({ id, line }: { id: TrackerId; line: string }) {
 export function Hub() {
   const { games, loading: loadingGames, refreshGame } = useGames()
   const { items, loading: loadingMedia } = useMedia()
+  const { lists } = useLists()
   const { showToast, showError } = useToast()
   const sessionTimer = useSessionTimer()
   const timer = sessionTimer.timer
@@ -448,6 +451,23 @@ export function Hub() {
             {trackerIds.map((id) => (
               <TrackerCard key={id} id={id} line={loading ? trackers[id].tagline : lines[id]} />
             ))}
+            <Link
+              to={listPaths.lists}
+              className="flex items-center gap-3 rounded-2xl bg-background-surface p-3 ring-1 ring-primary-dark/30 active:bg-primary-dark/10"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                <ClipboardList size={24} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-ink">Mis listas</h3>
+                <p className="truncate text-sm text-lavender">
+                  {lists.length === 0
+                    ? 'Agrupa juegos, películas y libros'
+                    : `${lists.length} ${lists.length === 1 ? 'lista' : 'listas'}`}
+                </p>
+              </div>
+              <ChevronRight size={20} className="text-accent" />
+            </Link>
           </div>
         </section>
 

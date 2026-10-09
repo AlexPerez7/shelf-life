@@ -5,10 +5,8 @@ import {
   Calendar,
   AlertCircle,
   ArrowLeft,
-  Check,
   CheckCircle2,
   ChevronDown,
-  ClipboardList,
   Clock,
   Disc,
   Gamepad2,
@@ -34,7 +32,7 @@ import {
 import { useGames } from '../../hooks/useGames'
 import { supabase } from '../../lib/supabaseClient'
 import { usePlaySessions } from '../../hooks/usePlaySessions'
-import { useLists, useGameListIds } from '../../hooks/useLists'
+import { ListPicker } from '../../components/ListPicker'
 import { StarRating } from '../../components/StarRating'
 import { TagList } from '../../components/TagList'
 import { PlatformPicker } from '../../components/PlatformPicker'
@@ -167,8 +165,6 @@ export function GameDetail() {
   // Se pasa el id de la URL (no game?.id) para que estas consultas no
   // esperen a que termine de cargar toda la biblioteca antes de arrancar.
   const { sessions, addSession, deleteSession } = usePlaySessions(id)
-  const { lists } = useLists()
-  const { listIds, toggle: toggleList } = useGameListIds(id)
 
   // --- Guardado automático ---------------------------------------------
   // `draft` guarda SOLO los campos modificados que todavía no se guardaron.
@@ -441,14 +437,6 @@ export function GameDetail() {
       })
     } catch (err) {
       showError(err, 'No se pudo eliminar la sesión')
-    }
-  }
-
-  async function handleToggleList(listId: string) {
-    try {
-      await toggleList(listId)
-    } catch (err) {
-      showError(err, 'No se pudo actualizar la lista')
     }
   }
 
@@ -830,34 +818,7 @@ export function GameDetail() {
               </SectionCard>
             </div>
 
-            <SectionCard icon={ClipboardList} title="Mis listas">
-              {lists.length === 0 ? (
-                <p className="text-sm text-lavender">
-                  No tienes listas todavía. Crea una desde la pestaña "Listas".
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-x-2 gap-y-3">
-                  {lists.map((list) => {
-                    const active = listIds.has(list.id)
-                    return (
-                      <Chip
-                        key={list.id}
-                        active={active}
-                        onClick={() => handleToggleList(list.id)}
-                        inactiveClassName="bg-background/40 text-lavender ring-1 ring-primary-dark/30"
-                      >
-                        {active ? (
-                          <Check size={14} className="-ml-0.5 mr-1" />
-                        ) : (
-                          <Plus size={14} className="-ml-0.5 mr-1" />
-                        )}
-                        {list.name}
-                      </Chip>
-                    )
-                  })}
-                </div>
-              )}
-            </SectionCard>
+            <ListPicker itemId={game.id} />
 
             {game.summary && (
               <SectionCard icon={Info} title="Acerca de">

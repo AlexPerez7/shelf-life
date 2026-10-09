@@ -4,10 +4,11 @@ import { ClipboardList } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { statusColors, statusLabels } from '../lib/status'
 import { gameStatusFromItem } from '../lib/gameItem'
-import { plural } from '../lib/text'
+import { listSummary } from '../lib/listEntries'
+import { itemStatusColor, mediaTypeIcons, mediaTypeLabels, sectionForType } from '../lib/media'
+import { trackers } from '../trackers/trackers'
 import { GameThumb } from '../components/GameThumb'
 import { Skeleton } from '../components/Skeleton'
-import type { GameStatus } from '../types/game'
 import type { ItemStatus, MediaType } from '../types/item'
 import { asset } from '../lib/appUrl'
 
@@ -23,27 +24,45 @@ interface PublicItem {
   release_date: string | null
 }
 
-interface PublicGame {
+interface PublicEntry {
+  type: MediaType
   title: string
   cover_url: string | null
-  status: GameStatus
+  typeLabel: string
+  statusLabel: string
+  statusClass: string
 }
 
 interface PublicList {
   name: string
-  games: PublicGame[]
+  entries: PublicEntry[]
 }
 
 function toPublicList(data: { name: string; items: PublicItem[] }): PublicList {
   return {
     name: data.name,
-    games: data.items
-      .filter((i) => i.media_type === 'game')
-      .map((i) => ({
+    entries: data.items.map((i) => {
+      if (i.media_type === 'game') {
+        const status = gameStatusFromItem(i.status)
+        return {
+          type: i.media_type,
+          title: i.title,
+          cover_url: i.cover_url,
+          typeLabel: 'Juego',
+          statusLabel: statusLabels[status],
+          statusClass: statusColors[status],
+        }
+      }
+      const section = sectionForType(i.media_type)
+      return {
+        type: i.media_type,
         title: i.title,
         cover_url: i.cover_url,
-        status: gameStatusFromItem(i.status),
-      })),
+        typeLabel: mediaTypeLabels[i.media_type],
+        statusLabel: section.statusLabels[i.status],
+        statusClass: itemStatusColor(i.status, section),
+      }
+    }),
   }
 }
 
@@ -101,26 +120,26 @@ export function SharedList() {
             Lista compartida
           </p>
           <h1 className="mb-1 text-2xl font-bold text-ink">{list.name}</h1>
-          <p className="mb-5 text-sm text-lavender">{plural(list.games.length, 'juego')}</p>
+          <p className="mb-5 text-sm text-lavender">{listSummary(list.entries)}</p>
 
           <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4">
-            {list.games.map((g, i) => (
+            {list.entries.map((g, i) => (
               <div key={`${g.title}-${i}`}>
-                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-primary-dark/20 ring-1 ring-primary-dark/30">
+                <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-primary-dark/20 ring-1 ring-primary-dark/30">
                   <GameThumb
                     src={g.cover_url}
                     alt=""
                     className="h-full w-full object-cover"
                     placeholderClassName="text-3xl"
+                    icon={g.type === 'game' ? trackers.juegos.Icon : mediaTypeIcons[g.type]}
                   />
                 </div>
                 <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-tight text-ink">
                   {g.title}
                 </p>
-                <span
-                  className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] ${statusColors[g.status]}`}
-                >
-                  {statusLabels[g.status]}
+                <p className="text-[11px] text-lavender">{g.typeLabel}</p>
+                <span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] ${g.statusClass}`}>
+                  {g.statusLabel}
                 </span>
               </div>
             ))}

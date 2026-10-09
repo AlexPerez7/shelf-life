@@ -43,7 +43,7 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
 - Cronómetro de sesión ("Jugar" / "Terminar"), que sigue contando aunque se cierre la app
 - Registro de sesiones de juego (fecha + minutos), que suman automáticamente a las horas totales (trigger en la DB)
 - Guardado automático en el detalle del juego (sin botón "Guardar")
-- Listas personalizadas (crear, agregar/quitar juegos) y compartibles por link público de solo lectura (`/compartir/:id`). La lectura pública pasa por la función `get_public_list` (SECURITY DEFINER), que solo devuelve campos no sensibles de listas marcadas como públicas; las tablas no tienen políticas para `anon`
+- Listas personalizadas comunes a los tres trackers (`/listas`): una lista puede mezclar juegos, películas, series, anime y libros; se agregan desde "Mis listas" en el detalle de cada uno (ahí también se puede crear una nueva). Compartibles por link público de solo lectura (`/compartir/:id`). La lectura pública pasa por la función `get_public_list` (SECURITY DEFINER), que solo devuelve campos no sensibles de listas marcadas como públicas; las tablas no tienen políticas para `anon`
 - Pantalla de Inicio con juegos populares recientes (vía IGDB) y alta rápida a la biblioteca
 - Diario: línea de tiempo con altas, inicios, finalizaciones y sesiones registradas
 - Estado "Deseado" (wishlist) separado de "Pendiente", con precios de tiendas

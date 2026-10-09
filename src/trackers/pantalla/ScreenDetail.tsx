@@ -28,6 +28,7 @@ import { BottomSheet } from '../../components/BottomSheet'
 import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
 import { Synopsis } from '../../components/Synopsis'
+import { ListPicker } from '../../components/ListPicker'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import {
@@ -512,6 +513,8 @@ export function ScreenDetail() {
                 </label>
               </div>
             </SectionCard>
+
+            <ListPicker itemId={current.id} />
 
             <SectionCard icon={StickyNote} title="Notas y reseña">
               <div className="flex flex-col gap-3">
