@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, Library, Rows3, Search, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileUp, Library, Rows3, Search, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
@@ -209,6 +209,12 @@ export function BooksLibrary() {
             className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-white"
           >
             <Search size={18} /> Buscar un libro
+          </Link>
+          <Link
+            to={`${section.libraryPath}/importar`}
+            className="flex min-h-12 items-center justify-center gap-2 rounded-xl text-sm font-medium text-accent ring-1 ring-primary-dark/25 active:bg-primary-dark/10"
+          >
+            <FileUp size={16} /> Importar de Goodreads o StoryGraph
           </Link>
         </div>
       ) : results ? (

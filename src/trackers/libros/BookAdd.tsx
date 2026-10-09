@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   BookOpen,
@@ -7,6 +7,7 @@ import {
   Bookmark,
   Check,
   ChevronRight,
+  FileUp,
   Loader2,
   PenLine,
   Search,
@@ -248,6 +249,18 @@ export function BookAdd() {
         <p className="mt-2 text-center text-xs text-lavender">
           Para lo que no aparece en la búsqueda: completas tú los datos.
         </p>
+
+        <Link
+          to={`${section.libraryPath}/importar`}
+          className="mt-6 flex items-center gap-3 rounded-2xl bg-background-surface p-3.5 shadow-sm ring-1 ring-primary-dark/15 active:bg-primary-dark/10"
+        >
+          <FileUp size={20} className="shrink-0 text-accent" />
+          <span className="min-w-0 flex-1 text-sm">
+            <span className="font-book block font-semibold text-ink">¿Vienes de Goodreads o StoryGraph?</span>
+            <span className="text-lavender">Importa toda tu biblioteca de una vez</span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-lavender" />
+        </Link>
       </div>
 
       <BottomSheet open={preview != null} onClose={() => setPreview(null)} title={shown?.title ?? 'Ficha'}>

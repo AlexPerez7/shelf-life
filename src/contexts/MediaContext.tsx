@@ -15,6 +15,14 @@ interface MediaContextValue {
   loading: boolean
   error: string | null
   addItem: (item: ItemWrite & Pick<Item, 'media_type' | 'title'>) => Promise<Item>
+  /**
+   * Alta en lote (importaciones): un insert cada 200, avisando el avance.
+   * Acepta `created_at` para conservar la fecha en que se agregó en otra app.
+   */
+  addItems: (
+    items: (ItemWrite & Pick<Item, 'media_type' | 'title'> & { created_at?: string })[],
+    onProgress?: (done: number) => void
+  ) => Promise<Item[]>
   updateItem: (id: string, changes: ItemWrite) => Promise<Item>
   deleteItem: (id: string) => Promise<void>
   /**
@@ -112,6 +120,25 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return data as Item
   }, [])
 
+  const addItems = useCallback<MediaContextValue['addItems']>(async (newItems, onProgress) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) throw new Error('No hay sesión activa')
+
+    const created: Item[] = []
+    for (let i = 0; i < newItems.length; i += 200) {
+      const rows = newItems.slice(i, i + 200).map((item) => ({ ...item, user_id: user.id }))
+      const { data, error } = await supabase.from('items').insert(rows).select()
+      if (error) throw error
+      created.push(...(data as Item[]))
+      // Por tandas, para que se vea el avance.
+      setItems((prev) => [...(data as Item[]), ...prev])
+      onProgress?.(created.length)
+    }
+    return created
+  }, [])
+
   const updateItem = useCallback<MediaContextValue['updateItem']>(async (id, changes) => {
     const { data, error } = await supabase
       .from('items')
@@ -151,8 +178,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo<MediaContextValue>(
-    () => ({ items, loading, error, addItem, updateItem, deleteItem, logActivity }),
-    [items, loading, error, addItem, updateItem, deleteItem, logActivity]
+    () => ({ items, loading, error, addItem, addItems, updateItem, deleteItem, logActivity }),
+    [items, loading, error, addItem, addItems, updateItem, deleteItem, logActivity]
   )
 
   return <MediaContext.Provider value={value}>{children}</MediaContext.Provider>
