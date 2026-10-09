@@ -157,3 +157,66 @@ body {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Librero de madera (tracker de Libros). La veta es ruido SVG estirado:
+   frecuencia baja en un eje y alta en el otro da vetas largas y orgánicas.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* Veta horizontal (marco y repisas). */
+  --wood-grain-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.28' numOctaves='4' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.24 0 0 0 0 0.13 0 0 0 0 0.05 0 0 0 0.65 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* Veta vertical (fondo del mueble, tablas paradas). */
+  --wood-grain-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='400'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.3 0.005' numOctaves='4' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.18 0 0 0 0 0.09 0 0 0 0 0.03 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* Marco del mueble: nogal medio, con luz en los cantos. */
+.wood-frame {
+  background-color: #7b4a23;
+  background-image:
+    var(--wood-grain-h),
+    linear-gradient(90deg, #643a19 0%, #8a552a 18%, #7b4a23 50%, #8a552a 82%, #643a19 100%);
+  background-blend-mode: multiply, normal;
+  box-shadow:
+    0 14px 28px -10px rgba(45, 22, 6, 0.6),
+    inset 0 1px 0 rgba(255, 220, 170, 0.35),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    inset 2px 0 0 rgba(255, 220, 170, 0.12),
+    inset -2px 0 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Fondo del mueble: tablas verticales más oscuras, con profundidad. */
+.wood-back {
+  background-color: #4f2d14;
+  background-image:
+    var(--wood-grain-v),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0 70px, rgba(0, 0, 0, 0.28) 70px 72px),
+    linear-gradient(to bottom, #5b3519, #4a2a12);
+  background-blend-mode: multiply, normal, normal;
+  box-shadow:
+    inset 0 10px 18px rgba(0, 0, 0, 0.5),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.35),
+    inset 8px 0 14px rgba(0, 0, 0, 0.3),
+    inset -8px 0 14px rgba(0, 0, 0, 0.3);
+}
+
+/* Repisa: superficie superior iluminada + canto frontal con veta. */
+.wood-board {
+  height: 15px;
+  background-color: #8f5a2c;
+  background-image:
+    var(--wood-grain-h),
+    linear-gradient(to bottom, #d39b62 0, #c48a52 4px, #9a6332 4px, #84522a 100%);
+  background-blend-mode: multiply, normal;
+  box-shadow:
+    0 8px 10px -3px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Etiqueta de repisa: placa de papel sobre la madera. */
+.shelf-label {
+  background: linear-gradient(to bottom, #fbf5e8, #efe4cc);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(140, 100, 50, 0.25);
+}

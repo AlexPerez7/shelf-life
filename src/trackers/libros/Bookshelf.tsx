@@ -118,29 +118,27 @@ export function ShelfBook({
   )
 }
 
-/** Tabla de la repisa, con canto y sombra. */
-function Plank() {
-  return (
-    <div
-      aria-hidden="true"
-      className="h-3 rounded-sm shadow-[0_6px_8px_-2px_rgba(60,40,20,0.35)]"
-      style={{ background: 'linear-gradient(to bottom, #e9d8bd 0%, #d4bc98 45%, #b89a72 100%)' }}
-    />
-  )
+/** Tabla de la repisa (madera, ver .wood-board en index.css). */
+function Board({ className = '' }: { className?: string }) {
+  return <div aria-hidden="true" className={`wood-board ${className}`} />
 }
 
 /** Adorno parado en la repisa. */
 function Decor({ seed }: { seed: string }) {
   return (
-    <span aria-hidden="true" className="flex-shrink-0 select-none self-end px-1 text-4xl leading-none">
+    <span
+      aria-hidden="true"
+      className="flex-shrink-0 select-none self-end px-1 text-4xl leading-none drop-shadow-[0_3px_3px_rgba(0,0,0,0.45)]"
+    >
       {decorFor(seed)}
     </span>
   )
 }
 
 /**
- * Repisa: etiqueta ("ESTADO · Leyendo · 3") y una fila de libros que se
- * desliza hacia los lados. Tocar la etiqueta abre el estante completo.
+ * Repisa: placa con la etiqueta ("ESTADO · Leyendo · 3") y una fila de
+ * libros parados sobre la tabla, que se desliza hacia los lados. Tocar la
+ * placa abre el estante completo.
  */
 export function Shelf({
   id,
@@ -170,17 +168,17 @@ export function Shelf({
         type="button"
         onClick={onOpenShelf}
         disabled={!onOpenShelf}
-        className="mb-2 flex min-h-9 w-full items-center gap-2 rounded-full bg-background-surface/80 px-3 text-left ring-1 ring-primary-dark/15 active:bg-background-surface"
+        className="shelf-label mb-2.5 ml-1 flex min-h-8 max-w-[calc(100%-0.5rem)] items-center gap-2 rounded-[4px] px-2.5 text-left active:brightness-95"
       >
-        <span className="text-[10px] font-bold uppercase tracking-widest text-lavender">{category}</span>
-        <span className="font-book min-w-0 flex-1 truncate text-sm font-semibold text-ink">{name}</span>
-        <span className="rounded-full bg-primary-dark/15 px-2 text-xs tabular-nums text-lavender">{items.length}</span>
-        {onOpenShelf && <ChevronRight size={14} className="text-lavender" />}
+        <span className="text-[9px] font-bold uppercase tracking-widest text-[#8a6a45]">{category}</span>
+        <span className="font-book min-w-0 truncate text-sm font-semibold text-[#2a2620]">{name}</span>
+        <span className="text-xs tabular-nums text-[#8a6a45]">{items.length}</span>
+        {onOpenShelf && <ChevronRight size={14} className="flex-shrink-0 text-[#8a6a45]" />}
       </button>
 
-      <div className="scrollbar-hide -mx-1 flex min-h-[7.75rem] items-end gap-1.5 overflow-x-auto px-2 pt-1">
+      <div className="scrollbar-hide flex min-h-[7.75rem] items-end gap-1 overflow-x-auto px-2 pt-1">
         {items.length === 0 && (
-          <p className="self-center px-2 text-xs italic text-lavender">{emptyText}</p>
+          <p className="self-center px-2 text-xs italic text-[#f1dfc4]/80">{emptyText}</p>
         )}
         {items.map((item, i) => (
           <div key={item.id} className="contents">
@@ -191,27 +189,30 @@ export function Shelf({
         <Decor seed={id} />
         <div className="w-2 flex-shrink-0" aria-hidden="true" />
       </div>
-      <Plank />
+      {/* La tabla llega a los costados del mueble. */}
+      <Board className="-mx-2" />
     </div>
   )
 }
 
-/** Mueble: agrupa varias repisas bajo un título. */
+/** Mueble de madera: marco, fondo de tablas y varias repisas. */
 export function ShelfUnit({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section
-      className="rounded-3xl p-3 pb-4 shadow-[inset_0_2px_10px_rgba(60,40,20,0.12)] ring-1 ring-[#c9b28f]/50"
-      style={{ background: 'linear-gradient(to bottom, #efe5d3, #e8dcc6)' }}
-    >
-      <h2 className="mb-3 px-1 text-lg font-bold text-ink">{title}</h2>
-      <div className="flex flex-col gap-5">{children}</div>
+    <section className="wood-frame rounded-xl p-2.5 pt-2">
+      <h2 className="mb-2 px-2 text-base font-bold text-[#f6e7cf] [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
+        {title}
+      </h2>
+      <div className="wood-back overflow-hidden rounded-[4px] px-2 pt-3">
+        <div className="flex flex-col gap-5">{children}</div>
+      </div>
     </section>
   )
 }
 
 /**
- * Estante completo: los libros en varias filas, cada una sobre su tabla
- * (la tabla se dibuja como fondo repetido, una por fila).
+ * Estante completo: los libros en varias filas. Cada libro lleva su tramo de
+ * tabla debajo; como no hay espacio entre ellos, los tramos de una fila
+ * forman una sola repisa. Un relleno final completa la última.
  */
 export function Bookcase({
   items,
@@ -222,28 +223,26 @@ export function Bookcase({
   mode: ShelfMode
   onOpenBook: (item: Item) => void
 }) {
-  const ROW = 144 // alto de cada fila, en px (libro + tabla)
   return (
-    <div
-      className="rounded-3xl p-3 shadow-[inset_0_2px_10px_rgba(60,40,20,0.12)] ring-1 ring-[#c9b28f]/50"
-      style={{ background: 'linear-gradient(to bottom, #efe5d3, #e8dcc6)' }}
-    >
-      <div
-        className="flex flex-wrap items-end gap-x-1.5 px-1"
-        style={{
-          rowGap: 0,
-          backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${ROW - 12}px, #d4bc98 ${ROW - 12}px, #b89a72 ${ROW}px)`,
-        }}
-      >
-        {items.map((item) => (
-          <div key={item.id} className="flex items-end pb-3" style={{ height: ROW }}>
-            <ShelfBook item={item} mode={mode} onOpen={() => onOpenBook(item)} />
+    <section className="wood-frame rounded-xl p-2.5">
+      <div className="wood-back overflow-hidden rounded-[4px] px-2 pt-4">
+        <div className="-mx-2 flex flex-wrap items-end" style={{ rowGap: '1.5rem' }}>
+          {items.map((item) => (
+            <div key={item.id} className="flex flex-col">
+              <div className="flex justify-center px-[3px] pt-1 first:pl-2">
+                <ShelfBook item={item} mode={mode} onOpen={() => onOpenBook(item)} />
+              </div>
+              <Board />
+            </div>
+          ))}
+          <div className="flex min-w-14 flex-1 flex-col">
+            <div className="flex px-1">
+              <Decor seed={`case-${items.length}`} />
+            </div>
+            <Board />
           </div>
-        ))}
-        <div className="flex items-end pb-3" style={{ height: ROW }}>
-          <Decor seed={`case-${items.length}`} />
         </div>
       </div>
-    </div>
+    </section>
   )
 }
