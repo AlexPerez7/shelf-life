@@ -1,6 +1,6 @@
 # Shelf Life
 
-PWA mobile-first para registrar juegos, películas, series, anime y libros. Detalle de funcionalidades, integraciones y setup en `README.md`.
+PWA mobile-first para registrar juegos, películas, series, anime y libros. Detalle de funcionalidades, integraciones y setup en `README.md`. Lo pendiente, en orden, en `plan.md`: al terminar algo de ahí, sacarlo del plan.
 
 ## Idioma
 
