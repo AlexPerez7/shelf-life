@@ -66,7 +66,7 @@ En producción: https://alexperez7.github.io/shelf-life/
    - `steam-auth` y `steam-library` usan el JWT del usuario para leer/escribir su fila en `profiles` (RLS).
    - Todas las funciones exigen un **usuario logueado** (no alcanza con la anon key, que es pública).
    - `steam-auth` solo acepta volver a URLs base permitidas: por defecto `https://alexperez7.github.io/shelf-life`. Para otras (dominio propio): `supabase secrets set APP_ORIGINS=https://alexperez7.github.io/shelf-life,https://otro.dominio`
-   - `media-search` (películas, series y anime) necesita `supabase secrets set TMDB_API_KEY=...` (API Key o Read Access Token de TMDB). El anime sale de AniList, sin key.
+   - `media-search` (películas, series y anime) necesita `supabase secrets set TMDB_API_KEY=...` (API Key o Read Access Token de TMDB). El anime sale de AniList y los libros de Open Library, ambos sin key. Opcional: `GOOGLE_BOOKS_API_KEY` para buscar libros primero en Google Books.
 5. Correr en desarrollo:
    ```
    npm run dev

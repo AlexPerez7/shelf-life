@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
+  BookOpen,
   Calendar,
   ChevronDown,
   Clock,
@@ -28,13 +29,15 @@ import { haptic } from '../lib/haptics'
 import { todayISO } from '../lib/dates'
 import {
   formatMinutes,
-  hasEpisodes,
-  isScreenType,
+  isNonGameType,
   itemStatusColor,
-  screenStatusLabels,
-  screenTypeIcons,
-  screenTypeLabels,
+  mediaSections,
+  mediaTypeIcons,
+  mediaTypeLabels,
+  progressChanges,
+  progressKind,
   statusChanges,
+  type MediaSectionId,
 } from '../lib/media'
 import type { Item, ItemStatus, ItemWrite } from '../types/item'
 
@@ -70,7 +73,131 @@ function BlurTextarea({
   )
 }
 
-export function MediaDetail() {
+/** Total de episodios o páginas, editable a mano (las APIs no siempre lo traen). */
+function TotalInput({
+  label,
+  value,
+  onSave,
+}: {
+  label: string
+  value: number | null
+  onSave: (value: number | null) => void
+}) {
+  return (
+    <label className="mt-3 flex items-center justify-between gap-3 text-sm text-lavender">
+      {label}
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        defaultValue={value ?? ''}
+        key={value ?? 'none'}
+        onBlur={(e) => {
+          const n = Number(e.target.value)
+          const next = Number.isInteger(n) && n > 0 ? n : null
+          if (next !== value) onSave(next)
+        }}
+        className="w-20 rounded-lg bg-background/40 px-2 py-1.5 text-right text-ink ring-1 ring-primary-dark/30 focus:outline-none focus:ring-2 focus:ring-primary"
+      />
+    </label>
+  )
+}
+
+/** Avance de un libro: página actual, con minutos de lectura opcionales. */
+function PagesCard({
+  item,
+  busy,
+  onSetPage,
+  onSave,
+}: {
+  item: Item
+  busy: boolean
+  onSetPage: (page: number, minutes: number | null) => void
+  onSave: (changes: ItemWrite) => void
+}) {
+  const [page, setPageText] = useState(String(item.progress || ''))
+  const [minutes, setMinutes] = useState('')
+  useEffect(() => setPageText(String(item.progress || '')), [item.progress])
+
+  const total = item.progress_total
+  const percent = total ? Math.min(100, Math.round((item.progress / total) * 100)) : null
+  const pageNumber = Number(page)
+  const valid =
+    page !== '' &&
+    Number.isInteger(pageNumber) &&
+    pageNumber >= 0 &&
+    (total == null || pageNumber <= total) &&
+    pageNumber !== item.progress
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!valid) return
+    const m = Number(minutes)
+    onSetPage(pageNumber, Number.isInteger(m) && m > 0 ? m : null)
+    setMinutes('')
+  }
+
+  return (
+    <SectionCard icon={BookOpen} title="Lectura">
+      <p className="text-3xl font-bold tabular-nums text-ink">
+        {item.progress}
+        <span className="text-lg font-normal text-lavender"> / {total ?? '?'} págs.</span>
+      </p>
+      {percent != null && (
+        <>
+          <p className="text-xs text-lavender">{percent}% leído</p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-primary-dark/30">
+            <div className="h-full bg-accent transition-all" style={{ width: `${percent}%` }} />
+          </div>
+        </>
+      )}
+
+      <form onSubmit={submit} className="mt-4 flex items-end gap-2">
+        <label className="block flex-1">
+          <span className="mb-1 block text-xs text-lavender">Voy en la página</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={total ?? undefined}
+            value={page}
+            onChange={(e) => setPageText(e.target.value)}
+            className={inputClass}
+          />
+        </label>
+        <label className="block w-24">
+          <span className="mb-1 block text-xs text-lavender">Minutos</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+            placeholder="opc."
+            className={inputClass}
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={!valid || busy}
+          className="min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          Guardar
+        </button>
+      </form>
+
+      <TotalInput
+        label="Total de páginas"
+        value={total}
+        onSave={(progress_total) => onSave({ progress_total })}
+      />
+    </SectionCard>
+  )
+}
+
+
+export function MediaDetail({ sectionId }: { sectionId: MediaSectionId }) {
+  const section = mediaSections[sectionId]
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
@@ -85,16 +212,20 @@ export function MediaDetail() {
 
   function goBack() {
     if (location.key !== 'default') navigate(-1)
-    else navigate('/pantalla')
+    else navigate(section.libraryPath)
   }
 
-  if (!item || !isScreenType(item.media_type)) {
+  if (
+    !item ||
+    !isNonGameType(item.media_type) ||
+    !(section.types as string[]).includes(item.media_type)
+  ) {
     return (
       <PageContainer>
         <p className="text-sm text-lavender">{loading ? 'Cargando...' : 'No se encontró.'}</p>
         {!loading && (
-          <button onClick={() => navigate('/pantalla')} className="mt-4 text-accent">
-            Volver a Pantalla
+          <button onClick={() => navigate(section.libraryPath)} className="mt-4 text-accent">
+            Volver a {section.title}
           </button>
         )}
       </PageContainer>
@@ -103,9 +234,10 @@ export function MediaDetail() {
 
   const current: Item = item
   const type = item.media_type
-  const TypeIcon = screenTypeIcons[type]
-  const episodes = hasEpisodes(type)
+  const TypeIcon = mediaTypeIcons[type]
+  const kind = progressKind(type)
   const runtime = current.metadata.runtime_minutes ?? null
+  const statusLabels = section.statusLabels
 
   async function save(changes: ItemWrite, message?: string) {
     try {
@@ -128,19 +260,11 @@ export function MediaDetail() {
     if (busy) return
     setBusy(true)
     haptic()
-    const today = todayISO()
-    const progress = current.progress + 1
-    let changes: ItemWrite = { progress }
-    if (current.progress_total && progress >= current.progress_total) {
-      changes = { ...statusChanges(current, 'completed', today), progress }
-    } else if (current.status !== 'in_progress') {
-      changes = { ...statusChanges(current, 'in_progress', today), progress }
-    }
     try {
       const updated = await logActivity(
         current.id,
         { duration_minutes: runtime, progress_delta: 1 },
-        changes
+        progressChanges(current, current.progress + 1, todayISO())
       )
       if (updated.status === 'completed' && current.status !== 'completed') {
         showToast(`¡Terminaste ${current.title}!`)
@@ -158,6 +282,34 @@ export function MediaDetail() {
     setBusy(true)
     await save({ progress: current.progress - 1 })
     setBusy(false)
+  }
+
+  /**
+   * Libro: nueva página actual. Avanzar registra la lectura (páginas y
+   * minutos opcionales); retroceder es una corrección y no registra nada.
+   */
+  async function setPage(page: number, minutes: number | null) {
+    if (busy || page === current.progress) return
+    setBusy(true)
+    haptic()
+    try {
+      if (page > current.progress) {
+        const updated = await logActivity(
+          current.id,
+          { duration_minutes: minutes, progress_delta: page - current.progress },
+          progressChanges(current, page, todayISO())
+        )
+        if (updated.status === 'completed' && current.status !== 'completed') {
+          showToast(`¡Terminaste ${current.title}!`)
+        }
+      } else {
+        await updateItem(current.id, { progress: page })
+      }
+    } catch (err) {
+      showError(err, 'No se pudo guardar la página')
+    } finally {
+      setBusy(false)
+    }
   }
 
   /** Película vista (o vuelta a ver). */
@@ -191,7 +343,7 @@ export function MediaDetail() {
     try {
       await deleteItem(current.id)
       showToast(`${current.title} eliminado`)
-      navigate('/pantalla', { replace: true })
+      navigate(section.libraryPath, { replace: true })
     } catch (err) {
       showError(err, 'No se pudo eliminar')
     }
@@ -260,9 +412,17 @@ export function MediaDetail() {
       <PageContainer belowHero>
         <div className="mx-auto md:max-w-xl">
           <h1 className="text-2xl font-bold">{current.title}</h1>
+          {current.metadata.authors?.length ? (
+            <p className="mt-0.5 text-sm text-ink">{current.metadata.authors.join(', ')}</p>
+          ) : null}
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-lavender">
             <TypeIcon size={14} />
-            {[screenTypeLabels[type], year, runtime && (episodes ? `${runtime} min/ep.` : formatMinutes(runtime))]
+            {[
+              mediaTypeLabels[type],
+              year,
+              runtime && (kind === 'episodes' ? `${runtime} min/ep.` : formatMinutes(runtime)),
+              kind === 'pages' && current.progress_total ? `${current.progress_total} págs.` : null,
+            ]
               .filter(Boolean)
               .join(' · ')}
           </p>
@@ -275,7 +435,7 @@ export function MediaDetail() {
               onClick={() => setStatusOpen(true)}
               className={`flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-medium ${itemStatusColor(current.status)}`}
             >
-              {screenStatusLabels[current.status]}
+              {statusLabels[current.status]}
               <ChevronDown size={14} />
             </button>
             <button
@@ -294,11 +454,14 @@ export function MediaDetail() {
             onClose={() => setStatusOpen(false)}
             value={current.status}
             onChange={handleStatus}
-            labels={screenStatusLabels}
+            labels={statusLabels}
           />
 
           <div className="flex flex-col gap-4">
-            {episodes ? (
+            {kind === 'pages' && (
+              <PagesCard item={current} busy={busy} onSetPage={setPage} onSave={save} />
+            )}
+            {kind === 'episodes' && (
               <SectionCard icon={ListChecks} title="Episodios">
                 <div className="flex items-center justify-between gap-3">
                   <button
@@ -333,24 +496,14 @@ export function MediaDetail() {
                     <div className="h-full bg-accent transition-all" style={{ width: `${percent}%` }} />
                   </div>
                 )}
-                <label className="mt-3 flex items-center justify-between gap-3 text-sm text-lavender">
-                  Total de episodios
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    defaultValue={current.progress_total ?? ''}
-                    key={current.progress_total ?? 'none'}
-                    onBlur={(e) => {
-                      const n = Number(e.target.value)
-                      const next = Number.isInteger(n) && n > 0 ? n : null
-                      if (next !== current.progress_total) save({ progress_total: next })
-                    }}
-                    className="w-20 rounded-lg bg-background/40 px-2 py-1.5 text-right text-ink ring-1 ring-primary-dark/30 focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </label>
+                <TotalInput
+                  label="Total de episodios"
+                  value={current.progress_total}
+                  onSave={(progress_total) => save({ progress_total })}
+                />
               </SectionCard>
-            ) : (
+            )}
+            {kind === 'none' && (
               <button
                 onClick={markWatched}
                 disabled={busy}
@@ -364,13 +517,17 @@ export function MediaDetail() {
             <SectionCard icon={Clock} title="Mi registro">
               <div className="mb-3 grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-xs text-lavender">Tiempo visto</p>
+                  <p className="text-xs text-lavender">
+                    {kind === 'pages' ? 'Tiempo de lectura' : 'Tiempo visto'}
+                  </p>
                   <p className="font-semibold text-ink">
                     {current.time_spent_minutes > 0 ? formatMinutes(current.time_spent_minutes) : '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-lavender">Veces vista de nuevo</p>
+                  <p className="text-xs text-lavender">
+                    {kind === 'pages' ? 'Relecturas' : 'Veces vista de nuevo'}
+                  </p>
                   <p className="font-semibold text-ink">{current.replays}</p>
                 </div>
               </div>
@@ -409,7 +566,7 @@ export function MediaDetail() {
                     value={current.notes}
                     onSave={(notes) => save({ notes })}
                     rows={3}
-                    placeholder="Dónde quedaste, con quién la ves..."
+                    placeholder={section.notesPlaceholder}
                   />
                 </label>
                 <label className="block">
@@ -423,6 +580,25 @@ export function MediaDetail() {
                 </label>
               </div>
             </SectionCard>
+
+            {kind === 'pages' && (current.metadata.publisher || current.metadata.isbn) && (
+              <SectionCard icon={BookOpen} title="Edición">
+                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                  {current.metadata.publisher && (
+                    <>
+                      <dt className="text-lavender">Editorial</dt>
+                      <dd className="text-ink">{current.metadata.publisher}</dd>
+                    </>
+                  )}
+                  {current.metadata.isbn && (
+                    <>
+                      <dt className="text-lavender">ISBN</dt>
+                      <dd className="tabular-nums text-ink">{current.metadata.isbn}</dd>
+                    </>
+                  )}
+                </dl>
+              </SectionCard>
+            )}
 
             {(current.summary || current.genres.length > 0) && (
               <SectionCard icon={Info} title="Sinopsis">

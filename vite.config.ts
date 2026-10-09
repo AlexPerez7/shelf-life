@@ -76,7 +76,9 @@ export default defineConfig({
               url.hostname.endsWith('.steamstatic.com') ||
               url.hostname.endsWith('.steampowered.com') ||
               url.hostname === 'image.tmdb.org' ||
-              url.hostname === 's4.anilist.co',
+              url.hostname === 's4.anilist.co' ||
+              url.hostname === 'covers.openlibrary.org' ||
+              url.hostname === 'books.google.com',
             handler: 'CacheFirst',
             options: {
               cacheName: 'game-images',

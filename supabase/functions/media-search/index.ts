@@ -1,28 +1,34 @@
-// Edge Function: búsqueda de películas, series y anime.
+// Edge Function: búsqueda de películas, series, anime y libros.
 //   - Películas y series: TMDB. Secret requerido (nunca en el frontend):
 //       supabase secrets set TMDB_API_KEY=xxx
 //     Acepta la "API Key" (v3) o el "API Read Access Token" (v4, empieza con eyJ).
 //   - Anime: AniList (GraphQL público, sin key).
+//   - Libros: Open Library (sin key). Si se configura
+//       supabase secrets set GOOGLE_BOOKS_API_KEY=xxx
+//     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
+//     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime', query?: string, id?: string }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
-//   - con `id`    -> detalle de un resultado (duración, episodios), que se pide
-//                    al agregar: la búsqueda de TMDB no trae esos datos.
+//   - con `id`    -> detalle de un resultado (duración, episodios, sinopsis),
+//                    que se pide al agregar: algunas búsquedas no lo traen.
+//                    Para libros, `source` dice de qué API es el id.
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { handlePreflight, jsonResponse, errorResponse } from '../_shared/http.ts'
 import { requireUser } from '../_shared/supabase.ts'
 
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
+const GOOGLE_BOOKS_API_KEY = Deno.env.get('GOOGLE_BOOKS_API_KEY')
 const TMDB_LANGUAGE = 'es-ES'
 const MAX_TEXT = 200
 
-type ScreenType = 'movie' | 'series' | 'anime'
+type MediaType = 'movie' | 'series' | 'anime' | 'book'
 
 /** Forma común de un resultado, sea de TMDB o de AniList. */
 interface MediaResult {
-  source: 'tmdb' | 'anilist'
+  source: 'tmdb' | 'anilist' | 'google_books' | 'openlibrary'
   external_id: string
-  media_type: ScreenType
+  media_type: MediaType
   title: string
   original_title: string | null
   cover_url: string | null
@@ -34,6 +40,11 @@ interface MediaResult {
   episodes: number | null
   /** Duración de la película, o de cada episodio, en minutos. */
   runtime_minutes: number | null
+  /** Libros. */
+  pages?: number | null
+  authors?: string[]
+  isbn?: string | null
+  publisher?: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +201,151 @@ async function anilistDetails(id: string): Promise<MediaResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Libros: Google Books (con key) y Open Library
+// ---------------------------------------------------------------------------
+
+/** 'YYYY', 'YYYY-MM' o 'YYYY-MM-DD' -> 'YYYY-MM-DD'. */
+function normalizeDate(value?: string | null): string | null {
+  const m = value?.match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/)
+  return m ? `${m[1]}-${m[2] ?? '01'}-${m[3] ?? '01'}` : null
+}
+
+function stripHtml(text?: string | null): string | null {
+  if (!text) return null
+  return (
+    text
+      .replace(/<br\s*\/?>|<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() || null
+  )
+}
+
+async function googleBooks(path: string, params: Record<string, string> = {}): Promise<any> {
+  const search = new URLSearchParams({ ...params, key: GOOGLE_BOOKS_API_KEY! })
+  const res = await fetch(`https://www.googleapis.com/books/v1${path}?${search}`)
+  if (!res.ok) throw new Error(`Error de Google Books (${res.status})`)
+  return res.json()
+}
+
+function googleToResult(v: any): MediaResult {
+  const info = v.volumeInfo ?? {}
+  const ids: { type: string; identifier: string }[] = info.industryIdentifiers ?? []
+  const cover = info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail ?? null
+  return {
+    source: 'google_books',
+    external_id: v.id,
+    media_type: 'book',
+    title: info.subtitle ? `${info.title}: ${info.subtitle}` : (info.title ?? ''),
+    original_title: null,
+    // http -> https y sin el borde "doblado" que agrega Google.
+    cover_url: cover ? cover.replace(/^http:/, 'https:').replace('&edge=curl', '') : null,
+    release_date: normalizeDate(info.publishedDate),
+    genres: info.categories ?? [],
+    summary: stripHtml(info.description),
+    episodes: null,
+    runtime_minutes: null,
+    pages: info.pageCount || null,
+    authors: info.authors ?? [],
+    isbn:
+      ids.find((i) => i.type === 'ISBN_13')?.identifier ??
+      ids.find((i) => i.type === 'ISBN_10')?.identifier ??
+      null,
+    publisher: info.publisher ?? null,
+  }
+}
+
+async function googleSearch(query: string): Promise<MediaResult[]> {
+  const data = await googleBooks('/volumes', { q: query, maxResults: '12', printType: 'books' })
+  return (data.items ?? []).map(googleToResult)
+}
+
+async function openLibrary(path: string): Promise<any> {
+  const res = await fetch(`https://openlibrary.org${path}`, {
+    headers: { 'User-Agent': 'ShelfLife/1.0 (+https://alexperez7.github.io/shelf-life/)' },
+  })
+  if (!res.ok) throw new Error(`Error de Open Library (${res.status})`)
+  return res.json()
+}
+
+const OL_FIELDS =
+  'key,title,subtitle,author_name,first_publish_year,number_of_pages_median,cover_i,subject,isbn'
+
+function olToResult(d: any): MediaResult {
+  return {
+    source: 'openlibrary',
+    external_id: String(d.key ?? '').replace('/works/', ''),
+    media_type: 'book',
+    title: d.subtitle ? `${d.title}: ${d.subtitle}` : (d.title ?? ''),
+    original_title: null,
+    cover_url: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : null,
+    release_date: d.first_publish_year ? `${d.first_publish_year}-01-01` : null,
+    // Los "subjects" de Open Library son muy ruidosos: solo los primeros.
+    genres: (d.subject ?? []).slice(0, 4),
+    summary: null,
+    episodes: null,
+    runtime_minutes: null,
+    pages: d.number_of_pages_median ?? null,
+    authors: d.author_name ?? [],
+    isbn: (d.isbn ?? []).find((i: string) => i.length === 13) ?? d.isbn?.[0] ?? null,
+    publisher: null,
+  }
+}
+
+async function olSearch(query: string): Promise<MediaResult[]> {
+  const params = new URLSearchParams({ q: query, limit: '12', fields: OL_FIELDS })
+  const data = await openLibrary(`/search.json?${params}`)
+  return (data.docs ?? []).map(olToResult)
+}
+
+/** Detalle de una obra: la búsqueda no trae la sinopsis. */
+async function olDetails(id: string): Promise<MediaResult> {
+  let work = await openLibrary(`/works/${id}.json`)
+  // Obras fusionadas: Open Library responde con una redirección.
+  if (work.type?.key === '/type/redirect' && work.location) {
+    work = await openLibrary(`${work.location}.json`)
+  }
+  const workKey = String(work.key ?? `/works/${id}`)
+  const params = new URLSearchParams({ q: `key:${workKey}`, limit: '1', fields: OL_FIELDS })
+  const doc = (await openLibrary(`/search.json?${params}`)).docs?.[0] ?? {
+    key: workKey,
+    title: work.title,
+  }
+  const description =
+    typeof work.description === 'string' ? work.description : work.description?.value
+  return { ...olToResult(doc), summary: stripHtml(description) }
+}
+
+async function bookSearch(query: string): Promise<MediaResult[]> {
+  if (GOOGLE_BOOKS_API_KEY) {
+    try {
+      const results = await googleSearch(query)
+      if (results.length > 0) return results
+    } catch {
+      /* cuota agotada o caída: se sigue con Open Library */
+    }
+  }
+  return olSearch(query)
+}
+
+async function bookDetails(source: unknown, id: string): Promise<MediaResult> {
+  if (source === 'google_books' && GOOGLE_BOOKS_API_KEY) {
+    return googleToResult(await googleBooks(`/volumes/${id}`))
+  }
+  return olDetails(id)
+}
+
+// ---------------------------------------------------------------------------
+
+/** Ids aceptados: numéricos (TMDB, AniList) o alfanuméricos (libros). */
+const ID_PATTERN: Record<MediaType, RegExp> = {
+  movie: /^\d{1,12}$/,
+  series: /^\d{1,12}$/,
+  anime: /^\d{1,12}$/,
+  book: /^[A-Za-z0-9_-]{1,40}$/,
+}
 
 serve(async (req) => {
   const preflight = handlePreflight(req)
@@ -199,16 +355,18 @@ serve(async (req) => {
     const auth = await requireUser(req)
     if (auth instanceof Response) return auth
 
-    const { type, query, id } = await req.json().catch(() => ({}))
-    if (type !== 'movie' && type !== 'series' && type !== 'anime') {
+    const { type, query, id, source } = await req.json().catch(() => ({}))
+    if (typeof type !== 'string' || !(type in ID_PATTERN)) {
       return jsonResponse({ error: 'Tipo inválido' }, 400)
     }
+    const mediaType = type as MediaType
 
     if (id != null) {
       const safeId = String(id)
-      if (!/^\d{1,12}$/.test(safeId)) return jsonResponse({ error: 'Id inválido' }, 400)
+      if (!ID_PATTERN[mediaType].test(safeId)) return jsonResponse({ error: 'Id inválido' }, 400)
+      if (mediaType === 'book') return jsonResponse(await bookDetails(source, safeId))
       return jsonResponse(
-        type === 'anime' ? await anilistDetails(safeId) : await tmdbDetails(type, safeId)
+        mediaType === 'anime' ? await anilistDetails(safeId) : await tmdbDetails(mediaType, safeId)
       )
     }
 
@@ -216,7 +374,10 @@ serve(async (req) => {
       return jsonResponse({ error: 'Falta el parámetro query' }, 400)
     }
     const text = query.slice(0, MAX_TEXT)
-    return jsonResponse(type === 'anime' ? await anilistSearch(text) : await tmdbSearch(type, text))
+    if (mediaType === 'book') return jsonResponse(await bookSearch(text))
+    return jsonResponse(
+      mediaType === 'anime' ? await anilistSearch(text) : await tmdbSearch(mediaType, text)
+    )
   } catch (err) {
     // 503 con un mensaje claro: el frontend lo muestra tal cual.
     if (err instanceof NotConfiguredError) return errorResponse(err, 503)

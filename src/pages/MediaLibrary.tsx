@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, Tv, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
 import { PageContainer } from '../components/PageContainer'
@@ -12,31 +12,28 @@ import { Skeleton } from '../components/Skeleton'
 import { haptic } from '../lib/haptics'
 import { todayISO } from '../lib/dates'
 import {
-  isScreenType,
   itemStatuses,
-  screenStatusLabels,
-  screenTypePlurals,
-  screenTypes,
+  mediaSections,
+  mediaTypePlurals,
   statusChanges,
+  type MediaSection,
+  type MediaSectionId,
 } from '../lib/media'
-import type { Item, ItemStatus, ScreenType } from '../types/item'
+import type { Item, ItemStatus, NonGameType } from '../types/item'
 
-type TypeFilter = ScreenType | 'todos'
+type TypeFilter = NonGameType | 'todos'
 type StatusFilter = ItemStatus | 'todos'
 
-function EmptyScreen() {
+function EmptySection({ section }: { section: MediaSection }) {
   return (
     <div className="mt-6 flex flex-col items-center rounded-2xl bg-background-surface px-6 py-10 text-center ring-1 ring-primary-dark/30">
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-dark/30 text-accent">
-        <Tv size={30} />
+        <section.Icon size={30} />
       </div>
       <h2 className="text-lg font-semibold text-ink">Nada por acá todavía</h2>
-      <p className="mt-1 max-w-xs text-sm text-lavender">
-        Agrega películas, series y anime para llevar lo que viste, lo que estás viendo y lo que
-        tienes pendiente.
-      </p>
+      <p className="mt-1 max-w-xs text-sm text-lavender">{section.emptyText}</p>
       <Link
-        to="/pantalla/agregar"
+        to={section.addPath}
         className="mt-6 flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-white"
       >
         <Search size={18} /> Buscar
@@ -45,18 +42,24 @@ function EmptyScreen() {
   )
 }
 
-/** Biblioteca de la sección Pantalla: películas, series y anime. */
-export function ScreenLibrary() {
+/** Biblioteca de una sección que no es de juegos (Pantalla, Libros). */
+export function MediaLibrary({ sectionId }: { sectionId: MediaSectionId }) {
+  const section = mediaSections[sectionId]
   const navigate = useNavigate()
   const { items, loading, error, updateItem } = useMedia()
   const { showToast, showError } = useToast()
 
-  const screenItems = useMemo(() => items.filter((i) => isScreenType(i.media_type)), [items])
+  const sectionItems = useMemo(
+    () => items.filter((i) => (section.types as string[]).includes(i.media_type)),
+    [items, section]
+  )
 
   // Filtros en la URL, como en la biblioteca de juegos.
   const [params, setParams] = useSearchParams()
   const typeParam = params.get('tipo') ?? ''
-  const typeFilter: TypeFilter = isScreenType(typeParam) ? typeParam : 'todos'
+  const typeFilter: TypeFilter = (section.types as string[]).includes(typeParam)
+    ? (typeParam as NonGameType)
+    : 'todos'
   const statusParam = params.get('estado') ?? ''
   const statusFilter: StatusFilter = (itemStatuses as string[]).includes(statusParam)
     ? (statusParam as ItemStatus)
@@ -79,13 +82,15 @@ export function ScreenLibrary() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
-    return screenItems.filter(
+    return sectionItems.filter(
       (i) =>
         (typeFilter === 'todos' || i.media_type === typeFilter) &&
         (statusFilter === 'todos' || i.status === statusFilter) &&
-        (query === '' || i.title.toLowerCase().includes(query))
+        (query === '' ||
+          i.title.toLowerCase().includes(query) ||
+          (i.metadata.authors ?? []).some((a) => a.toLowerCase().includes(query)))
     )
-  }, [screenItems, typeFilter, statusFilter, search])
+  }, [sectionItems, typeFilter, statusFilter, search])
 
   const [statusItem, setStatusItem] = useState<Item | null>(null)
   const closeStatusSheet = useCallback(() => setStatusItem(null), [])
@@ -96,29 +101,29 @@ export function ScreenLibrary() {
     haptic()
     try {
       await updateItem(item.id, statusChanges(item, status, todayISO()))
-      showToast(`${item.title}: ${screenStatusLabels[status]}`)
+      showToast(`${item.title}: ${section.statusLabels[status]}`)
     } catch (err) {
       showError(err, 'No se pudo cambiar el estado')
     }
   }
 
-  const isEmpty = !loading && !error && screenItems.length === 0
+  const isEmpty = !loading && !error && sectionItems.length === 0
 
   return (
     <PageContainer>
-      <SectionTabs current="pantalla" />
+      <SectionTabs current={section.id} />
 
       <div className="mb-4 flex items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">Pantalla</h1>
-        {!loading && screenItems.length > 0 && (
+        <h1 className="text-xl font-semibold">{section.title}</h1>
+        {!loading && sectionItems.length > 0 && (
           <span className="text-sm text-lavender">
-            {hasFilters ? `${filtered.length} de ${screenItems.length}` : screenItems.length}
+            {hasFilters ? `${filtered.length} de ${sectionItems.length}` : sectionItems.length}
           </span>
         )}
       </div>
 
       {isEmpty ? (
-        <EmptyScreen />
+        <EmptySection section={section} />
       ) : (
         <>
           <div className="relative mb-4 md:max-w-xs">
@@ -131,8 +136,8 @@ export function ScreenLibrary() {
               enterKeyHint="search"
               value={search}
               onChange={(e) => setParam('q', e.target.value, '')}
-              placeholder="Buscar por título..."
-              aria-label="Buscar por título"
+              placeholder={section.id === 'libros' ? 'Buscar por título o autor...' : 'Buscar por título...'}
+              aria-label="Buscar"
               className="w-full rounded-xl bg-background-surface py-2.5 pl-9 pr-10 text-sm text-ink ring-1 ring-primary-dark/30 [&::-webkit-search-cancel-button]:hidden focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {search && (
@@ -147,13 +152,15 @@ export function ScreenLibrary() {
             )}
           </div>
 
-          <div className="scrollbar-hide -mx-4 mb-2 flex gap-2 overflow-x-auto px-4 py-1.5">
-            {(['todos', ...screenTypes] as TypeFilter[]).map((t) => (
-              <Chip key={t} active={typeFilter === t} onClick={() => setParam('tipo', t, 'todos')}>
-                {t === 'todos' ? 'Todo' : screenTypePlurals[t]}
-              </Chip>
-            ))}
-          </div>
+          {section.types.length > 1 && (
+            <div className="scrollbar-hide -mx-4 mb-2 flex gap-2 overflow-x-auto px-4 py-1.5">
+              {(['todos', ...section.types] as TypeFilter[]).map((t) => (
+                <Chip key={t} active={typeFilter === t} onClick={() => setParam('tipo', t, 'todos')}>
+                  {t === 'todos' ? 'Todo' : mediaTypePlurals[t]}
+                </Chip>
+              ))}
+            </div>
+          )}
           <div className="scrollbar-hide -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 py-1.5">
             {(['todos', ...itemStatuses] as StatusFilter[]).map((s) => (
               <Chip
@@ -161,7 +168,7 @@ export function ScreenLibrary() {
                 active={statusFilter === s}
                 onClick={() => setParam('estado', s, 'todos')}
               >
-                {s === 'todos' ? 'Todos' : screenStatusLabels[s]}
+                {s === 'todos' ? 'Todos' : section.statusLabels[s]}
               </Chip>
             ))}
             <div className="shrink-0 basis-2" aria-hidden="true" />
@@ -194,7 +201,7 @@ export function ScreenLibrary() {
                   <MediaCoverCard
                     key={item.id}
                     item={item}
-                    onClick={(i) => navigate(`/pantalla/${i.id}`)}
+                    onClick={(i) => navigate(section.detailPath(i.id))}
                     onStatusClick={setStatusItem}
                   />
                 ))}
@@ -207,7 +214,7 @@ export function ScreenLibrary() {
             onClose={closeStatusSheet}
             value={statusItem?.status ?? 'planned'}
             onChange={handleQuickStatus}
-            labels={screenStatusLabels}
+            labels={section.statusLabels}
             title={statusItem?.title ?? 'Cambiar estado'}
           />
         </>

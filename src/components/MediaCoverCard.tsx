@@ -1,14 +1,14 @@
 import { Heart } from 'lucide-react'
 import { GameThumb } from './GameThumb'
 import {
-  hasEpisodes,
   itemStatusColor,
   itemStatusIcons,
-  screenStatusLabels,
-  screenTypeIcons,
-  screenTypeLabels,
+  mediaTypeIcons,
+  mediaTypeLabels,
+  progressKind,
+  sectionForType,
 } from '../lib/media'
-import type { Item, ScreenType } from '../types/item'
+import type { Item, NonGameType } from '../types/item'
 
 interface MediaCoverCardProps {
   item: Item
@@ -17,17 +17,26 @@ interface MediaCoverCardProps {
 }
 
 function subtitle(item: Item) {
-  const type = item.media_type as ScreenType
-  const year = item.release_date?.slice(0, 4)
-  if (hasEpisodes(type) && (item.progress > 0 || item.progress_total)) {
-    return `${screenTypeLabels[type]} · ${item.progress}/${item.progress_total ?? '?'}`
+  const type = item.media_type as NonGameType
+  const kind = progressKind(type)
+  if (kind === 'pages') {
+    const author = item.metadata.authors?.[0]
+    if (item.progress > 0 && item.progress_total) {
+      return `${Math.min(100, Math.round((item.progress / item.progress_total) * 100))}% leído`
+    }
+    return author ?? item.release_date?.slice(0, 4) ?? mediaTypeLabels[type]
   }
-  return [screenTypeLabels[type], year].filter(Boolean).join(' · ')
+  if (kind === 'episodes' && (item.progress > 0 || item.progress_total)) {
+    return `${mediaTypeLabels[type]} · ${item.progress}/${item.progress_total ?? '?'}`
+  }
+  return [mediaTypeLabels[type], item.release_date?.slice(0, 4)].filter(Boolean).join(' · ')
 }
 
-/** Tarjeta de película / serie / anime en la cuadrícula. */
+/** Tarjeta de película / serie / anime / libro en la cuadrícula. */
 export function MediaCoverCard({ item, onClick, onStatusClick }: MediaCoverCardProps) {
+  const type = item.media_type as NonGameType
   const StatusIcon = itemStatusIcons[item.status]
+  const statusLabel = sectionForType(type).statusLabels[item.status]
   const showProgress = item.progress_total != null && item.progress > 0
   return (
     <div className="relative">
@@ -42,7 +51,7 @@ export function MediaCoverCard({ item, onClick, onStatusClick }: MediaCoverCardP
             alt=""
             className="h-full w-full object-cover"
             placeholderClassName="text-3xl"
-            icon={screenTypeIcons[item.media_type as ScreenType]}
+            icon={mediaTypeIcons[type]}
           />
           {showProgress && (
             <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40">
@@ -54,7 +63,7 @@ export function MediaCoverCard({ item, onClick, onStatusClick }: MediaCoverCardP
           )}
         </div>
         <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-tight text-ink">{item.title}</p>
-        <p className="text-[11px] text-lavender">{subtitle(item)}</p>
+        <p className="truncate text-[11px] text-lavender">{subtitle(item)}</p>
       </button>
 
       {item.is_favorite && (
@@ -69,7 +78,7 @@ export function MediaCoverCard({ item, onClick, onStatusClick }: MediaCoverCardP
         type="button"
         onClick={() => onStatusClick?.(item)}
         disabled={!onStatusClick}
-        aria-label={`Estado: ${screenStatusLabels[item.status]}. Cambiar`}
+        aria-label={`Estado: ${statusLabel}. Cambiar`}
         className={`absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full shadow after:absolute after:-inset-1.5 after:content-[''] ${itemStatusColor(item.status)}`}
       >
         <StatusIcon size={15} />

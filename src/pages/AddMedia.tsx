@@ -8,27 +8,39 @@ import { GameThumb } from '../components/GameThumb'
 import { Skeleton } from '../components/Skeleton'
 import {
   getMediaDetails,
-  hasEpisodes,
-  isScreenType,
+  mediaSections,
+  mediaTypeIcons,
+  mediaTypeLabels,
+  needsDetails,
   resultToItem,
-  screenTypeIcons,
-  screenTypeLabels,
-  screenTypes,
   searchMedia,
+  type MediaSectionId,
 } from '../lib/media'
-import type { MediaSearchResult, ScreenType } from '../types/item'
+import type { MediaSearchResult, NonGameType } from '../types/item'
 
 const SEARCH_DELAY_MS = 350
 
-export function AddMedia() {
+/** Datos secundarios de un resultado: año, episodios o autor y páginas. */
+function resultMeta(r: MediaSearchResult) {
+  const year = r.release_date?.slice(0, 4)
+  if (r.media_type === 'book') {
+    return [r.authors?.slice(0, 2).join(', '), year, r.pages ? `${r.pages} págs.` : null]
+  }
+  return [year, r.media_type !== 'movie' && r.episodes ? `${r.episodes} ep.` : null]
+}
+
+export function AddMedia({ sectionId }: { sectionId: MediaSectionId }) {
+  const section = mediaSections[sectionId]
   const navigate = useNavigate()
   const { items, addItem } = useMedia()
   const { showToast, showError } = useToast()
 
   const [params, setParams] = useSearchParams()
   const typeParam = params.get('tipo') ?? ''
-  const type: ScreenType = isScreenType(typeParam) ? typeParam : 'movie'
-  function setType(next: ScreenType) {
+  const type: NonGameType = (section.types as string[]).includes(typeParam)
+    ? (typeParam as NonGameType)
+    : section.types[0]
+  function setType(next: NonGameType) {
     setParams({ tipo: next }, { replace: true })
   }
 
@@ -79,14 +91,15 @@ export function AddMedia() {
   async function handleAdd(result: MediaSearchResult) {
     setAdding(result.external_id)
     try {
-      // El detalle trae duración y episodios; si falla se agrega igual.
-      let full = result
-      if (result.source === 'tmdb') {
-        full = await getMediaDetails(result.media_type, result.external_id).catch(() => result)
-      }
+      // El detalle trae duración, episodios o sinopsis; si falla se agrega igual.
+      const full = needsDetails(result)
+        ? await getMediaDetails(result)
+            .then((d) => ({ ...result, ...d, cover_url: d.cover_url ?? result.cover_url }))
+            .catch(() => result)
+        : result
       const created = await addItem(resultToItem(full))
       showToast(`Agregaste ${created.title} a tu biblioteca`)
-      navigate(`/pantalla/${created.id}`, { replace: true })
+      navigate(section.detailPath(created.id), { replace: true })
     } catch (err) {
       showError(err, 'No se pudo agregar')
       setAdding(null)
@@ -99,49 +112,53 @@ export function AddMedia() {
     setAdding('manual')
     try {
       const created = await addItem({ media_type: type, title, status: 'planned' })
-      navigate(`/pantalla/${created.id}`, { replace: true })
+      navigate(section.detailPath(created.id), { replace: true })
     } catch (err) {
       showError(err, 'No se pudo agregar')
       setAdding(null)
     }
   }
 
-  const TypeIcon = screenTypeIcons[type]
+  const TypeIcon = mediaTypeIcons[type]
 
   return (
     <PageContainer>
       <button
-        onClick={() => navigate('/pantalla')}
+        onClick={() => navigate(section.libraryPath)}
         className="-ml-2 mb-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm text-accent active:bg-primary-dark/20"
       >
-        <ArrowLeft size={16} /> Pantalla
+        <ArrowLeft size={16} /> {section.title}
       </button>
-      <h1 className="mb-4 text-xl font-semibold">Agregar</h1>
+      <h1 className="mb-4 text-xl font-semibold">
+        {section.types.length === 1 ? `Agregar ${mediaTypeLabels[type].toLowerCase()}` : 'Agregar'}
+      </h1>
 
       <div className="md:mx-auto md:max-w-md">
-        <div
-          role="group"
-          aria-label="Tipo"
-          className="mb-3 flex rounded-full bg-background-surface p-1 ring-1 ring-primary-dark/30"
-        >
-          {screenTypes.map((t) => {
-            const Icon = screenTypeIcons[t]
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setType(t)}
-                aria-pressed={t === type}
-                className={`flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-medium ${
-                  t === type ? 'bg-accent text-primary-darker' : 'text-lavender'
-                }`}
-              >
-                <Icon size={16} />
-                {screenTypeLabels[t]}
-              </button>
-            )
-          })}
-        </div>
+        {section.types.length > 1 && (
+          <div
+            role="group"
+            aria-label="Tipo"
+            className="mb-3 flex rounded-full bg-background-surface p-1 ring-1 ring-primary-dark/30"
+          >
+            {section.types.map((t) => {
+              const Icon = mediaTypeIcons[t]
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  aria-pressed={t === type}
+                  className={`flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-medium ${
+                    t === type ? 'bg-accent text-primary-darker' : 'text-lavender'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {mediaTypeLabels[t]}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         <div className="relative mb-4">
           <Search
@@ -154,8 +171,12 @@ export function AddMedia() {
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Buscar ${screenTypeLabels[type].toLowerCase()}...`}
-            aria-label="Buscar por título"
+            placeholder={
+              type === 'book'
+                ? 'Título, autor o ISBN...'
+                : `Buscar ${mediaTypeLabels[type].toLowerCase()}...`
+            }
+            aria-label="Buscar"
             className="w-full rounded-xl bg-background-surface py-3 pl-9 pr-10 text-base text-ink ring-1 ring-primary-dark/30 [&::-webkit-search-cancel-button]:hidden focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {query && (
@@ -189,7 +210,6 @@ export function AddMedia() {
         <ul className="flex flex-col gap-2">
           {results.map((r) => {
             const existingId = existing.get(`${r.source}:${r.external_id}`)
-            const year = r.release_date?.slice(0, 4)
             return (
               <li
                 key={`${r.source}:${r.external_id}`}
@@ -200,15 +220,13 @@ export function AddMedia() {
                     src={r.cover_url}
                     alt=""
                     className="h-full w-full object-cover"
-                    icon={screenTypeIcons[r.media_type]}
+                    icon={mediaTypeIcons[r.media_type]}
                   />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-medium text-ink">{r.title}</p>
-                  <p className="text-xs text-lavender">
-                    {[year, hasEpisodes(r.media_type) && r.episodes ? `${r.episodes} ep.` : null]
-                      .filter(Boolean)
-                      .join(' · ')}
+                  <p className="truncate text-xs text-lavender">
+                    {resultMeta(r).filter(Boolean).join(' · ')}
                   </p>
                   {r.genres.length > 0 && (
                     <p className="truncate text-xs text-lavender/70">{r.genres.slice(0, 3).join(', ')}</p>
@@ -217,7 +235,7 @@ export function AddMedia() {
                 {existingId ? (
                   <button
                     type="button"
-                    onClick={() => navigate(`/pantalla/${existingId}`)}
+                    onClick={() => navigate(section.detailPath(existingId))}
                     aria-label={`${r.title}: ya está en tu biblioteca`}
                     className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary-dark/30 text-accent"
                   >

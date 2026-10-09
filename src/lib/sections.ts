@@ -1,18 +1,39 @@
 // Secciones de la biblioteca. Cada una tiene su propia pantalla; la barra
 // inferior vuelve a la última que se usó.
 
-export type Section = 'juegos' | 'pantalla'
+import { BookOpen, Gamepad2, Tv, type LucideIcon } from 'lucide-react'
+
+export type Section = 'juegos' | 'pantalla' | 'libros'
+
+export const sections: Section[] = ['juegos', 'pantalla', 'libros']
 
 const SECTION_KEY = 'shelflife_section'
 
-export const sectionPaths: Record<Section, { library: string; add: string }> = {
-  juegos: { library: '/', add: '/add' },
-  pantalla: { library: '/pantalla', add: '/pantalla/agregar' },
+export const sectionInfo: Record<
+  Section,
+  { label: string; Icon: LucideIcon; library: string; add: string; addLabel: string }
+> = {
+  juegos: { label: 'Juegos', Icon: Gamepad2, library: '/', add: '/add', addLabel: 'Agregar juego' },
+  pantalla: {
+    label: 'Pantalla',
+    Icon: Tv,
+    library: '/pantalla',
+    add: '/pantalla/agregar',
+    addLabel: 'Agregar película o serie',
+  },
+  libros: {
+    label: 'Libros',
+    Icon: BookOpen,
+    library: '/libros',
+    add: '/libros/agregar',
+    addLabel: 'Agregar libro',
+  },
 }
 
 /** Sección a la que pertenece una ruta (null si es común: listas, inicio...). */
 export function sectionForPath(pathname: string): Section | null {
   if (pathname.startsWith('/pantalla')) return 'pantalla'
+  if (pathname.startsWith('/libros')) return 'libros'
   if (
     pathname === '/' ||
     pathname.startsWith('/add') ||
@@ -26,7 +47,8 @@ export function sectionForPath(pathname: string): Section | null {
 
 export function readLastSection(): Section {
   try {
-    return localStorage.getItem(SECTION_KEY) === 'pantalla' ? 'pantalla' : 'juegos'
+    const value = localStorage.getItem(SECTION_KEY)
+    return value && (sections as string[]).includes(value) ? (value as Section) : 'juegos'
   } catch {
     return 'juegos'
   }

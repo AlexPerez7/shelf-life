@@ -31,8 +31,8 @@ const UpdatePassword = lazy(() =>
   import('./pages/UpdatePassword').then((m) => ({ default: m.UpdatePassword }))
 )
 const SharedList = lazy(() => import('./pages/SharedList').then((m) => ({ default: m.SharedList })))
-const ScreenLibrary = lazy(() =>
-  import('./pages/ScreenLibrary').then((m) => ({ default: m.ScreenLibrary }))
+const MediaLibrary = lazy(() =>
+  import('./pages/MediaLibrary').then((m) => ({ default: m.MediaLibrary }))
 )
 const AddMedia = lazy(() => import('./pages/AddMedia').then((m) => ({ default: m.AddMedia })))
 const MediaDetail = lazy(() => import('./pages/MediaDetail').then((m) => ({ default: m.MediaDetail })))
@@ -118,9 +118,12 @@ function App() {
             <Route path="/lists/:id" element={<ListDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/timeline" element={<Timeline />} />
-            <Route path="/pantalla" element={<ScreenLibrary />} />
-            <Route path="/pantalla/agregar" element={<AddMedia />} />
-            <Route path="/pantalla/:id" element={<MediaDetail />} />
+            <Route path="/pantalla" element={<MediaLibrary key="pantalla" sectionId="pantalla" />} />
+            <Route path="/pantalla/agregar" element={<AddMedia key="pantalla" sectionId="pantalla" />} />
+            <Route path="/pantalla/:id" element={<MediaDetail sectionId="pantalla" />} />
+            <Route path="/libros" element={<MediaLibrary key="libros" sectionId="libros" />} />
+            <Route path="/libros/agregar" element={<AddMedia key="libros" sectionId="libros" />} />
+            <Route path="/libros/:id" element={<MediaDetail sectionId="libros" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

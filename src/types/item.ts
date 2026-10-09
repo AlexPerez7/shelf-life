@@ -7,6 +7,9 @@ export type MediaType = 'game' | 'movie' | 'series' | 'anime' | 'book'
 /** Tipos de la sección Pantalla. */
 export type ScreenType = 'movie' | 'series' | 'anime'
 
+/** Todo lo que no es juego (lo maneja MediaProvider). */
+export type NonGameType = Exclude<MediaType, 'game'>
+
 /** Estado genérico; cada tipo lo muestra con su propio texto. */
 export type ItemStatus =
   | 'wishlist'
@@ -30,6 +33,10 @@ export interface ItemMetadata {
   original_title?: string
   /** Duración de la película, o de cada episodio, en minutos. */
   runtime_minutes?: number
+  // Libros
+  authors?: string[]
+  isbn?: string
+  publisher?: string
 }
 
 export interface Item {
@@ -67,11 +74,11 @@ export interface Item {
 /** Columnas escribibles de `items`. */
 export type ItemWrite = Partial<Omit<Item, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
 
-/** Resultado de búsqueda de la Edge Function `media-search` (TMDB / AniList). */
+/** Resultado de búsqueda de la Edge Function `media-search`. */
 export interface MediaSearchResult {
-  source: 'tmdb' | 'anilist'
+  source: 'tmdb' | 'anilist' | 'google_books' | 'openlibrary'
   external_id: string
-  media_type: ScreenType
+  media_type: NonGameType
   title: string
   original_title: string | null
   cover_url: string | null
@@ -80,4 +87,8 @@ export interface MediaSearchResult {
   summary: string | null
   episodes: number | null
   runtime_minutes: number | null
+  pages?: number | null
+  authors?: string[]
+  isbn?: string | null
+  publisher?: string | null
 }
