@@ -26,27 +26,25 @@ export function useItemListIds(itemId: string | undefined) {
     fetchListIds()
   }, [fetchListIds])
 
+  /** Optimista: el chip cambia al instante; si falla, vuelve atrás. */
   const toggle = useCallback(
     async (listId: string) => {
       if (!itemId) return
-      if (listIds.has(listId)) {
-        const { error } = await supabase
-          .from('list_items')
-          .delete()
-          .eq('list_id', listId)
-          .eq('item_id', itemId)
-        if (error) throw error
+      const removing = listIds.has(listId)
+      const apply = (add: boolean) =>
         setListIds((prev) => {
           const next = new Set(prev)
-          next.delete(listId)
+          if (add) next.add(listId)
+          else next.delete(listId)
           return next
         })
-      } else {
-        const { error } = await supabase
-          .from('list_items')
-          .insert({ list_id: listId, item_id: itemId })
-        if (error) throw error
-        setListIds((prev) => new Set(prev).add(listId))
+      apply(!removing)
+      const { error } = removing
+        ? await supabase.from('list_items').delete().eq('list_id', listId).eq('item_id', itemId)
+        : await supabase.from('list_items').insert({ list_id: listId, item_id: itemId })
+      if (error) {
+        apply(removing)
+        throw error
       }
     },
     [itemId, listIds]

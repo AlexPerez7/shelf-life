@@ -139,15 +139,41 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return created
   }, [])
 
+  // Último cambio pedido por ítem: si llegan respuestas fuera de orden (dos
+  // toques seguidos), solo la del último manda.
+  const updateSeq = useRef(new Map<string, number>())
+  // Estado actual, para tener el "antes" de un cambio optimista.
+  const itemsRef = useRef<Item[]>([])
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
+
+  /**
+   * Optimista: el cambio se ve al instante y se guarda en segundo plano (la
+   * ida y vuelta a Supabase en el teléfono puede tardar segundos). Si falla,
+   * vuelve a como estaba y el error sube para mostrarlo.
+   */
   const updateItem = useCallback<MediaContextValue['updateItem']>(async (id, changes) => {
+    const seq = (updateSeq.current.get(id) ?? 0) + 1
+    updateSeq.current.set(id, seq)
+    const previous = itemsRef.current.find((i) => i.id === id)
+    setItems((prev) => prev.map((i) => (i.id === id ? ({ ...i, ...changes } as Item) : i)))
+
     const { data, error } = await supabase
       .from('items')
       .update(changes)
       .eq('id', id)
       .select()
       .single()
-    if (error) throw error
-    setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
+    const isLatest = updateSeq.current.get(id) === seq
+    if (error) {
+      if (isLatest && previous) {
+        const before = previous
+        setItems((prev) => prev.map((i) => (i.id === id ? before : i)))
+      }
+      throw error
+    }
+    if (isLatest) setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
     return data as Item
   }, [])
 

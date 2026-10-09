@@ -145,17 +145,24 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     return created
   }, [])
 
+  // Último cambio pedido por juego (respuestas fuera de orden: manda la última).
+  const updateSeq = useRef(new Map<string, number>())
+
+  /** Optimista, como en MediaContext: se ve al instante y vuelve atrás si falla. */
   const updateGame = useCallback(async (id: string, changes: Partial<Game>) => {
     const current = itemsRef.current.find((i) => i.id === id)
-    const { data, error } = await supabase
-      .from('items')
-      .update(gameChangesToItem(changes, current?.metadata))
-      .eq('id', id)
-      .select()
-      .single()
+    const write = gameChangesToItem(changes, current?.metadata)
+    const seq = (updateSeq.current.get(id) ?? 0) + 1
+    updateSeq.current.set(id, seq)
+    setItems((prev) => prev.map((i) => (i.id === id ? ({ ...i, ...write } as Item) : i)))
 
-    if (error) throw error
-    setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
+    const { data, error } = await supabase.from('items').update(write).eq('id', id).select().single()
+    const isLatest = updateSeq.current.get(id) === seq
+    if (error) {
+      if (isLatest && current) setItems((prev) => prev.map((i) => (i.id === id ? current : i)))
+      throw error
+    }
+    if (isLatest) setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
     return itemToGame(data as Item)
   }, [])
 
