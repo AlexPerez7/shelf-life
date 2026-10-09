@@ -19,7 +19,7 @@ import {
 import { callFn } from './functions'
 import { statusColors } from './status'
 import { gameStatusFromItem } from './gameItem'
-import type { Item, ItemStatus, ItemWrite, MediaSearchResult, NonGameType } from '../types/item'
+import type { Item, ItemStatus, ItemWrite, MediaSearchResult, NonGameType, ScreenType } from '../types/item'
 
 export const mediaTypeLabels: Record<NonGameType, string> = {
   movie: 'Película',
@@ -164,6 +164,11 @@ export function isNonGameType(value: string): value is NonGameType {
 
 export async function searchMedia(type: NonGameType, query: string): Promise<MediaSearchResult[]> {
   return (await callFn<MediaSearchResult[]>('media-search', { type, query })) ?? []
+}
+
+/** Tendencias de la semana (TMDB) o de la temporada (AniList), para descubrir. */
+export async function trendingMedia(type: ScreenType): Promise<MediaSearchResult[]> {
+  return (await callFn<MediaSearchResult[]>('media-search', { type, mode: 'trending' })) ?? []
 }
 
 /** Detalle (duración, episodios, sinopsis): algunas búsquedas no los traen. */

@@ -8,8 +8,11 @@
 //     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
 //     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
+//   - con `mode: 'trending'` -> lo que es tendencia esta semana (TMDB) o esta
+//                    temporada (AniList), para "Descubrir" en Pantalla. No
+//                    aplica a libros.
 //   - con `id`    -> detalle de un resultado (duración, episodios, sinopsis),
 //                    que se pide al agregar: algunas búsquedas no lo traen.
 //                    Para libros, `source` dice de qué API es el id.
@@ -117,6 +120,21 @@ async function tmdbSearch(type: 'movie' | 'series', query: string): Promise<Medi
     )
 }
 
+/** Tendencias de la semana en TMDB (hasta 20). */
+async function tmdbTrending(type: 'movie' | 'series'): Promise<MediaResult[]> {
+  const kind = type === 'movie' ? 'movie' : 'tv'
+  const [data, genres] = await Promise.all([tmdb(`/trending/${kind}/week`), tmdbGenres(kind)])
+  return (data.results ?? [])
+    .slice(0, 20)
+    .map((r: any) =>
+      tmdbToResult(
+        r,
+        type,
+        (r.genre_ids ?? []).map((id: number) => genres.get(id)).filter(Boolean)
+      )
+    )
+}
+
 async function tmdbDetails(type: 'movie' | 'series', id: string): Promise<MediaResult> {
   const r = await tmdb(`/${type === 'movie' ? 'movie' : 'tv'}/${id}`)
   return tmdbToResult(r, type, (r.genres ?? []).map((g: { name: string }) => g.name))
@@ -189,6 +207,19 @@ async function anilistSearch(query: string): Promise<MediaResult[]> {
       }
     }`,
     { search: query }
+  )
+  return (data.Page?.media ?? []).map(anilistToResult)
+}
+
+/** Anime en tendencia en AniList (hasta 20). */
+async function anilistTrending(): Promise<MediaResult[]> {
+  const data = await anilist(
+    `query {
+      Page(perPage: 20) {
+        media(type: ANIME, isAdult: false, sort: TRENDING_DESC) { ${ANILIST_FIELDS} }
+      }
+    }`,
+    {}
   )
   return (data.Page?.media ?? []).map(anilistToResult)
 }
@@ -355,7 +386,7 @@ serve(async (req) => {
     const auth = await requireUser(req)
     if (auth instanceof Response) return auth
 
-    const { type, query, id, source } = await req.json().catch(() => ({}))
+    const { type, query, id, source, mode } = await req.json().catch(() => ({}))
     if (typeof type !== 'string' || !(type in ID_PATTERN)) {
       return jsonResponse({ error: 'Tipo inválido' }, 400)
     }
@@ -368,6 +399,11 @@ serve(async (req) => {
       return jsonResponse(
         mediaType === 'anime' ? await anilistDetails(safeId) : await tmdbDetails(mediaType, safeId)
       )
+    }
+
+    if (mode === 'trending') {
+      if (mediaType === 'book') return jsonResponse({ error: 'Sin tendencias para libros' }, 400)
+      return jsonResponse(mediaType === 'anime' ? await anilistTrending() : await tmdbTrending(mediaType))
     }
 
     if (!query || typeof query !== 'string') {

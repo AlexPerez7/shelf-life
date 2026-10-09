@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Bookmark, Check, Eye, Loader2, PenLine, Play, Search, X } from 'lucide-react'
+import { ArrowLeft, Bookmark, Check, Eye, Flame, Loader2, PenLine, Play, Search, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { useToast } from '../../contexts/ToastContext'
 import { PageContainer } from '../../components/PageContainer'
@@ -9,6 +9,7 @@ import { Skeleton } from '../../components/Skeleton'
 import { BottomSheet } from '../../components/BottomSheet'
 import { MediaForm } from '../../components/MediaForm'
 import { useMediaSearch } from '../../hooks/useMediaSearch'
+import { useTrending } from '../../hooks/useTrending'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
 import {
@@ -48,9 +49,10 @@ function resultFacts(r: MediaSearchResult) {
 
 /**
  * Alta de Pantalla: búsqueda en TMDB (películas, series) o AniList (anime)
- * con resultados como pósters. Tocar uno abre una vista previa desde la que
- * se agrega directo como "Quiero ver", "Viendo" o "Ya la vi", sin salir de la
- * búsqueda, así se pueden agregar varios seguidos.
+ * con resultados como pósters y, antes de escribir, las tendencias. Tocar uno
+ * abre una vista previa desde la que se agrega directo como "Quiero ver",
+ * "Viendo" o "Ya la vi", sin salir de la búsqueda, así se pueden agregar
+ * varios seguidos.
  */
 export function ScreenAdd() {
   const navigate = useNavigate()
@@ -124,6 +126,41 @@ export function ScreenAdd() {
   }
 
   const TypeIcon = mediaTypeIcons[type]
+  const trending = useTrending(type)
+
+  /** Póster de un resultado o tendencia; tocarlo abre la vista previa. */
+  function renderPoster(r: MediaSearchResult) {
+    const added = existing.get(resultKey(r))
+    return (
+      <button
+        key={resultKey(r)}
+        type="button"
+        onClick={() => openPreview(r)}
+        className="relative block text-left transition-transform active:scale-[0.97]"
+      >
+        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-primary-dark/30 ring-1 ring-primary-dark/40">
+          <GameThumb
+            src={r.cover_url}
+            alt=""
+            className="h-full w-full object-cover"
+            placeholderClassName="text-3xl"
+            icon={mediaTypeIcons[r.media_type]}
+          />
+          {added && (
+            <span
+              aria-label="Ya está en tu biblioteca"
+              className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-primary-darker shadow"
+            >
+              <Check size={15} />
+            </span>
+          )}
+        </div>
+        <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-tight text-ink">{r.title}</p>
+        <p className="truncate text-[11px] text-lavender">{resultFacts(r) || mediaTypeLabels[r.media_type]}</p>
+      </button>
+    )
+  }
+
 
   return (
     <PageContainer>
@@ -182,7 +219,26 @@ export function ScreenAdd() {
 
       {searchError && <p className="mb-3 rounded-xl bg-error/10 p-3 text-sm text-error">{searchError}</p>}
 
-      {!hasQuery && (
+      {!hasQuery && trending == null && (
+        <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-[2/3] w-full" />
+          ))}
+        </div>
+      )}
+
+      {!hasQuery && trending != null && trending.length > 0 && (
+        <section>
+          <h2 className="mb-2 flex items-center gap-1.5 text-lg font-semibold text-ink">
+            <Flame size={18} className="text-accent" /> Tendencias {type === 'anime' ? 'de la temporada' : 'de la semana'}
+          </h2>
+          <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4 lg:grid-cols-6">
+            {trending.map(renderPoster)}
+          </div>
+        </section>
+      )}
+
+      {!hasQuery && trending != null && trending.length === 0 && (
         <div className="mt-8 flex flex-col items-center text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-accent">
             <TypeIcon size={26} />
@@ -212,37 +268,7 @@ export function ScreenAdd() {
             searching ? 'opacity-60' : ''
           }`}
         >
-          {results.map((r) => {
-            const added = existing.get(resultKey(r))
-            return (
-              <button
-                key={resultKey(r)}
-                type="button"
-                onClick={() => openPreview(r)}
-                className="relative block text-left transition-transform active:scale-[0.97]"
-              >
-                <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-primary-dark/30 ring-1 ring-primary-dark/40">
-                  <GameThumb
-                    src={r.cover_url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    placeholderClassName="text-3xl"
-                    icon={mediaTypeIcons[r.media_type]}
-                  />
-                  {added && (
-                    <span
-                      aria-label="Ya está en tu biblioteca"
-                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-primary-darker shadow"
-                    >
-                      <Check size={15} />
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-tight text-ink">{r.title}</p>
-                <p className="truncate text-[11px] text-lavender">{resultFacts(r) || mediaTypeLabels[r.media_type]}</p>
-              </button>
-            )
-          })}
+          {results.map(renderPoster)}
         </div>
       )}
 
