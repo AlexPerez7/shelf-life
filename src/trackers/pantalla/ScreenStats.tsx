@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { Clapperboard, Clock, Flame, Layers, ListChecks, Star, Tag, Trophy, Tv } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Clapperboard, Clock, Flame, History, Layers, ListChecks, Star, Tag, Trophy, Tv } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
@@ -143,7 +144,15 @@ export function ScreenStats() {
   return (
     <PageContainer>
       <TrackerBar tracker="pantalla" />
-      <h1 className="mb-4 text-3xl font-bold text-ink">Estadísticas</h1>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-3xl font-bold text-ink">Estadísticas</h1>
+        <Link
+          to={`${section.libraryPath}/historial`}
+          className="-mr-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-medium text-accent active:bg-primary-dark/30"
+        >
+          <History size={16} /> Historial
+        </Link>
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

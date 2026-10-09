@@ -10,10 +10,13 @@ import { useTrackerTheme } from '../useTrackerTheme'
 
 const BookAdd = lazy(() => import('./BookAdd').then((m) => ({ default: m.BookAdd })))
 const BookStats = lazy(() => import('./BookStats').then((m) => ({ default: m.BookStats })))
+const BookHistory = lazy(() => import('./BookHistory').then((m) => ({ default: m.BookHistory })))
 const BookDetail = lazy(() => import('./BookDetail').then((m) => ({ default: m.BookDetail })))
 
 const section = mediaSections.libros
 const statsPath = `${section.libraryPath}/estadisticas`
+const historyPath = `${section.libraryPath}/historial`
+const isStats = (pathname: string) => pathname === statsPath || pathname === historyPath
 /** Estantes a los que lleva la barra inferior. */
 const shelfLink = (shelf: string) => `${section.libraryPath}?${shelfParam}=${shelf}`
 const isShelf = (shelf: string) => (pathname: string, search: URLSearchParams) =>
@@ -34,6 +37,7 @@ export function BooksTracker() {
           <Route index element={<BooksLibrary />} />
           <Route path="agregar" element={<BookAdd />} />
           <Route path="estadisticas" element={<BookStats />} />
+          <Route path="historial" element={<BookHistory />} />
           <Route path=":id" element={<BookDetail />} />
         </Routes>
       </Suspense>
@@ -48,13 +52,13 @@ export function BooksTracker() {
                 ? !search.get(shelfParam)
                 : pathname.startsWith(`${section.libraryPath}/`) &&
                   pathname !== section.addPath &&
-                  pathname !== statsPath,
+                  !isStats(pathname),
           },
           { to: shelfLink('leyendo'), label: 'Leyendo', Icon: BookOpen, isActive: isShelf('leyendo') },
         ]}
         right={[
           { to: shelfLink('por-leer'), label: 'Por leer', Icon: Bookmark, isActive: isShelf('por-leer') },
-          { to: statsPath, label: 'Estadísticas', Icon: BarChart3 },
+          { to: statsPath, label: 'Estadísticas', Icon: BarChart3, isActive: isStats },
         ]}
         add={{ to: section.addPath, label: 'Agregar libro' }}
       />

@@ -6,6 +6,7 @@ import {
   Feather,
   FileText,
   Gauge,
+  History,
   Layers,
   Ruler,
   Star,
@@ -184,8 +185,18 @@ export function BookStats() {
   return (
     <PageContainer>
       <TrackerBar tracker="libros" />
-      <h1 className="text-3xl font-bold text-ink">Estadísticas</h1>
-      <p className="mb-4 text-sm text-lavender">Tu vida lectora en números</p>
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <div>
+          <h1 className="text-3xl font-bold text-ink">Estadísticas</h1>
+          <p className="text-sm text-lavender">Tu vida lectora en números</p>
+        </div>
+        <Link
+          to={`${section.libraryPath}/historial`}
+          className="-mr-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-medium text-accent active:bg-primary-dark/15"
+        >
+          <History size={16} /> Diario
+        </Link>
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

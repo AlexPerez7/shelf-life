@@ -6,6 +6,7 @@ import type { Item } from '../types/item'
 
 /** Un registro de actividad: episodios, películas o páginas, con su tiempo. */
 export interface ActivityRow {
+  id: string
   item_id: string
   occurred_at: string
   duration_minutes: number | null

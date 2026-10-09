@@ -17,6 +17,8 @@ export function MediaTrackerNav({ section }: { section: MediaSection }) {
   })
   const shortcuts: ItemStatus[] = ['in_progress', 'wishlist']
   const statsPath = `${base}/estadisticas`
+  const historyPath = `${base}/historial`
+  const isStats = (pathname: string) => pathname === statsPath || pathname === historyPath
 
   return (
     <TrackerNav
@@ -29,13 +31,13 @@ export function MediaTrackerNav({ section }: { section: MediaSection }) {
           isActive: (pathname, search) =>
             pathname === base
               ? !shortcuts.includes(search.get('estado') as ItemStatus)
-              : pathname.startsWith(`${base}/`) && pathname !== section.addPath && pathname !== statsPath,
+              : pathname.startsWith(`${base}/`) && pathname !== section.addPath && !isStats(pathname),
         },
         shortcut('in_progress', section.statusLabels.in_progress, Play),
       ]}
       right={[
         shortcut('wishlist', section.statusLabels.wishlist, Bookmark),
-        { to: statsPath, label: 'Estadísticas', Icon: BarChart3 },
+        { to: statsPath, label: 'Estadísticas', Icon: BarChart3, isActive: isStats },
       ]}
       add={{ to: section.addPath, label: `Agregar a ${section.title}` }}
     />
