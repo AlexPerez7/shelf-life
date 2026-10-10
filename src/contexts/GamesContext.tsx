@@ -39,8 +39,12 @@ const CACHE_PREFIX = 'shelflife_items_v1:'
 export function GamesProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([])
   const games = useMemo(() => items.map(itemToGame), [items])
+  // Estado actual, para tener el "antes" de un cambio optimista (se actualiza
+  // después de cada render, no durante).
   const itemsRef = useRef<Item[]>([])
-  itemsRef.current = items
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // Una vez que hay datos, las recargas son silenciosas (sin esqueletos).
