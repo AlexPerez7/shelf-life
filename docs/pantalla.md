@@ -15,6 +15,7 @@ Ruta `/pantalla`, código en `src/trackers/pantalla/`. Tema oscuro azulado con c
 
 - Las series de TMDB guardan sus temporadas (`metadata.seasons`): el avance se lee "T2 · E5" y el detalle agrupa los episodios por temporada, en secciones plegables.
 - Las series agregadas antes de esto se completan solas al abrirlas.
+- **Anime de AniList**: cada temporada es otra entrada en AniList. Al terminar una, el detalle muestra "Sigue la historia" con sus secuelas (la temporada siguiente, películas, OVAs) para agregarlas con un toque ("Empezar a ver" o "Quiero ver"); las que ya están en Pantalla llevan a su ficha.
 - El episodio también se anota a mano ("Voy en el episodio 1085"), sin sumar tiempo de hoy salvo que se marque "Los vi hoy".
 
 ## Detalle

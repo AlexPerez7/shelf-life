@@ -52,6 +52,7 @@ import {
   statusChanges,
 } from '../../lib/media'
 import type { Item, ItemStatus, ItemWrite, MediaSearchResult, ScreenType } from '../../types/item'
+import { NextSeason } from './NextSeason'
 
 const section = mediaSections.pantalla
 
@@ -688,6 +689,12 @@ export function ScreenDetail() {
 
           <div className="flex flex-col gap-4">
             {current.summary && <Synopsis text={current.summary} />}
+
+            {/* Anime de AniList terminado: la temporada siguiente es otra entrada. */}
+            {type === 'anime' &&
+              current.source === 'anilist' &&
+              current.external_id &&
+              (current.status === 'completed' || finishedSeries) && <NextSeason item={current} />}
 
             {!isMovie && (
               <Episodes

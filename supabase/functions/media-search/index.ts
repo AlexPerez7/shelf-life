@@ -8,7 +8,7 @@
 //     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
 //     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[] }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal' | 'sequels', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[] }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
 //   - con `mode: 'trending'` -> lo que es tendencia esta semana (TMDB) o esta
 //                    temporada (AniList), para "Descubrir" en Pantalla. No
@@ -25,6 +25,9 @@
 //                    Letterboxd.
 //   - con `mode: 'mal'` + `ids` (hasta 50 ids de MyAnimeList) -> el anime de
 //                    AniList de cada uno, con `mal_id`. Para importar de MAL.
+//   - con `mode: 'sequels'` + `id` (anime de AniList) -> sus secuelas
+//                    (relación SEQUEL), con `format` (TV, MOVIE, OVA...):
+//                    AniList separa cada temporada en otra entrada.
 //   - con `id`    -> detalle de un resultado (duración, episodios, sinopsis),
 //                    que se pide al agregar: algunas búsquedas no lo traen.
 //                    Para libros, `source` dice de qué API es el id.
@@ -339,6 +342,29 @@ async function anilistByMal(ids: string[]): Promise<(MediaResult & { mal_id: str
     { ids: ids.map(Number) }
   )
   return (data.Page?.media ?? []).map((m: any) => ({ ...anilistToResult(m), mal_id: String(m.idMal) }))
+}
+
+/** Orden de las secuelas: primero lo que sigue la serie (TV), después películas y extras. */
+const FORMAT_ORDER = ['TV', 'TV_SHORT', 'ONA', 'MOVIE', 'OVA', 'SPECIAL']
+
+/** Secuelas de un anime de AniList (la temporada siguiente suele ser otra entrada). */
+async function anilistSequels(id: string): Promise<(MediaResult & { format: string | null })[]> {
+  const data = await anilist(
+    `query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        relations { edges { relationType node { type format ${ANILIST_FIELDS} } } }
+      }
+    }`,
+    { id: Number(id) }
+  )
+  const rank = (f: string | null) => {
+    const i = FORMAT_ORDER.indexOf(f ?? '')
+    return i < 0 ? FORMAT_ORDER.length : i
+  }
+  return (data.Media?.relations?.edges ?? [])
+    .filter((e: any) => e.relationType === 'SEQUEL' && e.node?.type === 'ANIME')
+    .map((e: any) => ({ ...anilistToResult(e.node), format: e.node.format ?? null }))
+    .sort((a: { format: string | null }, b: { format: string | null }) => rank(a.format) - rank(b.format))
 }
 
 async function anilistDetails(id: string): Promise<MediaResult> {
@@ -662,6 +688,13 @@ serve(async (req) => {
         .filter((x: string) => ID_PATTERN.anime.test(x))
         .slice(0, MAX_MAL)
       return jsonResponse(ids.length ? await anilistByMal(ids) : [])
+    }
+
+    if (mode === 'sequels') {
+      if (mediaType !== 'anime') return jsonResponse({ error: 'Solo anime' }, 400)
+      const safeId = String(id ?? '')
+      if (!ID_PATTERN.anime.test(safeId)) return jsonResponse({ error: 'Id inválido' }, 400)
+      return jsonResponse(await anilistSequels(safeId))
     }
 
     if (mode === 'upcoming') {

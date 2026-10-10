@@ -187,6 +187,19 @@ export async function upcomingEpisodes(type: 'series' | 'anime', ids: string[]):
   return (await callFn<UpcomingEpisode[]>('media-search', { type, mode: 'upcoming', ids })) ?? []
 }
 
+/** Formato de una entrada de AniList: TV, TV_SHORT, ONA, MOVIE, OVA, SPECIAL... */
+export type AnimeSequel = MediaSearchResult & { format: string | null }
+
+/**
+ * Secuelas de un anime de AniList: cada temporada es otra entrada, así que
+ * al terminar una se sugiere la siguiente. Primero lo que sigue la serie (TV).
+ */
+export async function animeSequels(anilistId: string): Promise<AnimeSequel[]> {
+  const result = await callFn<AnimeSequel[]>('media-search', { type: 'anime', mode: 'sequels', id: anilistId })
+  // Una versión vieja de la función responde el detalle: sin sugerencias.
+  return Array.isArray(result) ? result : []
+}
+
 /** Una portada alternativa para elegir. */
 export interface CoverOption {
   url: string
