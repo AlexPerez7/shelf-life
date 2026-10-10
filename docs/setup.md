@@ -19,11 +19,12 @@ VITE_SUPABASE_ANON_KEY=
 
 ## 3. Migraciones
 
-Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, hoy de la `0001` a la `0012`), o `supabase db push`.
+Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, hoy de la `0001` a la `0013`), o `supabase db push`.
 
 - La `0008` crea un trigger que suma y resta las horas jugadas al registrar o borrar una sesión. El frontend ya no actualiza `hours_played` en ese caso, así que tiene que aplicarse **antes** de desplegar el frontend.
 - La `0011` crea la tabla `items` (todo lo que se registra, de los tres trackers), `activity_log` y `list_items`.
 - La `0012` crea `goals` (metas del año). Sin ella la app funciona igual, solo no muestra las metas.
+- La `0013` crea el bucket público de Storage `covers` y sus políticas, para subir una foto propia como portada (cada usuario solo escribe en su carpeta). Sin ella, "Subir una foto" avisa que falta aplicarla. Se puede aplicar pegando el archivo en el *SQL Editor* del dashboard de Supabase.
 
 Una migración nueva va con el número siguiente y se anota acá.
 

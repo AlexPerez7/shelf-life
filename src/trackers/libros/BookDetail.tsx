@@ -725,6 +725,7 @@ export function BookDetail() {
           }}
         />
         <CoverPicker
+          itemId={current.id}
           currentUrl={current.cover_url}
           load={() => coverOptions(current)}
           open={coverOpen}

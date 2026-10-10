@@ -157,6 +157,7 @@ export function GameDetail() {
       />
 
       <CoverPicker
+        itemId={current.id}
         currentUrl={current.cover_url}
         load={() => gameCoverOptions(current)}
         open={coverOpen}

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, ImageOff, Link2 } from 'lucide-react'
+import { Camera, Check, ImageOff, Link2, Loader2 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 import { GameThumb } from './GameThumb'
 import { Skeleton } from './Skeleton'
 import type { CoverOption } from '../lib/media'
+import { uploadCover } from '../lib/coverUpload'
 
 const SOURCE_NAMES: Record<CoverOption['source'], string> = {
   openlibrary: 'Open Library',
@@ -15,6 +16,8 @@ const SOURCE_NAMES: Record<CoverOption['source'], string> = {
 }
 
 interface CoverPickerProps {
+  /** Ítem dueño de la portada (para el nombre de la foto subida). */
+  itemId: string
   /** Portada actual (no se ofrece como opción). */
   currentUrl: string | null
   /** Busca las alternativas (`coverOptions` de media, `gameCoverOptions` de juegos). */
@@ -28,21 +31,38 @@ interface CoverPickerProps {
 
 /**
  * Elegir otra portada: las alternativas de las fuentes (ediciones, pósters
- * en otros idiomas) o una URL de imagen pegada a mano.
+ * en otros idiomas), una foto propia (se sube a Storage) o una URL de imagen
+ * pegada a mano.
  */
-export function CoverPicker({ currentUrl, load, open, onClose, onPick, icon }: CoverPickerProps) {
+export function CoverPicker({ itemId, currentUrl, load, open, onClose, onPick, icon }: CoverPickerProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title="Cambiar portada">
-      {open && <CoverPickerBody currentUrl={currentUrl} load={load} onPick={onPick} icon={icon} />}
+      {open && <CoverPickerBody itemId={itemId} currentUrl={currentUrl} load={load} onPick={onPick} icon={icon} />}
     </BottomSheet>
   )
 }
 
-function CoverPickerBody({ currentUrl, load, onPick, icon }: Omit<CoverPickerProps, 'open' | 'onClose'>) {
+function CoverPickerBody({ itemId, currentUrl, load, onPick, icon }: Omit<CoverPickerProps, 'open' | 'onClose'>) {
   const [options, setOptions] = useState<CoverOption[] | null>(null)
   const [failed, setFailed] = useState(false)
   const [url, setUrl] = useState('')
   const [urlOk, setUrlOk] = useState<boolean | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      onPick(await uploadCover(itemId, file))
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'No se pudo subir la foto')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   // La hoja se cierra al elegir: una búsqueda por apertura (el cuerpo se
   // monta al abrir), con lo que había al abrirla.
@@ -76,8 +96,8 @@ function CoverPickerBody({ currentUrl, load, onPick, icon }: Omit<CoverPickerPro
       ) : options.length === 0 ? (
         <p className="flex items-center gap-2 rounded-xl bg-background/40 p-3 text-sm text-lavender">
           <ImageOff size={16} className="shrink-0" />
-          {failed ? 'No se pudieron buscar portadas.' : 'No encontramos otras portadas.'} Puedes pegar la URL de una
-          imagen abajo.
+          {failed ? 'No se pudieron buscar portadas.' : 'No encontramos otras portadas.'} Puedes subir una foto o pegar la
+          URL de una imagen abajo.
         </p>
       ) : (
         <>
@@ -101,6 +121,27 @@ function CoverPickerBody({ currentUrl, load, onPick, icon }: Omit<CoverPickerPro
           </div>
         </>
       )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          handleFile(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-ink ring-1 ring-primary-dark/30 active:bg-primary-dark/20 disabled:opacity-60"
+      >
+        {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+        {uploading ? 'Subiendo...' : 'Subir una foto'}
+      </button>
+      {uploadError && <p className="mt-1 text-xs text-error">{uploadError}</p>}
 
       <form
         className="mt-5"

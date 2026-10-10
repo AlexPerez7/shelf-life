@@ -74,7 +74,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Portadas (IGDB, Steam, TMDB, AniList, Open Library, Google y
-            // Apple Books): no cambian para una misma URL, así que se sirven
+            // Apple Books, y las fotos propias): no cambian para una misma URL, así que se sirven
             // desde cache (instantáneas y disponibles offline).
             urlPattern: ({ url }) =>
               url.hostname === 'images.igdb.com' ||
@@ -84,7 +84,9 @@ export default defineConfig({
               url.hostname === 's4.anilist.co' ||
               url.hostname === 'covers.openlibrary.org' ||
               url.hostname === 'books.google.com' ||
-              url.hostname.endsWith('.mzstatic.com'),
+              url.hostname.endsWith('.mzstatic.com') ||
+              // Fotos propias subidas a Storage (bucket público `covers`).
+              url.pathname.startsWith('/storage/v1/object/public/covers/'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'game-images',

@@ -798,6 +798,7 @@ export function ScreenDetail() {
           )}
         </BottomSheet>
         <CoverPicker
+          itemId={current.id}
           currentUrl={current.cover_url}
           load={() => coverOptions(current)}
           open={coverOpen}

@@ -36,6 +36,13 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 - Las sesiones de juego hechas sin señal aparecen en la lista con la marca "sin guardar"; borrar una de esas solo la saca de la cola.
 - Todavía necesitan conexión: agregar o borrar títulos, borrar una sesión ya guardada y las listas.
 
+## Fotos propias como portada
+
+- En "Cambiar portada" de los tres trackers, "Subir una foto" usa la cámara o la galería.
+- La foto se achica en el teléfono (600 px de ancho, JPEG) y se sube al bucket `covers` de Supabase Storage, en la carpeta del usuario (`lib/coverUpload.ts`, migración `0013`).
+- El service worker la cachea como cualquier otra portada. Necesita conexión para subirla.
+- Las fotos reemplazadas no se borran del bucket (ocupan poco: ~50-100 KB cada una).
+
 ## Cuenta y datos
 
 - Login y registro con Supabase Auth, con recuperación de contraseña por email. El origen de la app tiene que estar en *Authentication → URL Configuration → Redirect URLs* de Supabase.

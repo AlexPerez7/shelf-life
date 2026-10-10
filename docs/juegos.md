@@ -25,7 +25,7 @@ Ruta `/juegos`, código en `src/trackers/juegos/`. Tema violeta y magenta.
 - **Sesiones de juego** (fecha y minutos), que suman solas a las horas totales (trigger en la DB). Registrarlas y terminar el cronómetro funciona sin conexión: quedan marcadas "sin guardar" hasta que vuelve la señal.
 - **Precios** actuales en tiendas de PC (CheapShark) para juegos "Deseado" o "Pendiente".
 - **Duración estimada** (IGDB: rápido, normal, completista).
-- **Cambiar portada**: tocar la portada o ⋮ → Cambiar portada. Ofrece la portada de IGDB, las de cada región y edición, y la vertical de Steam; también se puede pegar la URL de una imagen.
+- **Cambiar portada**: tocar la portada o ⋮ → Cambiar portada. Ofrece la portada de IGDB, las de cada región y edición, y la vertical de Steam; también se puede subir una foto propia o pegar la URL de una imagen.
 
 El código del detalle está repartido en `src/trackers/juegos/detail/`: `useGameDraft` (autoguardado), `useGameSessions` (sesiones y cronómetro) y una sección por archivo.
 

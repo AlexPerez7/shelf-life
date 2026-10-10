@@ -23,7 +23,7 @@ Ruta `/pantalla`, código en `src/trackers/pantalla/`. Tema oscuro azulado con c
 - El póster sobre su fondo difuminado.
 - Una acción principal según el estado: ver el siguiente episodio, marcar vista o volver a verla.
 - Los episodios como casillas: tocar una marca todo hasta ahí y suma el tiempo visto.
-- **Cambiar portada**: tocar el póster (o ⋮ → Cambiar portada) muestra los pósters de TMDB en otros idiomas, o se pega la URL de una imagen.
+- **Cambiar portada**: tocar el póster (o ⋮ → Cambiar portada) muestra los pósters de TMDB en otros idiomas, o se sube una foto propia o se pega la URL de una imagen.
 
 ## Alta
 
