@@ -50,6 +50,12 @@ React 19 + Vite + TypeScript + Tailwind CSS v4 (config en `src/index.css` con `@
 - Migraciones en `supabase/migrations/` numeradas (`0001`...); una nueva va con el número siguiente y se documenta en el README.
 - Las APIs externas (IGDB, Steam, TMDB, AniList, Open Library, CheapShark) se llaman solo desde Edge Functions (`supabase/functions/`), nunca desde el frontend. Todas exigen usuario logueado. Secrets con `supabase secrets set`.
 
+## Documentación
+
+- Ningún `.md` (este incluido) debe crecer sin control. Si uno pasa de ~200 líneas o ~15 KB, o una sección se vuelve muy larga, dividirlo: lo detallado va a archivos en `docs/` (uno por tema, ej. `docs/pantalla.md`, `docs/supabase.md`) y el principal queda como índice corto que resume y enlaza a cada uno.
+- En `CLAUDE.md`, lo que se divida se referencia con su ruta para que se sepa dónde leer; las reglas generales se quedan acá.
+- Al agregar contenido, ponerlo en el archivo del tema que corresponde, no en el principal.
+
 ## Git y deploy
 
 - Push a `main` = deploy a producción (GitHub Actions → GitHub Pages, https://alexperez7.github.io/shelf-life/, base `/shelf-life/`).
