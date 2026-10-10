@@ -26,6 +26,7 @@ import { parseDate } from '../../lib/dates'
 import { statusLabels, statuses } from '../../lib/status'
 import { getTimeToBeatBatch } from '../../lib/igdb'
 import { useAuth } from '../../hooks/useAuth'
+import { useSignOut } from '../../hooks/useSignOut'
 import { useToast } from '../../contexts/ToastContext'
 import { useActivity } from '../../hooks/useActivity'
 import { MonthlyBars } from '../../components/stats/MonthlyBars'
@@ -33,7 +34,6 @@ import { RankBars } from '../../components/stats/RankBars'
 import { YearRecap } from '../../components/stats/YearRecap'
 import { GoalCard } from '../../components/stats/GoalCard'
 import { monthBuckets, type ActivityRow } from '../../lib/stats'
-import { useConfirm } from '../../contexts/ConfirmContext'
 import type { Game } from '../../types/game'
 import { gamesPaths } from './paths'
 
@@ -335,23 +335,16 @@ function GamesYearRecap({ games, sessions }: { games: Game[]; sessions: Activity
 }
 
 function AccountCard() {
-  const { session, signOut } = useAuth()
+  const { session } = useAuth()
+  const signOut = useSignOut()
   const { showError } = useToast()
-  const confirm = useConfirm()
   const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {
-    const ok = await confirm({
-      title: '¿Cerrar sesión?',
-      message: 'Tus datos quedan guardados en tu cuenta; solo se cierra la sesión en este dispositivo.',
-      confirmLabel: 'Cerrar sesión',
-      danger: true,
-    })
-    if (!ok) return
     setSigningOut(true)
-    const { error } = await signOut()
-    if (error) {
-      showError(error, 'No se pudo cerrar la sesión')
+    const result = await signOut()
+    if (!result || result.error) {
+      if (result?.error) showError(result.error, 'No se pudo cerrar la sesión')
       setSigningOut(false)
     }
   }

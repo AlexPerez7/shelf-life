@@ -9,6 +9,7 @@ import { ConfirmProvider } from './contexts/ConfirmContext'
 import { ScrollManager } from './components/ScrollManager'
 import { SessionTimerProvider } from './contexts/SessionTimerContext'
 import { TimerBanner } from './components/TimerBanner'
+import { PendingSyncIndicator } from './components/PendingSyncIndicator'
 import { Hub } from './pages/Hub'
 import { asset } from './lib/appUrl'
 import { gamesPaths } from './trackers/juegos/paths'
@@ -140,6 +141,7 @@ function App() {
           </Routes>
         </Suspense>
         <TimerBanner />
+        <PendingSyncIndicator />
       </div>
     )
   }

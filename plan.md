@@ -2,22 +2,14 @@
 
 Lo que quedó anotado para hacer más adelante, en el orden recomendado. El plan original (fase solo juegos) está en `shelf-life-plan.md` y ya está completo.
 
-## 1. Guardar sin conexión
-
-Hoy un cambio sin señal se ve un momento (guardado optimista) y vuelve atrás con un error.
-
-- Cola de cambios pendientes por ítem (ya existe la fila por ítem en `MediaContext`/`GamesContext`), persistida en el dispositivo, que se reintenta al volver la conexión (`online`) y al abrir la app.
-- Indicador discreto de "cambios sin guardar" y qué pasa si el usuario cierra sesión con cambios pendientes.
-- Cuidar el orden: los cambios de un mismo ítem se aplican en el orden en que se hicieron; la actividad (`activity_log`) no se debe duplicar al reintentar.
-
-## 2. "Cambiar portada" en Juegos
+## 1. "Cambiar portada" en Juegos
 
 Igual que en Libros y Pantalla (`components/CoverPicker.tsx`).
 
 - Un modo en `igdb-search` (o en `media-search`) que traiga las portadas y artes alternativos de un juego en IGDB, y quizás la portada de Steam (`library_600x900`) si tiene `steam_appid`.
 - En el detalle de juegos: tocar la portada o ⋮ → Cambiar portada.
 
-## 3. Ordenar el detalle de juegos
+## 2. Ordenar el detalle de juegos
 
 `src/trackers/juegos/GameDetail.tsx` tiene más de 1000 líneas: lo más difícil de mantener del proyecto.
 
@@ -25,6 +17,8 @@ Igual que en Libros y Pantalla (`components/CoverPicker.tsx`).
 - De paso: el aviso de lint `react(refs)` de `GamesContext` (ref leída durante el render).
 
 ## Ideas sueltas (sin prioridad)
+
+- Más cosas sin conexión: agregar y borrar títulos (necesita ids temporales), las sesiones de juego y el cronómetro (`usePlaySessions`, `useSaveStoppedTimer`) y las listas. Hoy fallan con un error si no hay señal.
 
 - Temporadas para el anime de AniList (hoy se cuentan de corrido): AniList separa cada temporada en otra entrada, así que habría que agrupar por relaciones (`SEQUEL`/`PREQUEL`).
 - Subir una foto propia como portada (requiere un bucket de Supabase Storage con RLS).

@@ -20,8 +20,8 @@ import { useGoals } from '../hooks/useGoals'
 import { goalDone, goalUnits } from '../lib/goals'
 import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
-import { useConfirm } from '../contexts/ConfirmContext'
 import { useAuth } from '../hooks/useAuth'
+import { useSignOut } from '../hooks/useSignOut'
 import { deliverFile, exportCsv, exportJson } from '../lib/exportData'
 import { formatElapsed, useNow, useSessionTimer } from '../contexts/SessionTimerContext'
 import { useActivity } from '../hooks/useActivity'
@@ -217,9 +217,9 @@ const actionClass =
 
 /** Tu cuenta: exportar los datos (respaldo) y cerrar sesión. */
 function AccountSection() {
-  const { session, signOut } = useAuth()
+  const { session } = useAuth()
+  const signOut = useSignOut()
   const { showToast, showError } = useToast()
-  const confirm = useConfirm()
   const [exporting, setExporting] = useState<'json' | 'csv' | null>(null)
 
   async function handleExport(kind: 'json' | 'csv') {
@@ -235,15 +235,8 @@ function AccountSection() {
   }
 
   async function handleSignOut() {
-    const ok = await confirm({
-      title: '¿Cerrar sesión?',
-      message: 'Tus datos quedan guardados en tu cuenta; solo se cierra la sesión en este dispositivo.',
-      confirmLabel: 'Cerrar sesión',
-      danger: true,
-    })
-    if (!ok) return
-    const { error } = await signOut()
-    if (error) showError(error, 'No se pudo cerrar la sesión')
+    const result = await signOut()
+    if (result?.error) showError(result.error, 'No se pudo cerrar la sesión')
   }
 
   const buttonClass =

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react'
 import { supabase, ensureSession } from '../lib/supabaseClient'
 import { readCache, removeCacheByPrefix, writeCache } from '../lib/localCache'
+import { usePendingSync } from '../hooks/usePendingSync'
 import { gameChangesToItem, itemToGame, newGameToItem } from '../lib/gameItem'
 import type { Game, NewGame } from '../types/game'
 import type { Item } from '../types/item'
@@ -18,6 +19,14 @@ interface GamesContextValue {
   /** Relee un juego de la DB (ej. después de que un trigger lo modificó). */
   refreshGame: (id: string) => Promise<void>
   refetch: () => Promise<void>
+  /** Cambios hechos sin conexión que todavía no llegaron a la base. */
+  pendingCount: number
+  /** Un cambio pendiente que la base rechazó al reintentar. */
+  syncError: { message: string; at: number } | null
+  /** Intenta mandar ya lo pendiente; devuelve cuántos cambios quedan. */
+  flushPending: () => Promise<number>
+  /** Descarta lo pendiente (al cerrar sesión). */
+  discardPending: () => void
 }
 
 const GamesContext = createContext<GamesContextValue | null>(null)
@@ -38,6 +47,8 @@ export function GamesProvider({ children }: { children: ReactNode }) {
   const hasLoaded = useRef(false)
   // Usuario dueño de los datos en memoria (para la cache local).
   const userIdRef = useRef<string | null>(null)
+  const sync = usePendingSync('games', setItems, itemsRef)
+  const { overlay, setUser, save, dropItem, pendingCount, syncError, flush, discard } = sync
 
   const fetchGames = useCallback(async () => {
     if (!hasLoaded.current) setLoading(true)
@@ -53,12 +64,13 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       // la biblioteca ni muestra error: se sigue viendo lo último conocido.
       if (!hasLoaded.current) setError(error.message)
     } else {
-      setItems(data as Item[])
+      // Lo hecho sin conexión que todavía no llegó se sigue viendo.
+      setItems(overlay(data as Item[]))
       setError(null)
       hasLoaded.current = true
     }
     setLoading(false)
-  }, [])
+  }, [overlay])
 
   useEffect(() => {
     // onAuthStateChange dispara INITIAL_SESSION apenas nos suscribimos (con la
@@ -75,6 +87,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT' || !session) {
         hasLoaded.current = false
         userIdRef.current = null
+        setUser(null)
         removeCacheByPrefix(CACHE_PREFIX)
         setItems([])
         setError(null)
@@ -86,6 +99,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
         // revalidar contra la DB en segundo plano.
         if (userIdRef.current !== session.user.id) {
           userIdRef.current = session.user.id
+          setUser(session.user.id)
           const cached = readCache<Item[]>(CACHE_PREFIX + session.user.id)
           if (cached) {
             setItems(cached.data)
@@ -99,7 +113,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       }
     })
     return () => subscription.unsubscribe()
-  }, [fetchGames])
+  }, [fetchGames, setUser])
 
   // Mantener la cache local al día con cada cambio (alta, edición, borrado).
   useEffect(() => {
@@ -145,38 +159,29 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     return created
   }, [])
 
-  // Último cambio pedido por juego (respuestas fuera de orden: manda la última).
-  const updateSeq = useRef(new Map<string, number>())
-
-  /** Optimista, como en MediaContext: se ve al instante y vuelve atrás si falla. */
-  const updateGame = useCallback(async (id: string, changes: Partial<Game>) => {
-    const current = itemsRef.current.find((i) => i.id === id)
-    const write = gameChangesToItem(changes, current?.metadata)
-    const seq = (updateSeq.current.get(id) ?? 0) + 1
-    updateSeq.current.set(id, seq)
-    setItems((prev) => prev.map((i) => (i.id === id ? ({ ...i, ...write } as Item) : i)))
-
-    const { data, error } = await supabase.from('items').update(write).eq('id', id).select().single()
-    const isLatest = updateSeq.current.get(id) === seq
-    if (error) {
-      if (isLatest && current) setItems((prev) => prev.map((i) => (i.id === id ? current : i)))
-      throw error
-    }
-    if (isLatest) setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
-    return itemToGame(data as Item)
-  }, [])
+  /** Optimista, como en MediaContext: se ve al instante; sin conexión queda en la cola. */
+  const updateGame = useCallback(
+    async (id: string, changes: Partial<Game>) => {
+      const current = itemsRef.current.find((i) => i.id === id)
+      const write = gameChangesToItem(changes, current?.metadata)
+      const saved = await save({ type: 'update', itemId: id, changes: write }, (i) => ({ ...i, ...write }) as Item)
+      return itemToGame(saved)
+    },
+    [save]
+  )
 
   const deleteGame = useCallback(async (id: string) => {
     const { error } = await supabase.from('items').delete().eq('id', id)
     if (error) throw error
+    dropItem(id)
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [])
+  }, [dropItem])
 
   const refreshGame = useCallback(async (id: string) => {
     const { data, error } = await supabase.from('items').select('*').eq('id', id).single()
     if (error) throw error
-    setItems((prev) => prev.map((i) => (i.id === id ? (data as Item) : i)))
-  }, [])
+    setItems((prev) => prev.map((i) => (i.id === id ? overlay([data as Item])[0] : i)))
+  }, [overlay])
 
   const value = useMemo<GamesContextValue>(
     () => ({
@@ -189,8 +194,26 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       deleteGame,
       refreshGame,
       refetch: fetchGames,
+      pendingCount,
+      syncError,
+      flushPending: flush,
+      discardPending: discard,
     }),
-    [games, loading, error, addGame, addGames, updateGame, deleteGame, refreshGame, fetchGames]
+    [
+      games,
+      loading,
+      error,
+      addGame,
+      addGames,
+      updateGame,
+      deleteGame,
+      refreshGame,
+      fetchGames,
+      pendingCount,
+      syncError,
+      flush,
+      discard,
+    ]
   )
 
   return <GamesContext.Provider value={value}>{children}</GamesContext.Provider>

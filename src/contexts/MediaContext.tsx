@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react'
 import { supabase, ensureSession } from '../lib/supabaseClient'
 import { readCache, removeCacheByPrefix, writeCache } from '../lib/localCache'
+import { usePendingSync } from '../hooks/usePendingSync'
 import type { Item, ItemWrite } from '../types/item'
 
 interface Activity {
@@ -31,6 +32,14 @@ interface MediaContextValue {
    * update posterior devuelve la fila ya con ese tiempo.
    */
   logActivity: (id: string, activity: Activity, changes: ItemWrite) => Promise<Item>
+  /** Cambios hechos sin conexión que todavía no llegaron a la base. */
+  pendingCount: number
+  /** Un cambio pendiente que la base rechazó al reintentar. */
+  syncError: { message: string; at: number } | null
+  /** Intenta mandar ya lo pendiente; devuelve cuántos cambios quedan. */
+  flushPending: () => Promise<number>
+  /** Descarta lo pendiente (al cerrar sesión). */
+  discardPending: () => void
 }
 
 const MediaContext = createContext<MediaContextValue | null>(null)
@@ -48,6 +57,13 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const hasLoaded = useRef(false)
   const userIdRef = useRef<string | null>(null)
+  // Estado actual, para tener el "antes" de un cambio optimista.
+  const itemsRef = useRef<Item[]>([])
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
+  const sync = usePendingSync('media', setItems, itemsRef)
+  const { overlay, setUser } = sync
 
   const fetchItems = useCallback(async () => {
     if (!hasLoaded.current) setLoading(true)
@@ -61,12 +77,13 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (error) {
       if (!hasLoaded.current) setError(error.message)
     } else {
-      setItems(data as Item[])
+      // Lo hecho sin conexión que todavía no llegó se sigue viendo.
+      setItems(overlay(data as Item[]))
       setError(null)
       hasLoaded.current = true
     }
     setLoading(false)
-  }, [])
+  }, [overlay])
 
   useEffect(() => {
     // Ver GamesProvider: mismos eventos y mismas razones.
@@ -76,6 +93,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT' || !session) {
         hasLoaded.current = false
         userIdRef.current = null
+        setUser(null)
         removeCacheByPrefix(CACHE_PREFIX)
         setItems([])
         setError(null)
@@ -85,6 +103,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
         if (userIdRef.current !== session.user.id) {
           userIdRef.current = session.user.id
+          setUser(session.user.id)
           const cached = readCache<Item[]>(CACHE_PREFIX + session.user.id)
           if (cached) {
             setItems(cached.data)
@@ -96,7 +115,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       }
     })
     return () => subscription.unsubscribe()
-  }, [fetchItems])
+  }, [fetchItems, setUser])
 
   useEffect(() => {
     if (hasLoaded.current && userIdRef.current) {
@@ -139,107 +158,70 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return created
   }, [])
 
-  // Último cambio pedido por ítem: solo la respuesta del último actualiza el
-  // estado (las anteriores ya quedaron superadas por el cambio optimista).
-  const updateSeq = useRef(new Map<string, number>())
-  // Guardados en fila por ítem: con dos toques rápidos ("+1", "+1") la base
-  // recibe los cambios en el mismo orden en que se hicieron.
-  const queues = useRef(new Map<string, Promise<unknown>>())
-  const enqueue = useCallback(<T,>(id: string, task: () => Promise<T>): Promise<T> => {
-    const next = (queues.current.get(id) ?? Promise.resolve()).catch(() => {}).then(task)
-    queues.current.set(id, next.catch(() => {}))
-    return next
-  }, [])
-  // Estado actual, para tener el "antes" de un cambio optimista.
-  const itemsRef = useRef<Item[]>([])
-  useEffect(() => {
-    itemsRef.current = items
-  }, [items])
-
-  /**
-   * Aplica `local` al instante, guarda con `write` (en fila) y deja la fila
-   * que devuelve la base. Si falla, vuelve a como estaba y el error sube.
-   */
-  const optimistic = useCallback(
-    async (id: string, local: (item: Item) => Item, write: () => Promise<Item>) => {
-      const seq = (updateSeq.current.get(id) ?? 0) + 1
-      updateSeq.current.set(id, seq)
-      const previous = itemsRef.current.find((i) => i.id === id)
-      setItems((prev) => prev.map((i) => (i.id === id ? local(i) : i)))
-      try {
-        const saved = await enqueue(id, write)
-        if (updateSeq.current.get(id) === seq) setItems((prev) => prev.map((i) => (i.id === id ? saved : i)))
-        return saved
-      } catch (err) {
-        if (updateSeq.current.get(id) === seq && previous) {
-          setItems((prev) => prev.map((i) => (i.id === id ? previous : i)))
-        }
-        throw err
-      }
-    },
-    [enqueue]
-  )
-
+  const { save, dropItem } = sync
   /**
    * Optimista: el cambio se ve al instante y se guarda en segundo plano (la
-   * ida y vuelta a Supabase en el teléfono puede tardar segundos).
+   * ida y vuelta a Supabase en el teléfono puede tardar segundos). Sin
+   * conexión queda en la cola de cambios pendientes.
    */
   const updateItem = useCallback<MediaContextValue['updateItem']>(
-    (id, changes) =>
-      optimistic(
-        id,
-        (i) => ({ ...i, ...changes }) as Item,
-        async () => {
-          const { data, error } = await supabase.from('items').update(changes).eq('id', id).select().single()
-          if (error) throw error
-          return data as Item
-        }
-      ),
-    [optimistic]
+    (id, changes) => save({ type: 'update', itemId: id, changes }, (i) => ({ ...i, ...changes }) as Item),
+    [save]
   )
 
   const deleteItem = useCallback<MediaContextValue['deleteItem']>(async (id) => {
     const { error } = await supabase.from('items').delete().eq('id', id)
     if (error) throw error
+    dropItem(id)
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [])
+  }, [dropItem])
 
   /**
    * También optimista: el avance (y el tiempo, que en la base suma un
-   * trigger) se ve al instante; el registro y el cambio se guardan en fila.
+   * trigger) se ve al instante; el registro y el cambio se guardan en fila,
+   * o en la cola si no hay conexión.
    */
   const logActivity = useCallback<MediaContextValue['logActivity']>(
     (id, activity, changes) =>
-      optimistic(
-        id,
+      save(
+        {
+          type: 'activity',
+          itemId: id,
+          activity: {
+            id: crypto.randomUUID(),
+            duration_minutes: activity.duration_minutes || null,
+            progress_delta: activity.progress_delta ?? null,
+            occurred_at: new Date().toISOString(),
+          },
+          changes,
+        },
         (i) =>
           ({
             ...i,
             ...changes,
             time_spent_minutes: i.time_spent_minutes + (activity.duration_minutes || 0),
-          }) as Item,
-        async () => {
-          const { error } = await supabase.from('activity_log').insert({
-            item_id: id,
-            duration_minutes: activity.duration_minutes || null,
-            progress_delta: activity.progress_delta ?? null,
-          })
-          if (error) throw error
-          // Aunque no haya cambios propios, el select trae el tiempo actualizado.
-          const { data, error: updateError } =
-            Object.keys(changes).length > 0
-              ? await supabase.from('items').update(changes).eq('id', id).select().single()
-              : await supabase.from('items').select('*').eq('id', id).single()
-          if (updateError) throw updateError
-          return data as Item
-        }
+          }) as Item
       ),
-    [optimistic]
+    [save]
   )
 
+  const { pendingCount, syncError, flush, discard } = sync
   const value = useMemo<MediaContextValue>(
-    () => ({ items, loading, error, addItem, addItems, updateItem, deleteItem, logActivity }),
-    [items, loading, error, addItem, addItems, updateItem, deleteItem, logActivity]
+    () => ({
+      items,
+      loading,
+      error,
+      addItem,
+      addItems,
+      updateItem,
+      deleteItem,
+      logActivity,
+      pendingCount,
+      syncError,
+      flushPending: flush,
+      discardPending: discard,
+    }),
+    [items, loading, error, addItem, addItems, updateItem, deleteItem, logActivity, pendingCount, syncError, flush, discard]
   )
 
   return <MediaContext.Provider value={value}>{children}</MediaContext.Provider>
