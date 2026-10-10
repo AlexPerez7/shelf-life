@@ -29,7 +29,7 @@ React 19 + Vite + TypeScript + Tailwind CSS v4 (config en `src/index.css` con `@
 - Datos: todo vive en la tabla `items` (migración `0011`). Juegos la ve como `Game` mediante la capa de adaptación de `src/lib/gameItem.ts` y `GamesContext`; el resto usa `Item` directo vía `MediaContext` (`src/types/item.ts`).
 - Configuración de Pantalla y Libros (etiquetas de estado, rutas, colores) en `mediaSections` de `src/lib/media.ts`. Ahí también están las reglas de avance y de alta: `statusChanges`, `progressChanges`, `withDetails` y `resultToItemWithStatus`. Reusarlas en vez de duplicar la lógica.
 - Actividad (episodios, sesiones, lecturas) en `activity_log`; un trigger de la DB suma `time_spent_minutes`. El frontend no suma tiempo a mano.
-- Guardado: `updateItem`/`logActivity` (Media) y `updateGame` (Juegos) son optimistas y pasan por `hooks/usePendingSync.ts`: sin conexión el cambio queda en una cola por usuario en el dispositivo (`lib/pendingChanges.ts`) y se reintenta solo. Un cambio nuevo de esos ítems va por ahí, no directo a Supabase; las actividades llevan id generado en el cliente (upsert sin duplicar).
+- Guardado: `updateItem`/`logActivity` (Media) y `updateGame`/`logSession` (Juegos) son optimistas y pasan por `hooks/usePendingSync.ts`: sin conexión el cambio queda en una cola por usuario en el dispositivo (`lib/pendingChanges.ts`) y se reintenta solo. Un cambio nuevo de esos ítems va por ahí, no directo a Supabase; las actividades llevan id generado en el cliente (upsert sin duplicar).
 
 ## Temas y estilos
 

@@ -20,6 +20,8 @@ export interface PendingActivity {
   progress_delta: number | null
   /** Cuándo pasó (no cuándo se guardó). */
   occurred_at: string
+  /** Nota de la sesión (juegos), si tiene. */
+  notes?: string | null
 }
 
 export type PendingOp =
@@ -29,6 +31,10 @@ export type PendingOp =
 export const pendingFor = (ops: PendingOp[], itemId: string) => ops.filter((o) => o.itemId === itemId)
 
 export const withoutItem = (ops: PendingOp[], itemId: string) => ops.filter((o) => o.itemId !== itemId)
+
+/** Las actividades de un ítem que todavía no llegaron a la base. */
+export const pendingActivities = (ops: PendingOp[], itemId: string) =>
+  ops.flatMap((o) => (o.type === 'activity' && o.itemId === itemId ? [o.activity] : []))
 
 /**
  * Suma un cambio al final de la cola. Una edición se junta con la anterior

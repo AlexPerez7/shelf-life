@@ -6,6 +6,7 @@ import {
   applyPendingOps,
   isNetworkError,
   overlayPending,
+  pendingActivities,
   pendingFor,
   pendingKey,
   readPending,
@@ -74,6 +75,7 @@ export function usePendingSync(
           duration_minutes: op.activity.duration_minutes || null,
           progress_delta: op.activity.progress_delta ?? null,
           occurred_at: op.activity.occurred_at,
+          notes: op.activity.notes ?? null,
         },
         { onConflict: 'id', ignoreDuplicates: true }
       )
@@ -192,6 +194,32 @@ export function usePendingSync(
   /** Un ítem borrado: lo suyo en la cola ya no tiene sentido. */
   const dropItem = useCallback((itemId: string) => persist(withoutItem(opsRef.current, itemId)), [persist])
 
+  /** Actividades de un ítem que esperan en la cola (ej. sesiones hechas sin conexión). */
+  const pendingActivitiesFor = useCallback((itemId: string) => pendingActivities(opsRef.current, itemId), [])
+
+  /**
+   * Saca de la cola una actividad que todavía no se mandó (borrar una sesión
+   * hecha sin conexión) y descuenta su tiempo. `false` si ya no está en la
+   * cola (se guardó o se está mandando): entonces se borra en la base.
+   */
+  const cancelActivity = useCallback(
+    (activityId: string) => {
+      const op = opsRef.current.find((o) => o.type === 'activity' && o.activity.id === activityId)
+      if (!op || op.type !== 'activity' || op === inFlightRef.current) return false
+      persist(opsRef.current.filter((o) => o !== op))
+      const minutes = op.activity.duration_minutes ?? 0
+      if (minutes) {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === op.itemId ? { ...i, time_spent_minutes: Math.max(0, i.time_spent_minutes - minutes) } : i
+          )
+        )
+      }
+      return true
+    },
+    [persist, setItems]
+  )
+
   /** Descarta todo lo pendiente (al cerrar sesión, si el usuario lo acepta). */
   const discard = useCallback(() => persist([]), [persist])
 
@@ -212,5 +240,16 @@ export function usePendingSync(
     return () => clearInterval(timer)
   }, [pendingCount, flush])
 
-  return { save, flush, setUser, overlay, dropItem, discard, pendingCount, syncError }
+  return {
+    save,
+    flush,
+    setUser,
+    overlay,
+    dropItem,
+    discard,
+    pendingActivitiesFor,
+    cancelActivity,
+    pendingCount,
+    syncError,
+  }
 }

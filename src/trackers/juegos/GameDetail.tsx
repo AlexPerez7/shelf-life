@@ -241,6 +241,7 @@ export function GameDetail() {
               sessions={sessions.sessions}
               onAdd={sessions.addManualSession}
               onDelete={sessions.removeSession}
+              isPending={sessions.isPending}
             />
 
             {/* Estas dos secciones incluyen su propia tarjeta y no se muestran

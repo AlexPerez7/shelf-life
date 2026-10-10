@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Clock, Trash2 } from 'lucide-react'
+import { Clock, CloudOff, Trash2 } from 'lucide-react'
 import { SectionCard } from '../../../components/SectionCard'
 import { Chip } from '../../../components/Chip'
 import { formatDate, todayISO } from '../../../lib/dates'
@@ -14,10 +14,12 @@ interface SessionsCardProps {
   /** Registra una sesión a mano; devuelve si se guardó. */
   onAdd: (minutes: number, day: string) => Promise<boolean>
   onDelete: (session: PlaySession) => void
+  /** ¿Todavía espera en la cola (hecha sin conexión)? */
+  isPending: (id: string) => boolean
 }
 
 /** Registrar sesiones a mano (minutos y día) y la lista de las registradas. */
-export function SessionsCard({ sessions, onAdd, onDelete }: SessionsCardProps) {
+export function SessionsCard({ sessions, onAdd, onDelete, isPending }: SessionsCardProps) {
   const [sessionMinutes, setSessionMinutes] = useState('')
   const [sessionDate, setSessionDate] = useState(todayISO())
   const [sessionError, setSessionError] = useState<string | null>(null)
@@ -87,8 +89,13 @@ export function SessionsCard({ sessions, onAdd, onDelete }: SessionsCardProps) {
               key={s.id}
               className="flex items-center justify-between rounded-xl bg-background/40 py-1 pl-3 pr-1 text-sm ring-1 ring-primary-dark/30"
             >
-              <span className="text-lavender">
+              <span className="flex items-center gap-1.5 text-lavender">
                 {formatDate(s.played_at)} — {s.duration_minutes} min
+                {isPending(s.id) && (
+                  <span className="flex items-center gap-1 text-xs" title="Se guarda al volver la conexión">
+                    <CloudOff size={12} aria-hidden /> sin guardar
+                  </span>
+                )}
               </span>
               <button
                 onClick={() => onDelete(s)}

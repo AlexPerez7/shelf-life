@@ -4,6 +4,7 @@ import {
   applyPendingOps,
   isNetworkError,
   overlayPending,
+  pendingActivities,
   pendingFor,
   withoutItem,
   type PendingOp,
@@ -59,6 +60,10 @@ describe('aplicar lo pendiente', () => {
     const [a, b] = overlayPending([item, other], ops)
     expect(a.progress).toBe(4)
     expect(b).toBe(other)
+  })
+
+  it('lista las actividades pendientes de un ítem (sesiones hechas sin conexión)', () => {
+    expect(pendingActivities([...ops, activity('b', 'y1', 30)], 'a').map((a) => a.id)).toEqual(['x1', 'x2'])
   })
 
   it('filtra por ítem', () => {

@@ -10,7 +10,8 @@ import type { Game, PlaySession } from '../../../types/game'
 
 /**
  * Sesiones de juego y cronómetro del detalle. Las horas las suma un trigger
- * en la DB al registrar o borrar una sesión; después se relee el juego.
+ * en la DB al registrar o borrar una sesión (al borrar, se relee el juego).
+ * Registrar funciona sin conexión: la sesión espera en la cola de cambios.
  * `flush` manda antes las ediciones pendientes (ej. horas a mano), para que
  * el trigger sume sobre el valor correcto.
  */
@@ -27,15 +28,17 @@ export function useGameSessions(
   const saveStoppedTimer = useSaveStoppedTimer()
   // Se pasa el id de la URL (no current?.id) para que estas consultas no
   // esperen a que termine de cargar toda la biblioteca antes de arrancar.
-  const { sessions, addSession, deleteSession } = usePlaySessions(id)
+  const { sessions, addSession, deleteSession, isPending } = usePlaySessions(id)
   const timerHere = sessionTimer.timer?.gameId === id ? sessionTimer.timer : null
 
-  /** Registra una sesión; las horas las suma un trigger en la DB. */
+  /**
+   * Registra una sesión; las horas las suma un trigger en la DB (y al
+   * instante en pantalla). Sin conexión queda en la cola.
+   */
   async function registerSession(minutes: number, playedAt: string, notes?: string | null) {
     if (!current) return
     await flush()
     await addSession(minutes, playedAt, notes ?? undefined)
-    await refreshGame(current.id)
   }
 
   /** Sesión cargada a mano (minutos y día). Devuelve si se guardó. */
@@ -106,8 +109,8 @@ export function useGameSessions(
     if (!current) return
     try {
       await flush()
-      await deleteSession(session.id)
-      await refreshGame(current.id)
+      const wasPending = await deleteSession(session.id)
+      if (!wasPending) await refreshGame(current.id)
       showToast(`Sesión de ${session.duration_minutes} min eliminada`, {
         duration: 5000,
         action: {
@@ -127,6 +130,7 @@ export function useGameSessions(
 
   return {
     sessions,
+    isPending,
     timerStartedAt: timerHere?.startedAt ?? null,
     addManualSession,
     startTimer,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase, ensureSession } from '../lib/supabaseClient'
+import { useGames } from './useGames'
 import type { PlaySession } from '../types/game'
 
 // Las sesiones viven en `activity_log` (genérica para todos los tipos de
@@ -7,8 +8,17 @@ import type { PlaySession } from '../types/game'
 const SESSION_COLUMNS =
   'id, game_id:item_id, duration_minutes, played_at:occurred_at, notes'
 
+const byDateDesc = (x: PlaySession, y: PlaySession) =>
+  new Date(y.played_at).getTime() - new Date(x.played_at).getTime()
+
+/**
+ * Sesiones de un juego. Registrar una pasa por `logSession` de GamesContext
+ * (optimista, con cola sin conexión); la lista suma las que todavía esperan
+ * en la cola, así se ven aunque se haya cerrado la app sin señal.
+ */
 export function usePlaySessions(gameId: string | undefined) {
-  const [sessions, setSessions] = useState<PlaySession[]>([])
+  const { logSession, pendingSessions, cancelPendingSession } = useGames()
+  const [saved, setSaved] = useState<PlaySession[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchSessions = useCallback(async () => {
@@ -21,7 +31,7 @@ export function usePlaySessions(gameId: string | undefined) {
       .eq('item_id', gameId)
       .order('occurred_at', { ascending: false })
 
-    if (!error) setSessions(data as PlaySession[])
+    if (!error) setSaved(data as PlaySession[])
     setLoading(false)
   }, [gameId])
 
@@ -32,35 +42,42 @@ export function usePlaySessions(gameId: string | undefined) {
   const addSession = useCallback(
     async (durationMinutes: number, playedAt: string, notes?: string) => {
       if (!gameId) return
-      const { data, error } = await supabase
-        .from('activity_log')
-        .insert({
-          item_id: gameId,
-          duration_minutes: durationMinutes,
-          occurred_at: playedAt,
-          notes: notes || null,
-        })
-        .select(SESSION_COLUMNS)
-        .single()
-
-      if (error) throw error
+      const session = await logSession(gameId, { minutes: durationMinutes, playedAt, notes })
       // Mantener el orden por fecha (una sesión con fecha pasada, o restaurada
       // con "Deshacer", no va necesariamente primera).
-      setSessions((prev) =>
-        [data as PlaySession, ...prev].sort(
-          (x, y) => new Date(y.played_at).getTime() - new Date(x.played_at).getTime()
-        )
-      )
-      return data as PlaySession
+      setSaved((prev) => [session, ...prev.filter((s) => s.id !== session.id)].sort(byDateDesc))
+      return session
     },
-    [gameId]
+    [gameId, logSession]
   )
 
-  const deleteSession = useCallback(async (id: string) => {
-    const { error } = await supabase.from('activity_log').delete().eq('id', id)
-    if (error) throw error
-    setSessions((prev) => prev.filter((s) => s.id !== id))
-  }, [])
+  /**
+   * Una sesión que todavía no se guardó solo sale de la cola; si no, se borra
+   * en la base. Devuelve si estaba en la cola (entonces no hace falta releer el juego).
+   */
+  const deleteSession = useCallback(
+    async (id: string) => {
+      const wasPending = cancelPendingSession(id)
+      if (!wasPending) {
+        const { error } = await supabase.from('activity_log').delete().eq('id', id)
+        if (error) throw error
+      }
+      setSaved((prev) => prev.filter((s) => s.id !== id))
+      return wasPending
+    },
+    [cancelPendingSession]
+  )
 
-  return { sessions, loading, addSession, deleteSession, refetch: fetchSessions }
+  // Se calcula en cada render: la cola cambia sin cambiar `saved` (y el
+  // contexto vuelve a renderizar cuando cambia).
+  const pending = gameId ? pendingSessions(gameId).filter((p) => !saved.some((s) => s.id === p.id)) : []
+  const sessions = pending.length ? [...pending, ...saved].sort(byDateDesc) : saved
+
+  /** ¿Esta sesión todavía espera en la cola? (para marcarla en la lista). */
+  const isPending = useCallback(
+    (id: string) => !!gameId && pendingSessions(gameId).some((p) => p.id === id),
+    [gameId, pendingSessions]
+  )
+
+  return { sessions, loading, addSession, deleteSession, isPending, refetch: fetchSessions }
 }

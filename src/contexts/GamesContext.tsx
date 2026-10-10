@@ -4,7 +4,7 @@ import { supabase, ensureSession } from '../lib/supabaseClient'
 import { readCache, removeCacheByPrefix, writeCache } from '../lib/localCache'
 import { usePendingSync } from '../hooks/usePendingSync'
 import { gameChangesToItem, itemToGame, newGameToItem } from '../lib/gameItem'
-import type { Game, NewGame } from '../types/game'
+import type { Game, NewGame, PlaySession } from '../types/game'
 import type { Item } from '../types/item'
 
 interface GamesContextValue {
@@ -16,6 +16,15 @@ interface GamesContextValue {
   addGames: (games: NewGame[]) => Promise<Game[]>
   updateGame: (id: string, changes: Partial<Game>) => Promise<Game>
   deleteGame: (id: string) => Promise<void>
+  /**
+   * Registra una sesión de juego (las horas las suma un trigger en la DB).
+   * Optimista y con cola sin conexión, como los cambios. Devuelve la sesión.
+   */
+  logSession: (gameId: string, session: { minutes: number; playedAt: string; notes?: string | null }) => Promise<PlaySession>
+  /** Sesiones de un juego hechas sin conexión que todavía no llegaron a la base. */
+  pendingSessions: (gameId: string) => PlaySession[]
+  /** Saca de la cola una sesión sin guardar; `false` si ya está en la base. */
+  cancelPendingSession: (sessionId: string) => boolean
   /** Relee un juego de la DB (ej. después de que un trigger lo modificó). */
   refreshGame: (id: string) => Promise<void>
   refetch: () => Promise<void>
@@ -52,7 +61,18 @@ export function GamesProvider({ children }: { children: ReactNode }) {
   // Usuario dueño de los datos en memoria (para la cache local).
   const userIdRef = useRef<string | null>(null)
   const sync = usePendingSync('games', setItems, itemsRef)
-  const { overlay, setUser, save, dropItem, pendingCount, syncError, flush, discard } = sync
+  const {
+    overlay,
+    setUser,
+    save,
+    dropItem,
+    pendingCount,
+    syncError,
+    flush,
+    discard,
+    pendingActivitiesFor,
+    cancelActivity,
+  } = sync
 
   const fetchGames = useCallback(async () => {
     if (!hasLoaded.current) setLoading(true)
@@ -174,6 +194,35 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     [save]
   )
 
+  const logSession = useCallback<GamesContextValue['logSession']>(
+    async (gameId, { minutes, playedAt, notes }) => {
+      const id = crypto.randomUUID()
+      await save(
+        {
+          type: 'activity',
+          itemId: gameId,
+          activity: { id, duration_minutes: minutes, progress_delta: null, occurred_at: playedAt, notes: notes || null },
+          changes: {},
+        },
+        (i) => ({ ...i, time_spent_minutes: i.time_spent_minutes + minutes })
+      )
+      return { id, game_id: gameId, duration_minutes: minutes, played_at: playedAt, notes: notes || null }
+    },
+    [save]
+  )
+
+  const pendingSessions = useCallback<GamesContextValue['pendingSessions']>(
+    (gameId) =>
+      pendingActivitiesFor(gameId).map((a) => ({
+        id: a.id,
+        game_id: gameId,
+        duration_minutes: a.duration_minutes ?? 0,
+        played_at: a.occurred_at,
+        notes: a.notes ?? null,
+      })),
+    [pendingActivitiesFor]
+  )
+
   const deleteGame = useCallback(async (id: string) => {
     const { error } = await supabase.from('items').delete().eq('id', id)
     if (error) throw error
@@ -197,6 +246,9 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       updateGame,
       deleteGame,
       refreshGame,
+      logSession,
+      pendingSessions,
+      cancelPendingSession: cancelActivity,
       refetch: fetchGames,
       pendingCount,
       syncError,
@@ -212,6 +264,9 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       updateGame,
       deleteGame,
       refreshGame,
+      logSession,
+      pendingSessions,
+      cancelActivity,
       fetchGames,
       pendingCount,
       syncError,

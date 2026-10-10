@@ -27,13 +27,14 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 
 ## Cambios sin conexión
 
-- Editar un título, cambiar su estado o puntaje, el avance rápido (+1 episodio, la página) y anotar episodios o páginas funcionan sin señal.
+- Editar un título, cambiar su estado o puntaje, el avance rápido (+1 episodio, la página), anotar episodios o páginas, registrar sesiones de juego y terminar el cronómetro (de juegos o de lectura) funcionan sin señal.
 - El cambio se ve al instante, queda en una cola guardada en el dispositivo (`lib/pendingChanges.ts`, `hooks/usePendingSync.ts`) y se manda solo al volver la conexión, al abrir la app o volver a ella, y cada 30 s.
 - Un aviso arriba a la derecha ("3 cambios sin guardar") lo muestra; tocarlo reintenta en el momento.
 - Los cambios de un mismo título se guardan en el orden en que se hicieron. Cada actividad lleva un id generado en el dispositivo, así un reintento no la duplica ni suma dos veces el tiempo.
 - Si la base rechaza un cambio al reintentar (por ejemplo, el título se borró en otro dispositivo), se descarta con un aviso.
 - Al cerrar sesión se intenta guardar lo pendiente y, si no se puede, se pregunta antes de perderlo.
-- Todavía necesitan conexión: agregar o borrar títulos, las sesiones de juego, el cronómetro y las listas.
+- Las sesiones de juego hechas sin señal aparecen en la lista con la marca "sin guardar"; borrar una de esas solo la saca de la cola.
+- Todavía necesitan conexión: agregar o borrar títulos, borrar una sesión ya guardada y las listas.
 
 ## Cuenta y datos
 
