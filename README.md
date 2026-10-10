@@ -2,106 +2,70 @@
 
 PWA mobile-first para llevar registro de juegos, películas, series, anime y libros: backlog, progreso, tiempo invertido y estadísticas personales.
 
-Ver [`shelf-life-plan.md`](./shelf-life-plan.md) para el plan original de desarrollo.
+**En producción:** https://alexperez7.github.io/shelf-life/
 
-En producción: https://alexperez7.github.io/shelf-life/
+## Tres trackers en uno
 
-## Estructura: tres trackers en uno
+El inicio junta lo que tienes en curso en los tres, con una acción rápida para cada uno (jugar, +1 episodio, anotar la página), tus números de la semana y las metas del año. Cada tracker tiene su ruta, su tema y sus propias pantallas.
 
-El inicio (`/`) junta los tres trackers: lo que está en curso (jugando, viendo, leyendo) con una acción rápida cada uno ("Jugar"/"Terminar" con el cronómetro, +1 episodio, "La vi", anotar la página), los números de los últimos 7 días y la entrada a cada tracker. Cada uno vive bajo su propia ruta, con su barra de navegación, su color de acento (`[data-tracker]` en `src/index.css`) y su carpeta en `src/trackers/`:
+### 🎮 Juegos · [detalle](docs/juegos.md)
 
-- **Juegos** (`/juegos`, `src/trackers/juegos/`): biblioteca, descubrir, listas, estadísticas, diario e importación de Steam.
-- **Pantalla** (`/pantalla`, `src/trackers/pantalla/`): películas, series y anime, con una biblioteca estilo app de streaming: "Seguir viendo" con avance rápido (+1 episodio, "la vi"), una fila de pósters por estado y números del tracker (episodios, horas frente a la pantalla), dónde ves cada título (Netflix, Max, Disney+, Prime Video, Apple TV+, Crunchyroll, cine, TV; se elige al agregar o en el detalle y suma "Dónde ves" en las estadísticas), y los próximos episodios de las series y anime que sigues ("Mañana · T2 · E5"); los de la semana también aparecen en el inicio. Las series de TMDB guardan sus temporadas (`metadata.seasons`): el avance se lee "T2 · E5", el detalle agrupa los episodios por temporada (plegables) y las series agregadas antes se completan solas al abrirlas. El episodio también se anota a mano ("Voy en el episodio 1085"), sin sumar tiempo de hoy salvo que se marque "Los vi hoy". El detalle tiene el póster sobre su fondo difuminado, una acción principal (ver el siguiente episodio, marcar vista, volver a verla) y los episodios como casillas: tocar una marca todo hasta ahí y suma el tiempo visto. El alta muestra, antes de escribir, las tendencias del tipo elegido, y los resultados como pósters; tocar uno abre una vista previa (sinopsis, duración, episodios) desde la que se agrega directo como "Quiero ver", "Viendo" o "Ya la vi", sin salir de la búsqueda. Se puede importar lo visto en Letterboxd o la lista de MyAnimeList (`/pantalla/importar`) con el archivo que exportan (el .zip o los .csv de Letterboxd, el .xml.gz de MAL): estados, puntajes, fechas, episodios vistos, reseñas, notas y revisionados. Las películas se buscan en TMDB por título y año; el anime, en AniList por su id de MAL (con portada, episodios y avance exactos). Lo que ya está se salta y lo que no se encuentra se muestra para agregarlo igual (sin portada ni datos) o saltarlo. El archivo se procesa en el dispositivo. Sus estadísticas (`/pantalla/estadisticas`): horas frente a la pantalla, películas, episodios, horas por mes, día más maratonero, tipos, géneros, estados, destacados y el resumen del año para compartir. Desde ahí se abre el historial (`/pantalla/historial`): día por día, lo que agregaste, empezaste, viste ("Viste 3 episodios de...", con el tiempo) y terminaste, con el total de cada día.
-- **Libros** (`/libros`, `src/trackers/libros/`): lecturas por páginas, con tema claro propio (papel, verde azulado y serif Lora, inspirado en Openreads), y una biblioteca que es un librero: muebles con repisas por estado, colecciones, géneros y autores, libros en portada o lomo, y estantes que se abren completos. El alta busca por título, autor o ISBN en una lista con ficha (autores, páginas, editorial, sinopsis) y agrega directo a "Quiero leer", "Leyendo" o "Leído". En Chrome de Android, el alta tiene un botón para escanear el código de barras (ISBN) con la cámara: busca el libro por ese número y deja el formato en "Físico". Cronómetro de lectura ("Leer" en la ficha y en el inicio): sigue contando aunque se cierre la app y, al terminar, pide la página con los minutos ya puestos (o guarda solo el tiempo); es el mismo cronómetro de los juegos, uno a la vez. Se puede importar la biblioteca de Goodreads o StoryGraph (`/libros/importar`) con el CSV que exportan: estados, puntajes, fechas, reseñas, relecturas y formato; los que ya están se saltan y las portadas salen de Open Library por ISBN. El archivo se procesa en el dispositivo. Cada libro tiene formato (Físico, eBook, Kindle, Kobo, Audiolibro; se pueden marcar varios): se elige al agregarlo (recuerda el último usado), se cambia en la ficha, arma estantes en Colecciones y aparece en las estadísticas ("Cómo lees"). La ficha del libro muestra la lectura en curso (página, % y lo que falta a tu ritmo, con atajos de +10/+25/+50 páginas), "Empezar a leer" o "Releer" según el estado, ritmo en páginas por hora, notas, reseña y datos de la edición. Sus estadísticas (`/libros/estadisticas`): leídos (y los de este año en portadas), páginas, tiempo y ritmo de lectura, páginas por mes, racha, géneros y autores, destacados (mejor puntuado, el más largo y el más corto) y el resumen del año. Desde ahí se abre el diario de lectura (`/libros/historial`): día por día, las páginas leídas de cada libro, lo empezado y lo terminado.
+- Biblioteca con filtros, búsqueda en IGDB e importación de Steam con horas reales.
+- Cronómetro de sesión, sesiones que suman horas solas y progreso por historia, general y 100%.
+- Precios en tiendas de PC (CheapShark), duración estimada (IGDB) y cambiar portada.
+- Estadísticas con el tiempo para terminar el backlog, y un diario.
 
-Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es lógica (búsqueda en `hooks/useMediaSearch`, reglas de avance en `lib/media.ts`) y componentes chicos de `src/components/`. Los datos de los tres están en la misma tabla `items`.
+### 📺 Pantalla · [detalle](docs/pantalla.md)
+
+- Películas, series y anime con estilo de app de streaming: "Seguir viendo", +1 episodio, temporadas.
+- Próximos episodios de lo que sigues y dónde ves cada título.
+- Alta con tendencias y vista previa; importar de Letterboxd y MyAnimeList.
+- Estadísticas (horas frente a la pantalla, día más maratonero) e historial día por día.
+
+### 📚 Libros · [detalle](docs/libros.md)
+
+- Un librero con repisas por estado, colecciones, géneros y autores; tema claro "papel".
+- Alta por título, autor o ISBN, con escáner de código de barras en Android.
+- Lectura en curso con ritmo, cronómetro de lectura y formatos (físico, eBook, Kindle, audiolibro...).
+- Importar de Goodreads o StoryGraph; estadísticas y diario de lectura.
+
+### Lo común · [detalle](docs/comunes.md)
+
+- Listas que mezclan los tres trackers, compartibles por link público.
+- Metas del año por tracker.
+- Cambios sin conexión: se ven al instante y se guardan solos al volver la señal.
+- Exportar todos los datos (JSON o CSV), PWA instalable y carga instantánea desde cache.
 
 ## Stack
 
-- React + Vite + TypeScript + Tailwind CSS
-- PWA vía `vite-plugin-pwa`
-- Supabase (Postgres + Auth + Edge Functions + RLS)
-- Deploy: GitHub Pages (GitHub Actions)
+- React 19 + Vite + TypeScript + Tailwind CSS v4
+- PWA con `vite-plugin-pwa`
+- Supabase: Postgres, Auth, RLS y Edge Functions (Deno)
+- APIs externas, siempre desde Edge Functions: IGDB, Steam, CheapShark, TMDB, AniList, Open Library ([integraciones](docs/integraciones.md))
+- Deploy: GitHub Pages y Supabase con GitHub Actions ([deploy](docs/deploy.md))
 
-## Integraciones externas (todas vía Edge Functions de Supabase, nunca desde el frontend)
+## Empezar
 
-- **IGDB** (metadata de juegos, populares y duración estimada) — vía Twitch OAuth. Función `igdb-search`, con modos `query` (default), `popular`, `timeToBeat` (endpoint oficial `game_time_to_beats`), `timeToBeatBatch` (varias duraciones en una consulta, para la estadística de backlog) `bySteam` (metadata de IGDB a partir de appids de Steam, vía `external_games`) y `covers` (portadas alternativas: la del juego, las de cada región y edición en IGDB, y la vertical de Steam `library_600x900` si tiene `steam_appid`).
-- **Steam** — cada usuario vincula su cuenta con "Sign in through Steam" (OpenID 2.0, función `steam-auth`); el SteamID64 se guarda en `profiles`. La función `steam-library` lee ese id y trae la biblioteca con horas jugadas reales vía la Steam Web API (key de la app). Requiere perfil de Steam público.
-- **CheapShark** (precios actuales en tiendas de PC, sin API key). Función `game-deals`. Los resultados se cachean en la tabla `price_cache` (TTL 12 h) porque CheapShark limita por IP y los Edge Functions comparten IP; usa `steam_appid` cuando está disponible para un match exacto.
+```
+npm install
+cp .env.example .env.local   # completar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY
+npm run dev
+```
 
-> La duración estimada antes venía de HowLongToBeat (scraping de un endpoint interno no oficial). Se migró a IGDB `game_time_to_beats` por estabilidad; la función `hltb-search` fue eliminada.
+Las migraciones, los secrets de las Edge Functions y el resto de la configuración de Supabase están en [docs/setup.md](docs/setup.md).
 
-## Funcionalidades
+| Script | Qué hace |
+| --- | --- |
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Type-check y build de producción |
+| `npm run preview` | Preview del build |
+| `npm run lint` | Lint con oxlint |
+| `npm test` | Tests de la lógica (Vitest); también corren en el deploy |
 
-- Login/registro con Supabase Auth, con recuperación de contraseña por email (el origen de la app debe estar en *Authentication → URL Configuration → Redirect URLs* de Supabase)
-- Cambios sin conexión: editar un título, cambiar su estado o puntaje, el avance rápido (+1 episodio, la página) y anotar episodios o páginas funcionan sin señal. El cambio se ve al instante, queda en una cola guardada en el dispositivo (`lib/pendingChanges.ts`, `hooks/usePendingSync.ts`) y se manda solo al volver la conexión, al abrir la app o volver a ella, y cada 30 s. Un aviso arriba a la derecha ("3 cambios sin guardar") lo muestra; tocarlo reintenta ya. Los cambios de un mismo título se guardan en el orden en que se hicieron, y cada actividad lleva un id generado en el dispositivo para que un reintento no la duplique ni sume dos veces el tiempo. Si la base rechaza un cambio al reintentar (por ejemplo, el título se borró en otro dispositivo), se descarta con un aviso. Al cerrar sesión se intenta guardar lo pendiente y, si no se puede, se pregunta antes de perderlo. Agregar o borrar títulos, las sesiones de juego y el cronómetro todavía necesitan conexión.
-- Biblioteca con filtros por estado/plataforma, búsqueda por título y orden (recientes, título, horas, puntaje); los filtros viven en la URL y se conservan al volver de un juego
-- Alta de juegos con búsqueda en IGDB mientras se escribe (portada, plataformas, géneros, sinopsis, año)
-- Vincular la cuenta de Steam ("Sign in through Steam") e importar la biblioteca con horas jugadas reales: de a uno o todos juntos, actualizar horas de los ya importados y completar sus datos (portada, géneros, sinopsis) con IGDB
-- Detalle/edición: estado, plataformas (multi-selección), fechas de inicio/fin, horas jugadas, puntaje (estrellas), notas, reseña
-- Cambiar portada de un juego: tocar la portada del detalle o ⋮ → Cambiar portada. Ofrece la portada de IGDB, las de cada región y edición, y la vertical de Steam; también se puede pegar la URL de una imagen
-- Precios actuales en tiendas de PC (CheapShark) para juegos en estado "Pendiente"
-- Duración estimada (IGDB: rápido / normal / completista) en el detalle de cada juego
-- Cronómetro de sesión ("Jugar" / "Terminar"), que sigue contando aunque se cierre la app
-- Registro de sesiones de juego (fecha + minutos), que suman automáticamente a las horas totales (trigger en la DB)
-- Guardado automático en el detalle del juego (sin botón "Guardar")
-- Listas personalizadas comunes a los tres trackers (`/listas`): una lista puede mezclar juegos, películas, series, anime y libros; se agregan desde "Mis listas" en el detalle de cada uno (ahí también se puede crear una nueva). Compartibles por link público de solo lectura (`/compartir/:id`). La lectura pública pasa por la función `get_public_list` (SECURITY DEFINER), que solo devuelve campos no sensibles de listas marcadas como públicas; las tablas no tienen políticas para `anon`
-- Pantalla de Inicio con juegos populares recientes (vía IGDB) y alta rápida a la biblioteca
-- Diario: línea de tiempo con altas, inicios, finalizaciones y sesiones registradas
-- Estado "Deseado" (wishlist) separado de "Pendiente", con precios de tiendas
-- Biblioteca en vista de lista o de portadas, filtro de favoritos y cambio rápido de estado desde la tarjeta
-- Cambiar portada (libros, películas y series): tocar la portada en el detalle (o ⋮ → Cambiar portada) muestra portadas alternativas de varias fuentes para elegir, o se pega la URL de una imagen
-- Exportar los datos desde el inicio ("Tu cuenta"): respaldo completo en JSON (biblioteca, actividad, listas y metas) o la biblioteca en CSV; en el teléfono se entrega con el menú de compartir
-- Metas del año, una por tracker (juegos terminados, títulos vistos, libros leídos): arriba de las estadísticas de cada tracker, con avance y si vas al día según el calendario, y en el inicio
-- Estadísticas: totales, tiempo estimado para terminar el backlog (IGDB) y a tu ritmo, horas por mes, distribución por estado, destacados y resumen del año para compartir
-- PWA instalable (manifest, ícono, service worker) y responsive (mobile-first, con ajustes para tablet)
-- Rendimiento: rutas con carga diferida, portadas cacheadas por el service worker y biblioteca/populares pintados al instante desde una cache local (se revalidan contra Supabase en segundo plano)
+## Documentación
 
-## Setup
-
-1. Instalar dependencias:
-   ```
-   npm install
-   ```
-2. Copiar `.env.example` a `.env.local` y completar con las credenciales de tu proyecto de Supabase:
-   ```
-   VITE_SUPABASE_URL=
-   VITE_SUPABASE_ANON_KEY=
-   ```
-3. Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, actualmente 0001 a 0012), o `supabase db push`.
-   - La `0012` crea `goals` (metas del año). Sin ella la app funciona igual, solo no muestra las metas.
-   - La `0008` crea un trigger que suma/resta las horas jugadas al registrar/borrar una sesión. El frontend ya no actualiza `hours_played` en ese caso, así que debe aplicarse **antes** de desplegar el frontend.
-4. Configurar los secrets de las Edge Functions (nunca en el frontend) y desplegarlas:
-   ```
-   supabase secrets set TWITCH_CLIENT_ID=xxx TWITCH_CLIENT_SECRET=xxx
-   supabase secrets set STEAM_API_KEY=xxx
-   supabase functions deploy igdb-search steam-library steam-auth game-deals media-search
-   ```
-   - `STEAM_API_KEY` es una sola key de la app (se obtiene en https://steamcommunity.com/dev/apikey). Ya no hace falta `STEAM_ID`: cada usuario vincula su cuenta desde la app.
-   - `game-deals` no necesita secrets (API pública); usa la `SUPABASE_SERVICE_ROLE_KEY` que Supabase inyecta automáticamente para escribir en `price_cache`.
-   - `steam-auth` y `steam-library` usan el JWT del usuario para leer/escribir su fila en `profiles` (RLS).
-   - Todas las funciones exigen un **usuario logueado** (no alcanza con la anon key, que es pública).
-   - `steam-auth` solo acepta volver a URLs base permitidas: por defecto `https://alexperez7.github.io/shelf-life`. Para otras (dominio propio): `supabase secrets set APP_ORIGINS=https://alexperez7.github.io/shelf-life,https://otro.dominio`
-   - `media-search` (películas, series y anime) necesita `supabase secrets set TMDB_API_KEY=...` (API Key o Read Access Token de TMDB). El anime sale de AniList y los libros de Open Library, ambos sin key. Opcional: `GOOGLE_BOOKS_API_KEY` para buscar libros primero en Google Books. Con `mode: 'trending'` devuelve las tendencias de la semana (TMDB) o de la temporada (AniList), que el alta de Pantalla muestra antes de escribir. Con `mode: 'upcoming'` e `ids` devuelve el próximo episodio con fecha de cada serie (TMDB) o anime (AniList). Con `mode: 'covers'` devuelve portadas alternativas: para libros, las ediciones de Open Library (primero en español), Apple Books (sin key) y Google Books (con key); para películas y series, los pósters de TMDB. Para importar: con `mode: 'match'` y `titles` (hasta 20 películas con su año) devuelve la película de TMDB de cada una, con el detalle, o `null`; con `mode: 'mal'` e `ids` (hasta 50 ids de MyAnimeList), el anime de AniList de cada uno, con `mal_id`.
-5. Correr en desarrollo:
-   ```
-   npm run dev
-   ```
-
-## Scripts
-
-- `npm run dev` — servidor de desarrollo
-- `npm run build` — build de producción (type-check + Vite build)
-- `npm run preview` — preview del build
-- `npm run lint` — lint con oxlint
-- `npm test` — tests de la lógica (Vitest); también corren en el deploy
-
-## Deploy
-
-GitHub Actions (`.github/workflows/deploy.yml`) compila y publica en GitHub Pages en cada push a `main`. La app vive en la subcarpeta `/shelf-life/` (el workflow pasa `BASE_PATH`); las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` son *variables* del repo (Settings → Secrets and variables → Actions → Variables). Para probar localmente un build igual: `BASE_PATH=/shelf-life/ npm run build`.
-
-Las Edge Functions se publican con otro workflow (`.github/workflows/functions.yml`) en cada push a `main` que toque `supabase/functions/`, o a mano desde Actions → "Deploy de Edge Functions" → Run workflow. Necesita dos *secrets* del repo (Settings → Secrets and variables → Actions → Secrets): `SUPABASE_ACCESS_TOKEN` (token personal, de https://supabase.com/dashboard/account/tokens) y `SUPABASE_PROJECT_REF` (el id del proyecto, el de la URL del dashboard). Sin ellos, el job avisa y termina sin fallar. Los secrets de las funciones (`TMDB_API_KEY`, etc.) siguen yendo con `supabase secrets set`.
-
-## Estado
-
-Todas las fases del plan original (`shelf-life-plan.md`) están completas y en producción. El desarrollo actual es iterativo, agregando mejoras e integraciones sobre la base ya funcionando.
+- [Juegos](docs/juegos.md), [Pantalla](docs/pantalla.md), [Libros](docs/libros.md) y [lo común a los tres](docs/comunes.md): qué hace cada pantalla.
+- [Integraciones](docs/integraciones.md): las Edge Functions y sus modos.
+- [Setup](docs/setup.md): instalación, migraciones y secrets.
+- [Deploy](docs/deploy.md): GitHub Pages y publicación de las funciones.
+- [`plan.md`](plan.md): lo pendiente. [`shelf-life-plan.md`](shelf-life-plan.md): el plan original, ya completo.

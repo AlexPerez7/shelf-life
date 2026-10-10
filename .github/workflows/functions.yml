@@ -41,7 +41,7 @@ jobs:
         if: steps.check.outputs.ready == 'true'
         with:
           version: latest
-      # Las mismas funciones que el README manda a publicar a mano.
+      # Las mismas funciones que docs/setup.md manda a publicar a mano.
       - name: Publicar funciones
         if: steps.check.outputs.ready == 'true'
         run: |

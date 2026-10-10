@@ -1,6 +1,6 @@
 # Shelf Life
 
-PWA mobile-first para registrar juegos, películas, series, anime y libros. Detalle de funcionalidades, integraciones y setup en `README.md`. Lo pendiente, en orden, en `plan.md`: al terminar algo de ahí, sacarlo del plan.
+PWA mobile-first para registrar juegos, películas, series, anime y libros. `README.md` es la presentación (resumen y cómo empezar); el detalle está en `docs/`: cada tracker (`juegos.md`, `pantalla.md`, `libros.md`), lo común (`comunes.md`), las Edge Functions y sus modos (`integraciones.md`), migraciones y secrets (`setup.md`) y deploy (`deploy.md`). Lo pendiente, en orden, en `plan.md`: al terminar algo de ahí, sacarlo del plan.
 
 ## Idioma
 
@@ -47,17 +47,19 @@ React 19 + Vite + TypeScript + Tailwind CSS v4 (config en `src/index.css` con `@
 
 ## Supabase
 
-- Migraciones en `supabase/migrations/` numeradas (`0001`...); una nueva va con el número siguiente y se documenta en el README.
+- Migraciones en `supabase/migrations/` numeradas (`0001`...); una nueva va con el número siguiente y se documenta en `docs/setup.md`.
+- Un modo nuevo de una Edge Function se documenta en `docs/integraciones.md`.
 - Las APIs externas (IGDB, Steam, TMDB, AniList, Open Library, CheapShark) se llaman solo desde Edge Functions (`supabase/functions/`), nunca desde el frontend. Todas exigen usuario logueado. Secrets con `supabase secrets set`.
 
 ## Documentación
 
 - Ningún `.md` (este incluido) debe crecer sin control. Si uno pasa de ~200 líneas o ~15 KB, o una sección se vuelve muy larga, dividirlo: lo detallado va a archivos en `docs/` (uno por tema, ej. `docs/pantalla.md`, `docs/supabase.md`) y el principal queda como índice corto que resume y enlaza a cada uno.
 - En `CLAUDE.md`, lo que se divida se referencia con su ruta para que se sepa dónde leer; las reglas generales se quedan acá.
+- `README.md` es la excepción al "índice corto": es la portada del repo en GitHub, así que sigue siendo una presentación completa y legible por sí sola (qué es, link, resumen de cada tracker en pocas viñetas, stack y cómo empezar). El detalle va a `docs/` y se enlaza desde ahí; GitHub muestra esos links como páginas.
 - Al agregar contenido, ponerlo en el archivo del tema que corresponde, no en el principal.
 
 ## Git y deploy
 
 - Push a `main` = deploy a producción (GitHub Actions → GitHub Pages, https://alexperez7.github.io/shelf-life/, base `/shelf-life/`).
 - Commits en español: título corto en infinitivo o sustantivo ("Logo y colores propios de Shelf Life", "Separar la app en tres trackers...") y cuerpo con viñetas de qué cambia para el usuario.
-- Al cambiar funcionalidades, actualizar el `README.md`.
+- Al cambiar funcionalidades, actualizar el doc del tema en `docs/`, y el resumen del `README.md` solo si cambia algo que se ve desde afuera (una función nueva importante).
