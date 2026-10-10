@@ -98,6 +98,8 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
 
 GitHub Actions (`.github/workflows/deploy.yml`) compila y publica en GitHub Pages en cada push a `main`. La app vive en la subcarpeta `/shelf-life/` (el workflow pasa `BASE_PATH`); las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` son *variables* del repo (Settings → Secrets and variables → Actions → Variables). Para probar localmente un build igual: `BASE_PATH=/shelf-life/ npm run build`.
 
+Las Edge Functions se publican con otro workflow (`.github/workflows/functions.yml`) en cada push a `main` que toque `supabase/functions/`, o a mano desde Actions → "Deploy de Edge Functions" → Run workflow. Necesita dos *secrets* del repo (Settings → Secrets and variables → Actions → Secrets): `SUPABASE_ACCESS_TOKEN` (token personal, de https://supabase.com/dashboard/account/tokens) y `SUPABASE_PROJECT_REF` (el id del proyecto, el de la URL del dashboard). Sin ellos, el job avisa y termina sin fallar. Los secrets de las funciones (`TMDB_API_KEY`, etc.) siguen yendo con `supabase secrets set`.
+
 ## Estado
 
 Todas las fases del plan original (`shelf-life-plan.md`) están completas y en producción. El desarrollo actual es iterativo, agregando mejoras e integraciones sobre la base ya funcionando.
