@@ -42,6 +42,8 @@ import { ProgressRing } from '../../components/ProgressRing'
 import { SectionCard } from '../../components/SectionCard'
 import { GameDeals } from '../../components/GameDeals'
 import { GameThumb } from '../../components/GameThumb'
+import { CoverPicker } from '../../components/CoverPicker'
+import { gameCoverOptions } from '../../lib/igdb'
 import { TimeToBeat } from '../../components/TimeToBeat'
 import { Skeleton } from '../../components/Skeleton'
 import { PageContainer } from '../../components/PageContainer'
@@ -239,6 +241,7 @@ export function GameDetail() {
   const [hoursText, setHoursText] = useState<string | null>(null)
 
   const [menuOpen, setMenuOpen] = useState(false)
+  const [coverOpen, setCoverOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
   const [editingProgress, setEditingProgress] = useState(false)
   const [editingHours, setEditingHours] = useState(false)
@@ -467,8 +470,8 @@ export function GameDetail() {
     <>
       <div className="relative h-64 w-full overflow-hidden bg-primary-dark/20 md:h-80">
         <GameThumb
-          src={heroCover(game.cover_url)}
-          fallbacks={game.cover_url ? [game.cover_url] : []}
+          src={heroCover(current.cover_url)}
+          fallbacks={current.cover_url ? [current.cover_url] : []}
           alt={game.title}
           eager
           className="h-full w-full object-cover"
@@ -480,6 +483,13 @@ export function GameDetail() {
             background:
               'linear-gradient(to top, var(--color-background) 0%, transparent 55%)',
           }}
+        />
+        {/* Tocar la portada abre "Cambiar portada" (también está en el menú ⋮). */}
+        <button
+          type="button"
+          onClick={() => setCoverOpen(true)}
+          aria-label="Cambiar portada"
+          className="absolute inset-0"
         />
 
         {/* Botones sobre la portada: respetan el notch / isla dinámica. */}
@@ -510,6 +520,15 @@ export function GameDetail() {
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                 <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl bg-background-surface p-1 shadow-lg ring-1 ring-primary-dark/30">
                   <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setCoverOpen(true)
+                    }}
+                    className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-ink active:bg-primary-dark/20"
+                  >
+                    Cambiar portada
+                  </button>
+                  <button
                     onClick={handleDelete}
                     className="w-full rounded-lg px-3 py-3 text-left text-sm font-medium text-error active:bg-error/10"
                   >
@@ -521,6 +540,20 @@ export function GameDetail() {
           </div>
         </div>
       </div>
+
+      <CoverPicker
+        currentUrl={current.cover_url}
+        load={() => gameCoverOptions(current)}
+        open={coverOpen}
+        onClose={() => setCoverOpen(false)}
+        icon={Gamepad2}
+        onPick={(cover_url) => {
+          setCoverOpen(false)
+          haptic()
+          setField({ cover_url }, { immediate: true })
+          showToast('Portada cambiada')
+        }}
+      />
 
       <CompactHeader
         visible={compactVisible}
@@ -850,6 +883,8 @@ export function GameDetail() {
             {moreOpen && (
               <>
                 <GameDataCard
+                  // Si la portada cambia desde "Cambiar portada", el campo se rearma con la nueva.
+                  key={current.cover_url ?? ''}
                   game={current}
                   onSave={(changes) => setField(changes, { immediate: true })}
                 />

@@ -25,7 +25,7 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
 
 ## Integraciones externas (todas vía Edge Functions de Supabase, nunca desde el frontend)
 
-- **IGDB** (metadata de juegos, populares y duración estimada) — vía Twitch OAuth. Función `igdb-search`, con modos `query` (default), `popular`, `timeToBeat` (endpoint oficial `game_time_to_beats`), `timeToBeatBatch` (varias duraciones en una consulta, para la estadística de backlog) y `bySteam` (metadata de IGDB a partir de appids de Steam, vía `external_games`).
+- **IGDB** (metadata de juegos, populares y duración estimada) — vía Twitch OAuth. Función `igdb-search`, con modos `query` (default), `popular`, `timeToBeat` (endpoint oficial `game_time_to_beats`), `timeToBeatBatch` (varias duraciones en una consulta, para la estadística de backlog) `bySteam` (metadata de IGDB a partir de appids de Steam, vía `external_games`) y `covers` (portadas alternativas: la del juego, las de cada región y edición en IGDB, y la vertical de Steam `library_600x900` si tiene `steam_appid`).
 - **Steam** — cada usuario vincula su cuenta con "Sign in through Steam" (OpenID 2.0, función `steam-auth`); el SteamID64 se guarda en `profiles`. La función `steam-library` lee ese id y trae la biblioteca con horas jugadas reales vía la Steam Web API (key de la app). Requiere perfil de Steam público.
 - **CheapShark** (precios actuales en tiendas de PC, sin API key). Función `game-deals`. Los resultados se cachean en la tabla `price_cache` (TTL 12 h) porque CheapShark limita por IP y los Edge Functions comparten IP; usa `steam_appid` cuando está disponible para un match exacto.
 
@@ -39,6 +39,7 @@ Cada tracker tiene sus propias pantallas; lo que comparten Pantalla y Libros es 
 - Alta de juegos con búsqueda en IGDB mientras se escribe (portada, plataformas, géneros, sinopsis, año)
 - Vincular la cuenta de Steam ("Sign in through Steam") e importar la biblioteca con horas jugadas reales: de a uno o todos juntos, actualizar horas de los ya importados y completar sus datos (portada, géneros, sinopsis) con IGDB
 - Detalle/edición: estado, plataformas (multi-selección), fechas de inicio/fin, horas jugadas, puntaje (estrellas), notas, reseña
+- Cambiar portada de un juego: tocar la portada del detalle o ⋮ → Cambiar portada. Ofrece la portada de IGDB, las de cada región y edición, y la vertical de Steam; también se puede pegar la URL de una imagen
 - Precios actuales en tiendas de PC (CheapShark) para juegos en estado "Pendiente"
 - Duración estimada (IGDB: rápido / normal / completista) en el detalle de cada juego
 - Cronómetro de sesión ("Jugar" / "Terminar"), que sigue contando aunque se cierre la app

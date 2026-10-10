@@ -1,20 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ImageOff, Link2 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 import { GameThumb } from './GameThumb'
 import { Skeleton } from './Skeleton'
-import { coverOptions, type CoverOption } from '../lib/media'
-import type { Item } from '../types/item'
+import type { CoverOption } from '../lib/media'
 
 const SOURCE_NAMES: Record<CoverOption['source'], string> = {
   openlibrary: 'Open Library',
   apple: 'Apple Books',
   google_books: 'Google Books',
   tmdb: 'TMDB',
+  igdb: 'IGDB',
+  steam: 'Steam',
 }
 
 interface CoverPickerProps {
-  item: Item
+  /** Portada actual (no se ofrece como opción). */
+  currentUrl: string | null
+  /** Busca las alternativas (`coverOptions` de media, `gameCoverOptions` de juegos). */
+  load: () => Promise<CoverOption[]>
   open: boolean
   onClose: () => void
   onPick: (url: string) => void
@@ -26,24 +30,28 @@ interface CoverPickerProps {
  * Elegir otra portada: las alternativas de las fuentes (ediciones, pósters
  * en otros idiomas) o una URL de imagen pegada a mano.
  */
-export function CoverPicker({ item, open, onClose, onPick, icon }: CoverPickerProps) {
+export function CoverPicker({ currentUrl, load, open, onClose, onPick, icon }: CoverPickerProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title="Cambiar portada">
-      {open && <CoverPickerBody item={item} onPick={onPick} icon={icon} />}
+      {open && <CoverPickerBody currentUrl={currentUrl} load={load} onPick={onPick} icon={icon} />}
     </BottomSheet>
   )
 }
 
-function CoverPickerBody({ item, onPick, icon }: Omit<CoverPickerProps, 'open' | 'onClose'>) {
+function CoverPickerBody({ currentUrl, load, onPick, icon }: Omit<CoverPickerProps, 'open' | 'onClose'>) {
   const [options, setOptions] = useState<CoverOption[] | null>(null)
   const [failed, setFailed] = useState(false)
   const [url, setUrl] = useState('')
   const [urlOk, setUrlOk] = useState<boolean | null>(null)
 
+  // La hoja se cierra al elegir: una búsqueda por apertura (el cuerpo se
+  // monta al abrir), con lo que había al abrirla.
+  const initial = useRef({ load, currentUrl })
   useEffect(() => {
     let cancelled = false
-    coverOptions(item)
-      .then((o) => !cancelled && setOptions(o.filter((c) => c.url !== item.cover_url)))
+    initial.current
+      .load()
+      .then((o) => !cancelled && setOptions(o.filter((c) => c.url !== initial.current.currentUrl)))
       .catch(() => {
         if (cancelled) return
         setFailed(true)
@@ -52,8 +60,7 @@ function CoverPickerBody({ item, onPick, icon }: Omit<CoverPickerProps, 'open' |
     return () => {
       cancelled = true
     }
-    // La hoja se cierra al elegir: en la práctica, una búsqueda por apertura.
-  }, [item])
+  }, [])
 
   const trimmed = url.trim()
   const validUrl = /^https:\/\/\S+$/i.test(trimmed)

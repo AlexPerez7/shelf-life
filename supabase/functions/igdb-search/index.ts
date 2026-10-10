@@ -13,6 +13,11 @@
 //                       una sola consulta (estadística de backlog).
 //   - "bySteam"      -> metadata de IGDB para juegos importados de Steam
 //                       (`steamAppIds`), vía external_games.
+//   - "covers"       -> portadas alternativas para "Cambiar portada": la del
+//                       juego, las de cada región (game_localizations) y las
+//                       de sus ediciones (version_parent) en IGDB (`igdbId`, o
+//                       el primer resultado de buscar `title`), más la vertical
+//                       de Steam (`steamAppId`) si existe.
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { handlePreflight, jsonResponse, errorResponse } from '../_shared/http.ts'
 import { requireUser } from '../_shared/supabase.ts'
@@ -263,6 +268,92 @@ limit ${part.length};`
   return result
 }
 
+interface CoverOption {
+  url: string
+  source: 'igdb' | 'steam'
+  /** Región o edición, para distinguirlas ("Japón", "Deluxe Edition"). */
+  label: string | null
+}
+
+interface IgdbCoverGame {
+  id: number
+  name: string
+  cover?: { image_id: string }
+  game_localizations?: { name?: string; region?: { name?: string }; cover?: { image_id: string } }[]
+}
+
+/** Mismo tamaño en que se guardan las portadas al agregar (`t_cover_big`). */
+const igdbCover = (imageId: string) => `https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg`
+
+async function igdbCovers(igdbId: number | undefined, title: string | undefined): Promise<CoverOption[]> {
+  let id = igdbId
+  if (!id && title) {
+    const hits = (await igdb(
+      'games',
+      `search "${title.replace(/"/g, '\\"')}";
+fields id;
+limit 1;`
+    )) as { id: number }[]
+    id = hits[0]?.id
+  }
+  if (!id) return []
+
+  const [games, versions] = await Promise.all([
+    igdb(
+      'games',
+      `fields name, cover.image_id, game_localizations.name, game_localizations.region.name, game_localizations.cover.image_id;
+where id = ${id};
+limit 1;`
+    ) as Promise<IgdbCoverGame[]>,
+    igdb(
+      'games',
+      `fields name, version_title, cover.image_id;
+where version_parent = ${id} & cover != null;
+limit 30;`
+    ) as Promise<(IgdbCoverGame & { version_title?: string })[]>,
+  ])
+  const game = games[0]
+  const out: CoverOption[] = []
+  if (game?.cover?.image_id) out.push({ url: igdbCover(game.cover.image_id), source: 'igdb', label: 'IGDB' })
+  for (const loc of game?.game_localizations ?? []) {
+    if (loc.cover?.image_id) {
+      out.push({ url: igdbCover(loc.cover.image_id), source: 'igdb', label: loc.region?.name ?? loc.name ?? null })
+    }
+  }
+  for (const v of versions) {
+    if (v.cover?.image_id) out.push({ url: igdbCover(v.cover.image_id), source: 'igdb', label: v.version_title ?? v.name })
+  }
+  return out
+}
+
+/** Portada vertical de la biblioteca de Steam (600x900), si el juego la tiene. */
+async function steamCover(appId: number): Promise<CoverOption[]> {
+  const candidates = [
+    `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/library_600x900_2x.jpg`,
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900_2x.jpg`,
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`,
+  ]
+  for (const url of candidates) {
+    const res = await fetch(url, { method: 'HEAD' }).catch(() => null)
+    if (res?.ok && (res.headers.get('content-type') ?? '').startsWith('image/')) {
+      return [{ url, source: 'steam', label: 'Steam' }]
+    }
+  }
+  return []
+}
+
+/** Sin repetidas; si una fuente falla, quedan las demás. */
+async function covers(igdbId: number | undefined, title: string | undefined, steamAppId: number | undefined) {
+  const results = await Promise.allSettled([
+    igdbCovers(igdbId, title),
+    steamAppId ? steamCover(steamAppId) : Promise.resolve([]),
+  ])
+  const seen = new Set<string>()
+  return results
+    .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+    .filter((c) => !seen.has(c.url) && seen.add(c.url))
+}
+
 serve(async (req) => {
   const preflight = handlePreflight(req)
   if (preflight) return preflight
@@ -271,7 +362,7 @@ serve(async (req) => {
     const auth = await requireUser(req)
     if (auth instanceof Response) return auth
 
-    const { query, mode, igdbId, title, igdbIds, steamAppIds } = await req
+    const { query, mode, igdbId, title, igdbIds, steamAppIds, steamAppId } = await req
       .json()
       .catch(() => ({}))
 
@@ -289,6 +380,19 @@ serve(async (req) => {
 
     if (mode === 'timeToBeatBatch') {
       return jsonResponse(await timeToBeatBatch(toIds(igdbIds)))
+    }
+
+    if (mode === 'covers') {
+      const id = Number(igdbId)
+      const appId = Number(steamAppId)
+      const safeTitle = typeof title === 'string' ? title.slice(0, MAX_TEXT) : undefined
+      return jsonResponse(
+        await covers(
+          Number.isInteger(id) && id > 0 ? id : undefined,
+          safeTitle,
+          Number.isInteger(appId) && appId > 0 ? appId : undefined
+        )
+      )
     }
 
     if (mode === 'bySteam') {

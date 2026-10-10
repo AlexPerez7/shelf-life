@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
 import { readCache, writeCache } from './localCache'
-import type { IgdbSearchResult, NewGame, TimeToBeat } from '../types/game'
+import type { CoverOption } from './media'
+import type { Game, IgdbSearchResult, NewGame, TimeToBeat } from '../types/game'
 
 const POPULAR_CACHE_KEY = 'shelflife_popular_v1'
 /** Los populares cambian poco: se reutilizan por 6 h sin volver a pedirlos. */
@@ -101,4 +102,23 @@ export function igdbResultToNewGame(result: IgdbSearchResult): NewGame {
     igdb_id: result.id,
     status: 'pendiente',
   }
+}
+
+/**
+ * Portadas alternativas de un juego para "Cambiar portada": la de IGDB, las
+ * de cada región y edición, y la vertical de Steam si tiene `steam_appid`.
+ * Sin `igdb_id`, la función busca el juego por título.
+ */
+export async function gameCoverOptions(game: Pick<Game, 'igdb_id' | 'title' | 'steam_appid'>): Promise<CoverOption[]> {
+  const { data, error } = await supabase.functions.invoke<CoverOption[]>('igdb-search', {
+    body: {
+      mode: 'covers',
+      igdbId: game.igdb_id ?? undefined,
+      title: game.title,
+      steamAppId: game.steam_appid ?? undefined,
+    },
+  })
+  if (error) throw error
+  // Una versión vieja de la función responde otra cosa: sin opciones.
+  return Array.isArray(data) ? data : []
 }

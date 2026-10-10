@@ -37,6 +37,7 @@ import { haptic } from '../../lib/haptics'
 import { sizedCover } from '../../lib/images'
 import { todayISO } from '../../lib/dates'
 import {
+  coverOptions,
   formatMinutes,
   itemStatusColor,
   mediaSections,
@@ -790,7 +791,8 @@ export function ScreenDetail() {
           )}
         </BottomSheet>
         <CoverPicker
-          item={current}
+          currentUrl={current.cover_url}
+          load={() => coverOptions(current)}
           open={coverOpen}
           onClose={() => setCoverOpen(false)}
           icon={TypeIcon}

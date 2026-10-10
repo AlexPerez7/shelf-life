@@ -41,6 +41,7 @@ import { PageSheet } from '../../components/PageSheet'
 import { sizedCover } from '../../lib/images'
 import { parseDate, todayISO } from '../../lib/dates'
 import {
+  coverOptions,
   formatMinutes,
   itemStatusColor,
   mediaSections,
@@ -724,7 +725,8 @@ export function BookDetail() {
           }}
         />
         <CoverPicker
-          item={current}
+          currentUrl={current.cover_url}
+          load={() => coverOptions(current)}
           open={coverOpen}
           onClose={() => setCoverOpen(false)}
           icon={BookOpen}

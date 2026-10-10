@@ -190,8 +190,8 @@ export async function upcomingEpisodes(type: 'series' | 'anime', ids: string[]):
 /** Una portada alternativa para elegir. */
 export interface CoverOption {
   url: string
-  source: 'openlibrary' | 'apple' | 'google_books' | 'tmdb'
-  /** Edición o idioma ("Salamandra · 2000", "ES"). */
+  source: 'openlibrary' | 'apple' | 'google_books' | 'tmdb' | 'igdb' | 'steam'
+  /** Edición, idioma o región ("Salamandra · 2000", "ES", "Japan"). */
   label: string | null
 }
 

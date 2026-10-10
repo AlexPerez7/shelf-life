@@ -2,14 +2,7 @@
 
 Lo que quedó anotado para hacer más adelante, en el orden recomendado. El plan original (fase solo juegos) está en `shelf-life-plan.md` y ya está completo.
 
-## 1. "Cambiar portada" en Juegos
-
-Igual que en Libros y Pantalla (`components/CoverPicker.tsx`).
-
-- Un modo en `igdb-search` (o en `media-search`) que traiga las portadas y artes alternativos de un juego en IGDB, y quizás la portada de Steam (`library_600x900`) si tiene `steam_appid`.
-- En el detalle de juegos: tocar la portada o ⋮ → Cambiar portada.
-
-## 2. Ordenar el detalle de juegos
+## 1. Ordenar el detalle de juegos
 
 `src/trackers/juegos/GameDetail.tsx` tiene más de 1000 líneas: lo más difícil de mantener del proyecto.
 
