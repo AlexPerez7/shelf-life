@@ -24,7 +24,9 @@ Ruta `/libros`, código en `src/trackers/libros/`. Lecturas por páginas, con te
 ## Ficha del libro
 
 - La lectura en curso: página, porcentaje y lo que falta a tu ritmo, con atajos de +10, +25 y +50 páginas.
-- "Empezar a leer" o "Releer" según el estado.
+- "Empezar a leer" o "Releer" según el estado. Releer guarda la lectura terminada en el historial y empieza otra desde la página 0.
+- **Lecturas** ("Leído 3 veces"): cada lectura anterior con su inicio, fin y cuántos días tomó, editable y borrable, y "Agregar una lectura anterior" para libros leídos antes de usar la app. Se guardan en `metadata.readings` (`lib/readings.ts`); las relecturas importadas sin fechas se cuentan aparte.
+- Un libro releído cuenta en las estadísticas, la meta y el diario de cada año en que se terminó.
 - Ritmo en páginas por hora, notas, reseña y datos de la edición.
 - **Cronómetro de lectura** ("Leer" en la ficha y en el inicio): sigue contando aunque se cierre la app y, al terminar, pide la página con los minutos ya puestos (o guarda solo el tiempo). Es el mismo cronómetro de los juegos: uno a la vez.
 - **Cambiar portada**: tocar la portada (o ⋮ → Cambiar portada) ofrece las ediciones de Open Library (primero en español), Apple Books y Google Books (con key), o se sube una foto propia (por ejemplo, de tu edición) o se pega la URL de una imagen.

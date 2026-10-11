@@ -1,6 +1,7 @@
 // Metas del año (tabla `goals`, migración 0012): una por tracker. El avance
 // se calcula acá, con lo terminado en el año.
 
+import { finishedInYear } from './readings'
 import { parseDate } from './dates'
 import type { TrackerId } from '../trackers/trackers'
 import type { Game } from '../types/game'
@@ -26,10 +27,10 @@ export function goalDone(tracker: TrackerId, year: number, games: Game[], items:
   if (tracker === 'juegos') {
     return games.filter((g) => g.status === 'completado' && inYear(g.date_finished, year)).length
   }
+  // Un libro releído cuenta en cada año en que se terminó (lib/readings.ts).
   return items.filter(
     (i) =>
-      i.status === 'completed' &&
-      inYear(i.date_finished, year) &&
+      finishedInYear(i, year) &&
       (tracker === 'libros' ? i.media_type === 'book' : i.media_type !== 'book' && i.media_type !== 'game')
   ).length
 }

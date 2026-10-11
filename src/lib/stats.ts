@@ -1,6 +1,7 @@
 // Cálculos de las estadísticas de los tres trackers, a partir de `items` y
 // de `activity_log`.
 
+import { finishedInYear } from './readings'
 import { parseDate } from './dates'
 import type { Item } from '../types/item'
 
@@ -62,11 +63,12 @@ export function started(items: Item[]) {
   return items.filter((i) => i.status !== 'wishlist' && i.status !== 'planned')
 }
 
-/** Ítems terminados en un año (por fecha de fin). */
+/**
+ * Ítems terminados en un año (por fecha de fin). Un libro releído cuenta en
+ * cada año en que se terminó una de sus lecturas (lib/readings.ts).
+ */
 export function finishedIn(items: Item[], year: number) {
-  return items.filter(
-    (i) => i.status === 'completed' && i.date_finished && parseDate(i.date_finished).getFullYear() === year
-  )
+  return items.filter((i) => finishedInYear(i, year))
 }
 
 /** El ítem con más valor (puntaje, tiempo...), o nada si ninguno tiene. */

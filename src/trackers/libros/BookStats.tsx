@@ -29,6 +29,7 @@ import { GoalCard } from '../../components/stats/GoalCard'
 import { useActivity } from '../../hooks/useActivity'
 import { formatMinutes, itemStatuses, mediaSections } from '../../lib/media'
 import { finishedIn, maxBy, minBy, monthBuckets, started, topCounts } from '../../lib/stats'
+import { lastFinishIn } from '../../lib/readings'
 import { parseDate } from '../../lib/dates'
 import { plural } from '../../lib/text'
 import type { Item } from '../../types/item'
@@ -102,7 +103,10 @@ export function BookStats() {
       minutes,
       pagesPerHour,
       avgLength,
-      thisYear: finishedIn(books, year).sort((a, b) => (b.date_finished ?? '').localeCompare(a.date_finished ?? '')),
+      // Por la última vez que se terminó en el año (un libro releído puede estar leyéndose otra vez).
+      thisYear: finishedIn(books, year).sort((a, b) =>
+        (lastFinishIn(b, year) ?? '').localeCompare(lastFinishIn(a, year) ?? '')
+      ),
       genres: topCounts(started(books).flatMap((b) => b.genres), 6),
       authors: topCounts(started(books).flatMap((b) => b.metadata.authors ?? []), 5),
       formats: topCounts(

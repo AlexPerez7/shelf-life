@@ -39,6 +39,8 @@ export interface ItemMetadata {
   authors?: string[]
   isbn?: string
   publisher?: string
+  /** Libros: lecturas anteriores, de la más vieja a la más nueva (ver lib/readings.ts). */
+  readings?: { started: string | null; finished: string | null }[]
 }
 
 export interface Item {

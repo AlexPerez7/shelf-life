@@ -32,6 +32,8 @@ import { Synopsis } from '../../components/Synopsis'
 import { ListPicker } from '../../components/ListPicker'
 import { CoverPicker } from '../../components/CoverPicker'
 import { FormatPicker } from '../../components/FormatPicker'
+import { ReadingHistory } from './ReadingHistory'
+import { rereadChanges, timesRead } from '../../lib/readings'
 import { BOOK_FORMATS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
 import { useQuickProgress } from '../../hooks/useQuickProgress'
@@ -359,13 +361,10 @@ export function BookDetail() {
     await save(statusChanges(current, 'in_progress', todayISO()), `Empezaste ${current.title}`)
   }
 
-  /** Releer: vuelve a la página 0 y cuenta una relectura. */
+  /** Releer: la lectura terminada pasa al historial y empieza otra desde la página 0. */
   async function reread() {
     haptic()
-    await save(
-      { status: 'in_progress', progress: 0, replays: current.replays + 1, date_started: todayISO(), date_finished: null },
-      `Empezaste a releer ${current.title}`
-    )
+    await save(rereadChanges(current, todayISO()), `Empezaste a releer ${current.title}`)
   }
 
   async function handleDelete() {
@@ -603,8 +602,10 @@ export function BookDetail() {
                   <p className="font-semibold text-ink">{pace ? `${Math.round(60 / pace)} págs/h` : '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-lavender">Relecturas</p>
-                  <p className="font-semibold text-ink">{current.replays}</p>
+                  <p className="text-xs text-lavender">Leído</p>
+                  <p className="font-semibold text-ink">
+                    {timesRead(current) === 0 ? '—' : timesRead(current) === 1 ? '1 vez' : `${timesRead(current)} veces`}
+                  </p>
                 </div>
               </div>
               <StarRating value={current.rating} onChange={(rating) => save({ rating })} />
@@ -633,6 +634,8 @@ export function BookDetail() {
                 </label>
               </div>
             </SectionCard>
+
+            <ReadingHistory item={current} onSave={save} />
 
             <SectionCard icon={StickyNote} title="Notas y reseña">
               <div className="flex flex-col gap-3">

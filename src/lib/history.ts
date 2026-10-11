@@ -3,6 +3,7 @@
 // terminado), agrupados por día.
 
 import { parseDate } from './dates'
+import { pastReadings } from './readings'
 import { formatMinutes } from './media'
 import { plural } from './text'
 import type { ActivityRow } from './stats'
@@ -133,6 +134,31 @@ export function buildHistory(items: Item[], activity: ActivityRow[]): HistoryDay
         minutes: 0,
       })
     }
+    // Lecturas anteriores de un libro releído (lib/readings.ts).
+    pastReadings(item).forEach((r, n) => {
+      if (r.started) {
+        events.push({
+          key: `started:${item.id}:${n}`,
+          kind: 'started',
+          item,
+          time: parseDate(r.started).getTime(),
+          text: 'Empezaste a leer',
+          detail: null,
+          minutes: 0,
+        })
+      }
+      if (r.finished) {
+        events.push({
+          key: `finished:${item.id}:${n}`,
+          kind: 'finished',
+          item,
+          time: endOfDay(r.finished).getTime(),
+          text: finishedText(item),
+          detail: null,
+          minutes: 0,
+        })
+      }
+    })
     if (item.date_finished && item.status === 'completed') {
       const finished = endOfDay(item.date_finished)
       if (item.media_type === 'movie' && groups.has(`${item.id}:${dayKey(finished)}`)) continue

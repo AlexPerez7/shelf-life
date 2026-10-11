@@ -73,6 +73,24 @@ describe('buildHistory', () => {
     expect(days[0].events.map((e) => e.kind)).toEqual(['finished', 'activity', 'started'])
   })
 
+  it('un libro releído muestra también cuándo empezó y terminó sus lecturas anteriores', () => {
+    const book = makeItem({
+      id: 'b',
+      media_type: 'book',
+      status: 'in_progress',
+      date_started: '2026-10-09',
+      created_at: '2020-01-01T12:00:00Z',
+      metadata: { readings: [{ started: '2021-05-01', finished: '2021-05-20' }] },
+    })
+    const events = buildHistory([book], []).flatMap((d) => d.events)
+    expect(events.map((e) => [e.kind, e.text])).toEqual([
+      ['started', 'Empezaste a leer'],
+      ['finished', 'Terminaste de leer'],
+      ['started', 'Empezaste a leer'],
+      ['added', 'Agregaste'],
+    ])
+  })
+
   it('ignora actividad de títulos que ya no están', () => {
     expect(buildHistory([], [row('borrado', today(10), 1, 20)])).toEqual([])
   })
