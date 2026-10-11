@@ -8,6 +8,7 @@ Ruta `/libros`, código en `src/trackers/libros/`. Lecturas por páginas, con te
 
 - La biblioteca es un librero: muebles con repisas por estado, colecciones, géneros y autores.
 - Libros en portada o en lomo, y estantes que se abren completos.
+- **Completar portadas**: si hay libros sin portada (o con la que puso la importación, que puede no existir), una tarjeta al final del librero las revisa y busca las que faltan en Open Library (por ISBN o título), Google Books (con key) y Apple Books (`lib/bookCovers.ts`).
 
 ## Alta
 

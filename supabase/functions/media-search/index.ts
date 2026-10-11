@@ -8,7 +8,7 @@
 //     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
 //     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal' | 'sequels', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[] }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal' | 'sequels' | 'findCovers', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[], books?: { title: string, author?: string, isbn?: string }[] }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
 //   - con `mode: 'trending'` -> lo que es tendencia esta semana (TMDB) o esta
 //                    temporada (AniList), para "Descubrir" en Pantalla. No
@@ -25,6 +25,9 @@
 //                    Letterboxd.
 //   - con `mode: 'mal'` + `ids` (hasta 50 ids de MyAnimeList) -> el anime de
 //                    AniList de cada uno, con `mal_id`. Para importar de MAL.
+//   - con `mode: 'findCovers'` + `books` (hasta 20: { title, author, isbn })
+//                    -> la portada de cada libro, o `null`; en el mismo
+//                    orden. Para completar las que faltan después de importar.
 //   - con `mode: 'sequels'` + `id` (anime de AniList) -> sus secuelas
 //                    (relación SEQUEL), con `format` (TV, MOVIE, OVA...):
 //                    AniList separa cada temporada en otra entrada.
@@ -606,6 +609,55 @@ async function tmdbCovers(type: 'movie' | 'series', id: string): Promise<CoverOp
   }))
 }
 
+const MAX_FIND_COVERS = 20
+
+/** Título comparable: sin tildes, mayúsculas ni signos. */
+const normTitle = (t: string) =>
+  t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
+
+/**
+ * Una portada para un libro sin portada: Open Library por ISBN, después por
+ * título y autor; si no, Google Books (con key) o Apple Books, solo si el
+ * título coincide. `null` si no aparece.
+ */
+async function findBookCover(title: string, author: string, isbn: string | null): Promise<string | null> {
+  const olCover = (docs: any[]) => {
+    const id = docs.find((d) => d.cover_i)?.cover_i
+    return id ? `https://covers.openlibrary.org/b/id/${id}-L.jpg` : null
+  }
+  if (isbn) {
+    const params = new URLSearchParams({ q: `isbn:${isbn}`, limit: '1', fields: 'cover_i' })
+    const found = olCover((await openLibrary(`/search.json?${params}`)).docs ?? [])
+    if (found) return found
+  }
+  if (!title) return null
+  const params = new URLSearchParams({ title, limit: '3', fields: 'cover_i' })
+  if (author) params.set('author', author)
+  const found = olCover((await openLibrary(`/search.json?${params}`)).docs ?? [])
+  if (found) return found
+
+  // Google Books busca con intitle/inauthor; Apple Books filtra por título.
+  const others = await Promise.allSettled([
+    googleCovers(title, author).then((c) => c.map((o) => o.url)),
+    appleBookCovers(title, author),
+  ])
+  for (const r of others) {
+    if (r.status === 'fulfilled' && r.value[0]) return r.value[0]
+  }
+  return null
+}
+
+/** Apple Books: la primera portada cuyo título coincide con el buscado. */
+async function appleBookCovers(title: string, author: string): Promise<string[]> {
+  const params = new URLSearchParams({ term: [title, author].filter(Boolean).join(' '), entity: 'ebook', limit: '5' })
+  const res = await fetch(`https://itunes.apple.com/search?${params}`)
+  if (!res.ok) return []
+  const wanted = normTitle(title)
+  return ((await res.json()).results ?? [])
+    .filter((r: any) => r.artworkUrl100 && normTitle(r.trackName ?? '').startsWith(wanted.slice(0, 12)))
+    .map((r: any) => String(r.artworkUrl100).replace(/\/\d+x\d+bb\./, '/600x900bb.'))
+}
+
 /** Sin repetidas y con un tope; si una fuente falla, quedan las demás. */
 async function collectCovers(sources: Promise<CoverOption[]>[]): Promise<CoverOption[]> {
   const results = await Promise.allSettled(sources)
@@ -688,6 +740,20 @@ serve(async (req) => {
         .filter((x: string) => ID_PATTERN.anime.test(x))
         .slice(0, MAX_MAL)
       return jsonResponse(ids.length ? await anilistByMal(ids) : [])
+    }
+
+    if (mode === 'findCovers') {
+      if (mediaType !== 'book') return jsonResponse({ error: 'Solo libros' }, 400)
+      const books = (Array.isArray(body.books) ? body.books : []).slice(0, MAX_FIND_COVERS)
+      const results = await Promise.allSettled(
+        books.map((b: any) => {
+          const title = typeof b?.title === 'string' ? b.title.trim().slice(0, MAX_TEXT) : ''
+          const author = typeof b?.author === 'string' ? b.author.trim().slice(0, MAX_TEXT) : ''
+          const isbn = typeof b?.isbn === 'string' && /^[0-9X]{10,13}$/i.test(b.isbn) ? b.isbn : null
+          return findBookCover(title, author, isbn)
+        })
+      )
+      return jsonResponse(results.map((r) => (r.status === 'fulfilled' ? r.value : null)))
     }
 
     if (mode === 'sequels') {

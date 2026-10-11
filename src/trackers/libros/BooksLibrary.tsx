@@ -7,6 +7,7 @@ import { TrackerBar } from '../../components/TrackerBar'
 import { Skeleton } from '../../components/Skeleton'
 import { mediaSections } from '../../lib/media'
 import { Bookcase, Shelf, ShelfUnit, type ShelfMode } from './Bookshelf'
+import { MissingCovers } from './MissingCovers'
 import { buildShelves, findShelf, shelfParam } from './bookLists'
 import type { Item } from '../../types/item'
 
@@ -274,6 +275,7 @@ export function BooksLibrary() {
               </ShelfUnit>
             ))}
           </div>
+          <MissingCovers books={books} />
         </>
       )}
     </PageContainer>
