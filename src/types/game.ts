@@ -22,6 +22,8 @@ export interface Game {
   date_started: string | null
   date_finished: string | null
   summary: string | null
+  /** ¿Ya se cargaron las notas, la reseña y la sinopsis? La lista no las trae (ver `lib/itemDetail.ts`). */
+  detail_loaded?: boolean
   first_release_date: number | null
   steam_appid: number | null
   story_percent: number

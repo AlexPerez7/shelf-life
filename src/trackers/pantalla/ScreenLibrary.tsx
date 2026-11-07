@@ -6,6 +6,8 @@ import { useToast } from '../../contexts/ToastContext'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
 import { MediaCoverCard } from '../../components/MediaCoverCard'
+import { ShowMore } from '../../components/ShowMore'
+import { useBatch } from '../../hooks/useBatch'
 import { ItemStatusSheet } from '../../components/ItemStatusSheet'
 import { GameThumb } from '../../components/GameThumb'
 import { Skeleton } from '../../components/Skeleton'
@@ -295,6 +297,7 @@ export function ScreenLibrary() {
 
   // Cambio rápido de estado desde el póster.
   const [statusItem, setStatusItem] = useState<Item | null>(null)
+  const batch = useBatch()
   const closeStatusSheet = useCallback(() => setStatusItem(null), [])
   async function handleQuickStatus(status: ItemStatus) {
     const item = statusItem
@@ -434,11 +437,14 @@ export function ScreenLibrary() {
               {search ? 'Nada coincide con la búsqueda.' : 'Nada por acá todavía.'}
             </p>
           ) : (
-            <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4 lg:grid-cols-6">
-              {grid.map((item) => (
-                <MediaCoverCard key={item.id} item={item} onClick={open} onStatusClick={setStatusItem} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4 lg:grid-cols-6">
+                {grid.slice(0, batch.limit).map((item) => (
+                  <MediaCoverCard key={item.id} item={item} onClick={open} onStatusClick={setStatusItem} />
+                ))}
+              </div>
+              <ShowMore remaining={grid.length - batch.limit} onClick={batch.more} />
+            </>
           )}
         </>
       ) : (

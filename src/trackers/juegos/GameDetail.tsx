@@ -18,6 +18,7 @@ import { useConfirm } from '../../contexts/ConfirmContext'
 import type { Game } from '../../types/game'
 import { gamesPaths } from './paths'
 import { useGameDraft } from './detail/useGameDraft'
+import { useItemDetail } from '../../hooks/useItemDetail'
 import { useGameSessions } from './detail/useGameSessions'
 import { GameHero } from './detail/GameHero'
 import { CompactHeader, SaveIndicator } from './detail/CompactHeader'
@@ -36,10 +37,11 @@ export function GameDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { games, loading, deleteGame } = useGames()
+  const { games, loading, deleteGame, loadDetail } = useGames()
   const { showToast, showError } = useToast()
   const confirm = useConfirm()
   const game = games.find((g) => g.id === id)
+  const detail = useItemDetail(id, game?.detail_loaded ?? false, loadDetail)
 
   const { draft, setField, flush, discard, saveState } = useGameDraft(id)
   const current = game ? { ...game, ...draft } : undefined
@@ -256,6 +258,8 @@ export function GameDetail() {
             <NotesCard
               notes={current.notes}
               review={current.review}
+              ready={detail.ready}
+              failed={detail.failed}
               setField={setField}
               sectionRef={notesRef}
             />

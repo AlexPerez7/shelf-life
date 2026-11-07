@@ -28,6 +28,9 @@ import { ItemStatusSheet } from '../../components/ItemStatusSheet'
 import { BottomSheet } from '../../components/BottomSheet'
 import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
+import { DetailGate } from '../../components/DetailGate'
+import { useItemDetail } from '../../hooks/useItemDetail'
+import { hasDetail } from '../../lib/itemDetail'
 import { Synopsis } from '../../components/Synopsis'
 import { ListPicker } from '../../components/ListPicker'
 import { CoverPicker } from '../../components/CoverPicker'
@@ -386,11 +389,12 @@ export function ScreenDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { items, loading, updateItem, deleteItem, logActivity } = useMedia()
+  const { items, loading, updateItem, deleteItem, logActivity, loadDetail } = useMedia()
   const { showToast, showError } = useToast()
   const confirm = useConfirm()
 
   const item = items.find((i) => i.id === id)
+  const detail = useItemDetail(item?.id, item ? hasDetail(item) : false, loadDetail)
   useFillSeasons(item, updateItem)
   const [statusOpen, setStatusOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -757,6 +761,7 @@ export function ScreenDetail() {
             <ListPicker itemId={current.id} />
 
             <SectionCard icon={StickyNote} title="Notas y reseña">
+              <DetailGate ready={detail.ready} failed={detail.failed}>
               <div className="flex flex-col gap-3">
                 <label className="block">
                   <span className="mb-1 block text-xs text-lavender">Notas</span>
@@ -779,12 +784,14 @@ export function ScreenDetail() {
                   />
                 </label>
               </div>
+              </DetailGate>
             </SectionCard>
           </div>
         </div>
 
         <BottomSheet open={editOpen} onClose={() => setEditOpen(false)} title="Editar datos">
           {editOpen && (
+            <DetailGate ready={detail.ready} failed={detail.failed}>
             <MediaForm
               section={section}
               item={current}
@@ -795,6 +802,7 @@ export function ScreenDetail() {
                 showToast('Datos actualizados')
               }}
             />
+            </DetailGate>
           )}
         </BottomSheet>
         <CoverPicker

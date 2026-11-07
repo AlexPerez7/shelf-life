@@ -82,6 +82,13 @@ export const withoutItem = (ops: PendingOp[], itemId: string) => ops.filter((o) 
 export const pendingActivities = (ops: PendingOp[], itemId: string) =>
   ops.flatMap((o) => (o.type === 'activity' && o.itemId === itemId ? [o.activity] : []))
 
+/** Los campos que cambiaron los cambios pendientes de un ítem (el último valor de cada uno). */
+export const pendingFields = (ops: PendingOp[], itemId: string): ItemWrite =>
+  ops.reduce<ItemWrite>(
+    (acc, o) => (o.itemId === itemId && (o.type === 'update' || o.type === 'activity') ? { ...acc, ...o.changes } : acc),
+    {}
+  )
+
 /** La papelera de un título que todavía no llegó a la base (para deshacer sin conexión). */
 export const pendingTrash = (ops: PendingOp[], itemId: string) =>
   ops.find((o): o is Extract<PendingOp, { type: 'delete' }> => o.type === 'delete' && o.trash && o.itemId === itemId)

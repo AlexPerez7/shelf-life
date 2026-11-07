@@ -5,6 +5,7 @@
 // nueva (películas, libros) trabaja directo con `Item`.
 
 import { parseTags } from './tags'
+import { hasDetail } from './itemDetail'
 import type { Game, GameStatus, NewGame } from '../types/game'
 import type { Item, ItemMetadata, ItemStatus, ItemWrite } from '../types/item'
 
@@ -57,6 +58,7 @@ export function itemToGame(item: Item): Game {
     date_started: item.date_started,
     date_finished: item.date_finished,
     summary: item.summary,
+    detail_loaded: hasDetail(item),
     first_release_date: dateToUnix(item.release_date),
     steam_appid: m.steam_appid ?? null,
     story_percent: m.story_percent ?? 0,

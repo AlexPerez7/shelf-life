@@ -5,6 +5,7 @@ import { readCache, removeCacheByPrefix, writeCache } from '../lib/localCache'
 import { usePendingSync } from '../hooks/usePendingSync'
 import { isMissingTrashColumn, trashCutoff } from '../lib/trash'
 import { newItem } from '../lib/pendingChanges'
+import { DETAIL_SELECT, LIST_COLUMNS, keepDetail, withDetail } from '../lib/itemDetail'
 import type { Item, ItemWrite } from '../types/item'
 
 interface Activity {
@@ -35,6 +36,11 @@ interface MediaContextValue {
   trashItem: (id: string) => Promise<void>
   /** Saca un ítem de la papelera y lo devuelve al librero. */
   restoreItem: (id: string) => Promise<Item>
+  /**
+   * Las listas no traen la sinopsis, las notas ni la reseña (ver `lib/itemDetail.ts`):
+   * el detalle las pide con esto al abrirse. Falla sin conexión.
+   */
+  loadDetail: (id: string) => Promise<void>
   /**
    * Registra actividad (película vista, episodios) en `activity_log` y aplica
    * `changes` al ítem. El tiempo invertido lo suma el trigger de la DB; el
@@ -84,13 +90,13 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     itemsRef.current = items
   }, [items])
   const sync = usePendingSync('media', setItems, itemsRef)
-  const { overlay, setUser } = sync
+  const { overlay, setUser, pendingFieldsFor } = sync
 
   const fetchItems = useCallback(async () => {
     if (!hasLoaded.current) setLoading(true)
     await ensureSession()
     const base = () =>
-      supabase.from('items').select('*').neq('media_type', 'game').order('created_at', { ascending: false })
+      supabase.from('items').select(LIST_COLUMNS).neq('media_type', 'game').order('created_at', { ascending: false })
     // Lo de la papelera no se ve. Sin la migración 0015 no existe la columna: se pide todo, como antes.
     let { data, error } = await base().is('deleted_at', null)
     let hasTrash = !error
@@ -111,7 +117,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       // Lo que lleva más de 30 días en la papelera se elimina (sin esperar el resultado).
       if (hasTrash) void supabase.from('items').delete().lt('deleted_at', trashCutoff())
       // Lo hecho sin conexión que todavía no llegó se sigue viendo.
-      setItems(overlay(data as Item[]))
+      // El detalle que ya se había cargado se conserva.
+      setItems(overlay(keepDetail(data as unknown as Item[], itemsRef.current)))
       setError(null)
       hasLoaded.current = true
     }
@@ -214,6 +221,16 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return item
   }, [cancelTrash])
 
+  const loadDetail = useCallback<MediaContextValue['loadDetail']>(
+    async (id) => {
+      const { data, error } = await supabase.from('items').select(DETAIL_SELECT).eq('id', id).single()
+      if (error) throw error
+      const detail = data as unknown as Pick<Item, 'summary' | 'review' | 'notes'>
+      setItems((prev) => prev.map((i) => (i.id === id ? withDetail(i, detail, pendingFieldsFor(id)) : i)))
+    },
+    [pendingFieldsFor]
+  )
+
   /**
    * También optimista: el avance (y el tiempo, que en la base suma un
    * trigger) se ve al instante; el registro y el cambio se guardan en fila,
@@ -256,6 +273,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       trashAvailable,
       trashItem,
       restoreItem,
+      loadDetail,
       logActivity,
       pendingCount,
       syncError,
@@ -273,6 +291,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       trashAvailable,
       trashItem,
       restoreItem,
+      loadDetail,
       logActivity,
       pendingCount,
       syncError,

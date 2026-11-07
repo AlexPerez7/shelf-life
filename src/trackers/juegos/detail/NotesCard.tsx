@@ -1,21 +1,26 @@
 import type { Ref } from 'react'
 import { StickyNote } from 'lucide-react'
 import { SectionCard } from '../../../components/SectionCard'
+import { DetailGate } from '../../../components/DetailGate'
 import type { Game } from '../../../types/game'
 import { inputClass } from './shared'
 
 interface NotesCardProps {
   notes: string | null
   review: string | null
+  /** Las notas y la reseña ya se cargaron (la lista no las trae). */
+  ready: boolean
+  failed: boolean
   setField: (changes: Partial<Game>) => void
   /** Para el botón de notas de arriba, que baja hasta acá. */
   sectionRef?: Ref<HTMLDivElement>
 }
 
-export function NotesCard({ notes, review, setField, sectionRef }: NotesCardProps) {
+export function NotesCard({ notes, review, ready, failed, setField, sectionRef }: NotesCardProps) {
   return (
     <div ref={sectionRef} className="scroll-mt-20">
       <SectionCard icon={StickyNote} title="Notas y reseña">
+        <DetailGate ready={ready} failed={failed}>
         <div className="flex flex-col gap-3">
           <label className="block">
             <span className="mb-1 block text-xs text-lavender">Notas</span>
@@ -38,6 +43,7 @@ export function NotesCard({ notes, review, setField, sectionRef }: NotesCardProp
             />
           </label>
         </div>
+        </DetailGate>
       </SectionCard>
     </div>
   )

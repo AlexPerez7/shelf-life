@@ -28,6 +28,9 @@ import { ItemStatusSheet } from '../../components/ItemStatusSheet'
 import { BottomSheet } from '../../components/BottomSheet'
 import { BlurTextarea } from '../../components/BlurTextarea'
 import { MediaForm } from '../../components/MediaForm'
+import { DetailGate } from '../../components/DetailGate'
+import { useItemDetail } from '../../hooks/useItemDetail'
+import { hasDetail } from '../../lib/itemDetail'
 import { Synopsis } from '../../components/Synopsis'
 import { ListPicker } from '../../components/ListPicker'
 import { CoverPicker } from '../../components/CoverPicker'
@@ -260,7 +263,7 @@ export function BookDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { items, loading, updateItem, deleteItem, trashAvailable, trashItem, restoreItem } = useMedia()
+  const { items, loading, updateItem, deleteItem, trashAvailable, trashItem, restoreItem, loadDetail } = useMedia()
   const { showToast, showError } = useToast()
   const confirm = useConfirm()
   const quick = useQuickProgress()
@@ -269,6 +272,7 @@ export function BookDetail() {
   const [pageMinutes, setPageMinutes] = useState<number | null>(null)
 
   const item = items.find((i) => i.id === id)
+  const detail = useItemDetail(item?.id, item ? hasDetail(item) : false, loadDetail)
   const [statusOpen, setStatusOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -663,6 +667,7 @@ export function BookDetail() {
             <ReadingHistory item={current} onSave={save} />
 
             <SectionCard icon={StickyNote} title="Notas y reseña">
+              <DetailGate ready={detail.ready} failed={detail.failed}>
               <div className="flex flex-col gap-3">
                 <label className="block">
                   <span className="mb-1 block text-xs text-lavender">Notas</span>
@@ -685,6 +690,7 @@ export function BookDetail() {
                   />
                 </label>
               </div>
+              </DetailGate>
             </SectionCard>
 
             <SectionCard icon={Disc3} title="Formato">
@@ -751,6 +757,7 @@ export function BookDetail() {
 
         <BottomSheet open={editOpen} onClose={() => setEditOpen(false)} title="Editar datos">
           {editOpen && (
+            <DetailGate ready={detail.ready} failed={detail.failed}>
             <MediaForm
               section={section}
               item={current}
@@ -761,6 +768,7 @@ export function BookDetail() {
                 showToast('Datos actualizados')
               }}
             />
+            </DetailGate>
           )}
         </BottomSheet>
         <PageSheet

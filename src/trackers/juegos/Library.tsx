@@ -5,6 +5,8 @@ import { SiSteam } from 'react-icons/si'
 import { useGames } from '../../hooks/useGames'
 import { GameCard } from '../../components/GameCard'
 import { GameCoverCard } from '../../components/GameCoverCard'
+import { ShowMore } from '../../components/ShowMore'
+import { useBatch } from '../../hooks/useBatch'
 import { StatusSheet } from '../../components/StatusSheet'
 import { useToast } from '../../contexts/ToastContext'
 import { haptic } from '../../lib/haptics'
@@ -127,6 +129,7 @@ export function Library() {
 
   // Cambio rápido de estado desde la tarjeta.
   const [statusGame, setStatusGame] = useState<Game | null>(null)
+  const batch = useBatch()
   const closeStatusSheet = useCallback(() => setStatusGame(null), [])
   async function handleQuickStatus(newStatus: GameStatus) {
     const game = statusGame
@@ -336,7 +339,7 @@ export function Library() {
 
               {view === 'portadas' ? (
                 <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4 lg:grid-cols-6">
-                  {sorted.map((game) => (
+                  {sorted.slice(0, batch.limit).map((game) => (
                     <GameCoverCard
                       key={game.id}
                       game={game}
@@ -347,7 +350,7 @@ export function Library() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-3">
-                  {sorted.map((game) => (
+                  {sorted.slice(0, batch.limit).map((game) => (
                     <GameCard
                       key={game.id}
                       game={game}
@@ -357,6 +360,8 @@ export function Library() {
                   ))}
                 </div>
               )}
+
+              <ShowMore remaining={sorted.length - batch.limit} onClick={batch.more} />
 
               <StatusSheet
                 open={statusGame != null}

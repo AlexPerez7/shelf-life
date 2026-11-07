@@ -32,6 +32,13 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 - **Reinstalar los archivos de la app** (último recurso, con confirmación): desregistra el service worker y borra la caché de archivos; no toca los datos ni los cambios pendientes sin conexión. Hace falta señal para que la app vuelva a abrir.
 - La primera vez que se publica esta pantalla hay que recargar la app a mano (o cerrarla y abrirla): el botón viaja en la versión nueva.
 
+## Rendimiento con bibliotecas grandes
+
+- Las listas (`MediaContext`, `GamesContext`) piden solo las columnas que dibujan las tarjetas (`LIST_COLUMNS` en `lib/itemDetail.ts`): no traen la **sinopsis, las notas ni la reseña**, que son lo más pesado. Así la lista, la memoria y la cache local pesan bastante menos con miles de títulos.
+- El detalle completa esos tres campos al abrirse (`loadDetail`, `hooks/useItemDetail.ts`). Mientras no llegan, la sección de notas y reseña (y "Editar datos") muestra un esqueleto, o un aviso si no hay conexión, y se reintenta sola al volver la señal. Así nadie escribe sobre un campo que parece vacío y pisa lo guardado (`components/DetailGate.tsx`).
+- Lo ya cargado se conserva al volver a pedir la lista, y lo editado sin conexión va encima (`keepDetail` y `withDetail`). Un título que se agregó sin conexión ya trae todo. Límite: una ficha que nunca se abrió con señal muestra ese aviso en vez de las notas si se abre sin conexión.
+- Las cuadrículas de Pantalla y de Juegos se muestran por tandas de 60 con "Mostrar más" (`hooks/useBatch.ts`, `components/ShowMore.tsx`), como el librero.
+
 ## Cambios sin conexión
 
 - Editar un título, cambiar su estado o puntaje, el avance rápido (+1 episodio, la página), anotar episodios o páginas, registrar sesiones de juego y terminar el cronómetro (de juegos o de lectura) funcionan sin señal.

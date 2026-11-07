@@ -8,6 +8,7 @@ import {
   overlayPending,
   pendingActivities,
   pendingFor,
+  pendingFields,
   pendingKey,
   pendingTrash,
   readPending,
@@ -313,6 +314,12 @@ export function usePendingSync(
 
   const overlay = useCallback((items: Item[]) => overlayPending(items, opsRef.current), [])
 
+  /** Un ítem recién leído de la base, con sus cambios pendientes encima. */
+  const applyPending = useCallback((item: Item) => applyPendingOps(item, opsRef.current), [])
+
+  /** Los campos de un ítem que se cambiaron sin conexión y todavía no se guardaron. */
+  const pendingFieldsFor = useCallback((itemId: string) => pendingFields(opsRef.current, itemId), [])
+
   /** Un ítem borrado: lo suyo en la cola ya no tiene sentido. */
   const dropItem = useCallback((itemId: string) => persist(withoutItem(opsRef.current, itemId)), [persist])
 
@@ -371,6 +378,8 @@ export function usePendingSync(
     flush,
     setUser,
     overlay,
+    applyPending,
+    pendingFieldsFor,
     dropItem,
     discard,
     pendingActivitiesFor,

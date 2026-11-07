@@ -4,6 +4,7 @@ import { supabase, ensureSession } from '../lib/supabaseClient'
 import { readCache, removeCacheByPrefix, writeCache } from '../lib/localCache'
 import { usePendingSync } from '../hooks/usePendingSync'
 import { newItem } from '../lib/pendingChanges'
+import { DETAIL_SELECT, LIST_COLUMNS, keepDetail, withDetail } from '../lib/itemDetail'
 import { gameChangesToItem, itemToGame, newGameToItem } from '../lib/gameItem'
 import type { Game, NewGame, PlaySession } from '../types/game'
 import type { Item } from '../types/item'
@@ -28,6 +29,11 @@ interface GamesContextValue {
   cancelPendingSession: (sessionId: string) => boolean
   /** Relee un juego de la DB (ej. después de que un trigger lo modificó). */
   refreshGame: (id: string) => Promise<void>
+  /**
+   * La lista no trae la sinopsis, las notas ni la reseña (ver `lib/itemDetail.ts`):
+   * el detalle las pide con esto al abrirse. Falla sin conexión.
+   */
+  loadDetail: (id: string) => Promise<void>
   refetch: () => Promise<void>
   /** Cambios hechos sin conexión que todavía no llegaron a la base. */
   pendingCount: number
@@ -64,6 +70,8 @@ export function GamesProvider({ children }: { children: ReactNode }) {
   const sync = usePendingSync('games', setItems, itemsRef)
   const {
     overlay,
+    applyPending,
+    pendingFieldsFor,
     setUser,
     save,
     create,
@@ -82,7 +90,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     await ensureSession()
     const { data, error } = await supabase
       .from('items')
-      .select('*')
+      .select(LIST_COLUMNS)
       .eq('media_type', 'game')
       .order('created_at', { ascending: false })
 
@@ -92,7 +100,8 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       if (!hasLoaded.current) setError(error.message)
     } else {
       // Lo hecho sin conexión que todavía no llegó se sigue viendo.
-      setItems(overlay(data as Item[]))
+      // El detalle que ya se había cargado se conserva.
+      setItems(overlay(keepDetail(data as unknown as Item[], itemsRef.current)))
       setError(null)
       hasLoaded.current = true
     }
@@ -224,8 +233,19 @@ export function GamesProvider({ children }: { children: ReactNode }) {
   const refreshGame = useCallback(async (id: string) => {
     const { data, error } = await supabase.from('items').select('*').eq('id', id).single()
     if (error) throw error
-    setItems((prev) => prev.map((i) => (i.id === id ? overlay([data as Item])[0] : i)))
-  }, [overlay])
+    const fresh = applyPending(data as Item)
+    setItems((prev) => prev.map((i) => (i.id === id ? fresh : i)))
+  }, [applyPending])
+
+  const loadDetail = useCallback(
+    async (id: string) => {
+      const { data, error } = await supabase.from('items').select(DETAIL_SELECT).eq('id', id).single()
+      if (error) throw error
+      const detail = data as unknown as Pick<Item, 'summary' | 'review' | 'notes'>
+      setItems((prev) => prev.map((i) => (i.id === id ? withDetail(i, detail, pendingFieldsFor(id)) : i)))
+    },
+    [pendingFieldsFor]
+  )
 
   const value = useMemo<GamesContextValue>(
     () => ({
@@ -237,6 +257,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       updateGame,
       deleteGame,
       refreshGame,
+      loadDetail,
       logSession,
       pendingSessions,
       cancelPendingSession: cancelActivity,
@@ -255,6 +276,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       updateGame,
       deleteGame,
       refreshGame,
+      loadDetail,
       logSession,
       pendingSessions,
       cancelActivity,
