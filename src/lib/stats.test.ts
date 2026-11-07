@@ -77,7 +77,7 @@ describe('metas', () => {
 
   it('goalPace: adelantado, al día o atrasado según el calendario', () => {
     const mid = new Date(2026, 6, 2) // ~mitad del año
-    const goal = { tracker: 'libros' as const, year: 2026, target: 24 }
+    const goal = { tracker: 'libros' as const, year: 2026, target: 24, kind: 'items' as const }
     expect(goalPace(goal, 12, mid)).toBe(0)
     expect(goalPace(goal, 15, mid)).toBe(3)
     expect(goalPace(goal, 9, mid)).toBeLessThan(0)

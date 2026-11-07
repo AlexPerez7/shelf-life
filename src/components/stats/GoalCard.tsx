@@ -4,39 +4,57 @@ import { useGames } from '../../hooks/useGames'
 import { useMedia } from '../../contexts/MediaContext'
 import { useToast } from '../../contexts/ToastContext'
 import { useGoals } from '../../hooks/useGoals'
-import { goalDone, goalPace, goalUnits } from '../../lib/goals'
+import { goalDone, goalPace, goalUnits, pageGoalUnits, type GoalKind } from '../../lib/goals'
+import { pagesInYear } from '../../lib/bookStats'
 import { haptic } from '../../lib/haptics'
 import { BottomSheet } from '../BottomSheet'
 import type { TrackerId } from '../../trackers/trackers'
 
 /** Texto de cómo va la meta respecto del calendario. */
-function paceText(pace: number | null, left: number) {
+function paceText(pace: number | null, left: number, kind: GoalKind) {
   if (left <= 0) return '¡Meta cumplida! 🎉'
   if (pace == null) return null
-  if (pace > 0) return `Vas ${pace} por delante`
-  if (pace < 0) return `Te ${pace === -1 ? 'falta 1' : `faltan ${-pace}`} para ir al día`
+  const amount = (n: number) =>
+    kind === 'pages' ? `${n.toLocaleString('es')} ${n === 1 ? 'pág.' : 'págs.'}` : String(n)
+  if (pace > 0) return `Vas ${amount(pace)} por delante`
+  if (pace < 0) return `Te ${pace === -1 ? 'falta' : 'faltan'} ${amount(-pace)} para ir al día`
   return 'Vas al día'
 }
 
 /**
  * Meta del año de un tracker, arriba de sus estadísticas: avance, si vas al
  * día y una hoja para ponerla, cambiarla o quitarla. No se muestra si la
- * tabla de metas todavía no existe.
+ * tabla de metas todavía no existe. Libros tiene además una meta de páginas
+ * (`kind="pages"`); con otro `year` solo se muestra si ya había una meta.
  */
-export function GoalCard({ tracker }: { tracker: TrackerId }) {
-  const year = new Date().getFullYear()
-  const { goals, available, setGoal } = useGoals(year)
+export function GoalCard({
+  tracker,
+  year = new Date().getFullYear(),
+  kind = 'items',
+}: {
+  tracker: TrackerId
+  year?: number
+  kind?: GoalKind
+}) {
+  const { goals, available, pagesAvailable, setGoal } = useGoals(year)
   const { games } = useGames()
   const { items } = useMedia()
   const { showToast, showError } = useToast()
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
 
-  if (!available) return null
+  if (!available || (kind === 'pages' && !pagesAvailable)) return null
 
-  const goal = goals.find((g) => g.tracker === tracker) ?? null
-  const done = goalDone(tracker, year, games, items)
-  const [singular, plural] = goalUnits[tracker]
+  const goal = goals.find((g) => g.tracker === tracker && g.kind === kind) ?? null
+  // Un año que ya pasó no invita a ponerse una meta.
+  if (!goal && year !== new Date().getFullYear()) return null
+  const pages = kind === 'pages'
+  const done = pages
+    ? pagesInYear(items.filter((i) => i.media_type === 'book'), year)
+    : goalDone(tracker, year, games, items)
+  const [singular, plural] = pages ? pageGoalUnits : goalUnits[tracker]
+  const maxTarget = pages ? 1_000_000 : 10_000
+  const heading = pages ? `Meta de páginas ${year}` : `Meta ${year}`
 
   function openEditor() {
     setValue(goal ? String(goal.target) : '')
@@ -47,18 +65,22 @@ export function GoalCard({ tracker }: { tracker: TrackerId }) {
     setEditing(false)
     haptic()
     try {
-      await setGoal(tracker, target)
-      showToast(target == null ? 'Meta quitada' : `Meta ${year}: ${target} ${target === 1 ? singular : plural}`)
+      await setGoal(tracker, target, kind)
+      showToast(
+        target == null
+          ? 'Meta quitada'
+          : `${heading}: ${target.toLocaleString('es')} ${target === 1 ? singular : plural}`
+      )
     } catch (err) {
       showError(err, 'No se pudo guardar la meta')
     }
   }
 
   const n = Number(value)
-  const valid = Number.isInteger(n) && n >= 1 && n <= 10000
+  const valid = Number.isInteger(n) && n >= 1 && n <= maxTarget
 
   const sheet = (
-    <BottomSheet open={editing} onClose={() => setEditing(false)} title={`Meta ${year}`}>
+    <BottomSheet open={editing} onClose={() => setEditing(false)} title={heading}>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -66,13 +88,15 @@ export function GoalCard({ tracker }: { tracker: TrackerId }) {
         }}
       >
         <label className="block">
-          <span className="mb-1 block text-sm text-lavender">¿Cuántos {plural} este año?</span>
+          <span className="mb-1 block text-sm text-lavender">
+            ¿Cuánt{pages ? 'as' : 'os'} {plural} {year === new Date().getFullYear() ? 'este año' : `en ${year}`}?
+          </span>
           <input
             type="number"
             inputMode="numeric"
             autoFocus
             min={1}
-            max={10000}
+            max={maxTarget}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             className="w-full rounded-xl bg-background px-3 py-2.5 text-ink ring-1 ring-primary-dark/40 focus:outline-none focus:ring-2 focus:ring-accent"
@@ -108,9 +132,9 @@ export function GoalCard({ tracker }: { tracker: TrackerId }) {
         >
           <Target size={20} className="shrink-0 text-accent" />
           <span className="text-sm text-ink">
-            Ponte una meta para {year}
+            {pages ? `Ponte una meta de páginas para ${year}` : `Ponte una meta para ${year}`}
             <span className="block text-xs text-lavender">
-              Llevas {done} {done === 1 ? singular : plural} este año
+              Llevas {done.toLocaleString('es')} {done === 1 ? singular : plural} este año
             </span>
           </span>
         </button>
@@ -120,14 +144,14 @@ export function GoalCard({ tracker }: { tracker: TrackerId }) {
   }
 
   const pct = Math.min(100, Math.round((done / goal.target) * 100))
-  const status = paceText(goalPace(goal, done), goal.target - done)
+  const status = paceText(goalPace(goal, done), goal.target - done, kind)
 
   return (
     <>
       <div className="rounded-2xl bg-background-surface p-4 ring-1 ring-primary-dark/30">
         <div className="flex items-start justify-between gap-2">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-            <Target size={16} className="text-accent" /> Meta {year}
+            <Target size={16} className="text-accent" /> {heading}
           </p>
           <button
             type="button"
@@ -139,7 +163,10 @@ export function GoalCard({ tracker }: { tracker: TrackerId }) {
           </button>
         </div>
         <p className="-mt-1 text-2xl font-bold tabular-nums text-ink">
-          {done} <span className="text-base font-normal text-lavender">de {goal.target} {plural}</span>
+          {done.toLocaleString('es')}{' '}
+          <span className="text-base font-normal text-lavender">
+            de {goal.target.toLocaleString('es')} {plural}
+          </span>
         </p>
         <div
           className="mt-2 h-2.5 overflow-hidden rounded-full bg-primary-dark/25"
@@ -147,7 +174,7 @@ export function GoalCard({ tracker }: { tracker: TrackerId }) {
           aria-valuenow={pct}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Meta ${year}`}
+          aria-label={heading}
         >
           <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${pct}%` }} />
         </div>

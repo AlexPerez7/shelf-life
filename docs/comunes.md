@@ -21,9 +21,9 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 
 ## Metas del año
 
-- Una por tracker: juegos terminados, títulos vistos, libros leídos.
+- Una por tracker: juegos terminados, títulos vistos, libros leídos. Libros tiene además una de páginas (ver `libros.md`).
 - Arriba de las estadísticas de cada tracker, con el avance y si vas al día según el calendario, y también en el inicio.
-- Tabla `goals` (migración `0012`); sin ella la app funciona igual y no muestra las metas.
+- Tabla `goals` (migración `0012`); sin ella la app funciona igual y no muestra las metas. La `0014` suma `kind` (libros leídos o páginas); sin ella no hay meta de páginas. El inicio solo muestra las de libros leídos.
 
 ## Cambios sin conexión
 

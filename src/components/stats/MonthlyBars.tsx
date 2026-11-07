@@ -14,10 +14,21 @@ interface MonthlyBarsProps {
   /** Detalle extra del mes elegido (ej. "12 episodios · 2 películas"). */
   detail?: (index: number) => ReactNode
   footnote?: string
+  /** Mes elegido al abrir (por defecto, el último). */
+  defaultIndex?: number
 }
 
 /** Barras por mes (una sola serie, un tono); tocar una muestra su valor. */
-export function MonthlyBars({ icon, title, months, format, emptyText, detail, footnote }: MonthlyBarsProps) {
+export function MonthlyBars({
+  icon,
+  title,
+  months,
+  format,
+  emptyText,
+  detail,
+  footnote,
+  defaultIndex,
+}: MonthlyBarsProps) {
   const [selected, setSelected] = useState<number | null>(null)
 
   if (months == null) {
@@ -28,7 +39,7 @@ export function MonthlyBars({ icon, title, months, format, emptyText, detail, fo
     )
   }
 
-  const index = selected ?? months.length - 1
+  const index = selected ?? defaultIndex ?? months.length - 1
   const current = months[index]
   const max = Math.max(...months.map((m) => m.value), 1)
   const empty = months.every((m) => m.value === 0)

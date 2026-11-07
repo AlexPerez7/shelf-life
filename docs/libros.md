@@ -42,5 +42,8 @@ Ruta `/libros`, código en `src/trackers/libros/`. Lecturas por páginas, con te
 
 ## Estadísticas y diario
 
-- **Estadísticas** (`/libros/estadisticas`): leídos (y los de este año en portadas), páginas, tiempo y ritmo de lectura, páginas por mes, racha, géneros y autores, destacados (mejor puntuado, el más largo y el más corto), la meta del año y el resumen del año.
+- **Estadísticas** (`/libros/estadisticas`): totales (leídos, páginas, tiempo y ritmo de lectura), racha, géneros, formatos y autores, y destacados (mejor puntuado, el más largo y el más corto).
+- **Año a mirar** (`?anio=`, por defecto el actual): una fila de años arriba de la parte anual, con los años en que terminaste algún libro. Muestra las metas (de libros y de páginas), lo leído en el año en portadas, libros terminados por mes (con sus títulos), páginas y tiempo por mes, promedios (puntaje, páginas, tiempo y días por libro), el que leíste más rápido y el más lento, y el resumen del año para compartir.
+- **Meta de páginas**: además de la de libros leídos, y cuenta las páginas de los libros terminados en el año (como la otra, sin depender del registro de actividad, así sirve con libros importados). Necesita la migración `0014`; sin ella solo está la meta de libros. Los años pasados muestran la meta solo si ya existía.
+- Las cuentas por año están en `lib/bookStats.ts`: cada lectura terminada (las de `metadata.readings` y la última) cuenta en el año en que se terminó, y los días que tomó salen de sus fechas de inicio y fin; las lecturas sin las dos fechas no entran en "días por libro" ni en el más rápido y el más lento.
 - **Diario de lectura** (`/libros/historial`): día por día, las páginas leídas de cada libro, lo empezado y lo terminado.

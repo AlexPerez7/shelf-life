@@ -7,10 +7,14 @@ import type { TrackerId } from '../trackers/trackers'
 import type { Game } from '../types/game'
 import type { Item } from '../types/item'
 
+/** 'items': juegos terminados, títulos vistos o libros leídos. 'pages': páginas leídas (solo Libros). */
+export type GoalKind = 'items' | 'pages'
+
 export interface Goal {
   tracker: TrackerId
   year: number
   target: number
+  kind: GoalKind
 }
 
 /** Qué cuenta cada meta: [singular, plural]. */
@@ -19,6 +23,9 @@ export const goalUnits: Record<TrackerId, [string, string]> = {
   pantalla: ['título visto', 'títulos vistos'],
   libros: ['libro leído', 'libros leídos'],
 }
+
+/** Qué cuenta la meta de páginas: [singular, plural]. */
+export const pageGoalUnits: [string, string] = ['página leída', 'páginas leídas']
 
 const inYear = (date: string | null, year: number) => date != null && parseDate(date).getFullYear() === year
 

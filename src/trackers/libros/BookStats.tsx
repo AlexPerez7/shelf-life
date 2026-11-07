@@ -1,23 +1,28 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   BookOpenCheck,
+  CalendarDays,
   Clock,
   Disc3,
   Feather,
   FileText,
   Gauge,
   History,
+  Hourglass,
   Layers,
+  Rabbit,
   Ruler,
   Star,
   Tag,
+  Turtle,
   Zap,
 } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
 import { SectionCard } from '../../components/SectionCard'
+import { Chip } from '../../components/Chip'
 import { Skeleton } from '../../components/Skeleton'
 import { GameThumb } from '../../components/GameThumb'
 import { MonthlyBars } from '../../components/stats/MonthlyBars'
@@ -28,15 +33,16 @@ import { YearRecap } from '../../components/stats/YearRecap'
 import { GoalCard } from '../../components/stats/GoalCard'
 import { useActivity } from '../../hooks/useActivity'
 import { formatMinutes, itemStatuses, mediaSections } from '../../lib/media'
-import { finishedIn, maxBy, minBy, monthBuckets, started, topCounts } from '../../lib/stats'
+import { finishedIn, maxBy, minBy, started, topCounts, yearBuckets } from '../../lib/stats'
+import { fastestAndSlowest, finishedByMonth, readingsInYear, yearAverages } from '../../lib/bookStats'
 import { lastFinishIn } from '../../lib/readings'
+import { readYears } from '../../lib/bookView'
 import { parseDate } from '../../lib/dates'
 import { plural } from '../../lib/text'
 import type { Item } from '../../types/item'
 import { shelfParam } from './bookLists'
 
 const section = mediaSections.libros
-const MONTHS_SHOWN = 6
 const BOOK_TYPES = ['book' as const]
 
 /** Páginas leídas de un libro: todas si está leído, si no hasta donde va. */
@@ -72,15 +78,42 @@ function ReadThisYear({ books, year }: { books: Item[]; year: number }) {
 }
 
 /**
- * Estadísticas de Libros: lo leído este año, páginas por mes, ritmo,
+ * Estadísticas de Libros: totales, y de un año a elegir (metas, lo leído,
+ * libros y páginas por mes, promedios, el más rápido y el más lento), más
  * géneros y autores, destacados y el resumen del año para compartir.
  */
 export function BookStats() {
   const { items, loading } = useMedia()
-  const activity = useActivity(BOOK_TYPES)
-  const year = new Date().getFullYear()
+  const activity = useActivity(BOOK_TYPES, null)
+  const thisYear = new Date().getFullYear()
 
   const books = useMemo(() => items.filter((i) => i.media_type === 'book'), [items])
+
+  // El año a mirar vive en la URL (?anio=); por defecto, el actual.
+  const [params, setParams] = useSearchParams()
+  const years = useMemo(() => [...new Set([thisYear, ...readYears(books)])].sort((a, b) => b - a), [books, thisYear])
+  const asked = Number(params.get('anio'))
+  const year = years.includes(asked) ? asked : thisYear
+  function pickYear(y: number) {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (y === thisYear) next.delete('anio')
+        else next.set('anio', String(y))
+        return next
+      },
+      { replace: true }
+    )
+  }
+
+  const readThisYear = useMemo(() => finishedIn(books, thisYear).length, [books, thisYear])
+  const yearReadings = useMemo(() => readingsInYear(books, year), [books, year])
+  const averages = useMemo(() => yearAverages(yearReadings), [yearReadings])
+  const extremes = useMemo(() => fastestAndSlowest(yearReadings), [yearReadings])
+  const finishedMonths = useMemo(() => finishedByMonth(yearReadings, year), [yearReadings, year])
+  // Mes elegido al abrir: el actual, o el último con algo si es un año pasado.
+  const defaultMonth = (values: number[]) =>
+    year === thisYear ? new Date().getMonth() : Math.max(0, values.findLastIndex((v) => v > 0))
 
   const stats = useMemo(() => {
     const read = books.filter((b) => b.status === 'completed')
@@ -104,7 +137,7 @@ export function BookStats() {
       pagesPerHour,
       avgLength,
       // Por la última vez que se terminó en el año (un libro releído puede estar leyéndose otra vez).
-      thisYear: finishedIn(books, year).sort((a, b) =>
+      yearBooks: finishedIn(books, year).sort((a, b) =>
         (lastFinishIn(b, year) ?? '').localeCompare(lastFinishIn(a, year) ?? '')
       ),
       genres: topCounts(started(books).flatMap((b) => b.genres), 6),
@@ -126,11 +159,11 @@ export function BookStats() {
     () =>
       activity
         ? {
-            pages: monthBuckets(activity, MONTHS_SHOWN, (r) => Math.max(0, r.progress_delta ?? 0)),
-            minutes: monthBuckets(activity, MONTHS_SHOWN, (r) => r.duration_minutes ?? 0),
+            pages: yearBuckets(activity, year, (r) => r.occurred_at, (r) => Math.max(0, r.progress_delta ?? 0)),
+            minutes: yearBuckets(activity, year, (r) => r.occurred_at, (r) => r.duration_minutes ?? 0),
           }
         : null,
-    [activity]
+    [activity, year]
   )
 
   // Racha: días seguidos con lectura registrada, hasta hoy o ayer.
@@ -159,16 +192,16 @@ export function BookStats() {
     const yearActivity = (activity ?? []).filter((r) => parseDate(r.occurred_at).getFullYear() === year)
     const pages = yearActivity.reduce((s, r) => s + Math.max(0, r.progress_delta ?? 0), 0)
     const minutes = yearActivity.reduce((s, r) => s + (r.duration_minutes ?? 0), 0)
-    const best = maxBy(stats.thisYear, (b) => b.rating)
-    const author = topCounts(stats.thisYear.flatMap((b) => b.metadata.authors ?? []), 1)[0]
+    const best = maxBy(stats.yearBooks, (b) => b.rating)
+    const author = topCounts(stats.yearBooks.flatMap((b) => b.metadata.authors ?? []), 1)[0]
     return [
-      stats.thisYear.length > 0 && `📚 ${plural(stats.thisYear.length, 'libro leído', 'libros leídos')}`,
+      stats.yearBooks.length > 0 && `📚 ${plural(stats.yearBooks.length, 'libro leído', 'libros leídos')}`,
       pages > 0 && `📄 ${plural(pages, 'página')}`,
       minutes > 0 && `⏱️ ${formatMinutes(minutes)} de lectura`,
       best && `⭐ Mi favorito: ${best.title}`,
       author && author.value > 1 && `✍️ Autor del año: ${author.label}`,
     ].filter(Boolean) as string[]
-  }, [activity, stats.thisYear, year])
+  }, [activity, stats.yearBooks, year])
 
   const highlights = [
     stats.topRated && {
@@ -220,13 +253,12 @@ export function BookStats() {
         </p>
       ) : (
         <div className="flex flex-col gap-4">
-          <GoalCard tracker="libros" />
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatTile
               icon={BookOpenCheck}
               label="Libros leídos"
               value={String(stats.read.length)}
-              hint={stats.thisYear.length ? `${stats.thisYear.length} este año` : undefined}
+              hint={readThisYear ? `${readThisYear} este año` : undefined}
               to={`${section.libraryPath}?${shelfParam}=leidos`}
             />
             <StatTile icon={FileText} label="Páginas leídas" value={stats.pages.toLocaleString('es')} />
@@ -243,18 +275,105 @@ export function BookStats() {
             />
           </div>
 
-          <ReadThisYear books={stats.thisYear} year={year} />
+          {/* Todo lo que sigue hasta la racha es del año elegido. */}
+          <div className="flex items-center gap-2" role="group" aria-label="Año a mirar">
+            <CalendarDays size={18} className="shrink-0 text-accent" />
+            <div className="scrollbar-hide -mr-4 flex gap-2 overflow-x-auto pr-4">
+              {years.map((y) => (
+                <Chip key={y} active={y === year} onClick={() => pickYear(y)}>
+                  {y}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
+          <GoalCard key={`items-${year}`} tracker="libros" year={year} />
+          <GoalCard key={`pages-${year}`} tracker="libros" year={year} kind="pages" />
+
+          <ReadThisYear books={stats.yearBooks} year={year} />
 
           <MonthlyBars
+            key={`books-${year}`}
+            icon={BookOpenCheck}
+            title={`Libros terminados en ${year}`}
+            months={finishedMonths}
+            format={(v) => plural(v, 'libro')}
+            emptyText={`No terminaste ningún libro en ${year}.`}
+            defaultIndex={defaultMonth(finishedMonths.map((m) => m.value))}
+            detail={(i) => {
+              const titles = yearReadings
+                .filter((r) => parseDate(r.finished).getMonth() === i)
+                .map((r) => r.item.title)
+              if (titles.length === 0) return null
+              return titles.length > 3 ? `${titles.slice(0, 3).join(' · ')} y ${titles.length - 3} más` : titles.join(' · ')
+            }}
+          />
+
+          <MonthlyBars
+            key={`pages-${year}`}
             icon={FileText}
-            title="Páginas por mes"
+            title={`Páginas por mes en ${year}`}
             months={months?.pages ?? null}
             format={(v) => plural(v, 'página')}
             emptyText="Guarda la página en la que vas desde la ficha de un libro para ver tu ritmo mes a mes."
+            defaultIndex={months ? defaultMonth(months.pages.map((m) => m.value)) : undefined}
             detail={(i) =>
               months && months.minutes[i].value > 0 ? `${formatMinutes(months.minutes[i].value)} de lectura` : null
             }
           />
+
+          {yearReadings.length > 0 && (
+            <>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <StatTile
+                  icon={Star}
+                  label="Puntaje promedio"
+                  value={averages.rating != null ? `${averages.rating.toLocaleString('es')} ★` : '—'}
+                />
+                <StatTile
+                  icon={FileText}
+                  label="Páginas por libro"
+                  value={averages.pages != null ? averages.pages.toLocaleString('es') : '—'}
+                />
+                <StatTile
+                  icon={Hourglass}
+                  label="Tiempo por libro"
+                  value={averages.minutes != null ? formatMinutes(averages.minutes) : '—'}
+                />
+                <StatTile
+                  icon={CalendarDays}
+                  label="Días por libro"
+                  value={averages.days != null ? String(averages.days) : '—'}
+                  hint="De empezarlo a terminarlo"
+                />
+              </div>
+
+              {(extremes.fastest || extremes.slowest) && (
+                <div className="grid gap-2 md:grid-cols-2">
+                  {extremes.fastest && (
+                    <Highlight
+                      icon={Rabbit}
+                      label={`El que leíste más rápido en ${year}`}
+                      title={extremes.fastest.item.title}
+                      detail={plural(extremes.fastest.days, 'día')}
+                      cover={extremes.fastest.item.cover_url}
+                      to={section.detailPath(extremes.fastest.item.id)}
+                    />
+                  )}
+                  {extremes.slowest && (
+                    <Highlight
+                      icon={Turtle}
+                      label={`El que leíste más lento en ${year}`}
+                      title={extremes.slowest.item.title}
+                      detail={plural(extremes.slowest.days, 'día')}
+                      cover={extremes.slowest.item.cover_url}
+                      to={section.detailPath(extremes.slowest.item.id)}
+                    />
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
           {streak >= 2 && (
             <div className="flex items-center gap-3 rounded-2xl bg-background-surface p-3.5 shadow-sm ring-1 ring-primary-dark/20">

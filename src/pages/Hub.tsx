@@ -73,14 +73,14 @@ type NowEntry =
 function GoalsStrip({ games, items }: { games: Game[]; items: Item[] }) {
   const year = new Date().getFullYear()
   const { goals } = useGoals(year)
-  if (goals.length === 0) return null
+  if (!goals.some((g) => g.kind === 'items')) return null
 
   return (
     <section className="mb-6">
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">Metas {year}</h2>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {trackerIds
-          .map((id) => goals.find((g) => g.tracker === id))
+          .map((id) => goals.find((g) => g.tracker === id && g.kind === 'items'))
           .filter((g) => g != null)
           .map((goal) => {
             const { Icon, base } = trackers[goal.tracker]

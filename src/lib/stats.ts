@@ -23,15 +23,10 @@ export interface MonthBucket {
   value: number
 }
 
-/** Los últimos `count` meses (el actual al final), sumando `valueOf` de cada registro. */
-export function monthBuckets(
-  activity: ActivityRow[],
-  count: number,
-  valueOf: (row: ActivityRow) => number
-): MonthBucket[] {
-  const now = new Date()
-  const list = Array.from({ length: count }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (count - 1 - i), 1)
+/** `count` meses seguidos desde `first`, todos en cero. */
+function emptyBuckets(first: Date, count: number): MonthBucket[] {
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(first.getFullYear(), first.getMonth() + i, 1)
     return {
       key: `${d.getFullYear()}-${d.getMonth()}`,
       short: d.toLocaleDateString('es', { month: 'short' }).replace('.', ''),
@@ -39,13 +34,43 @@ export function monthBuckets(
       value: 0,
     }
   })
+}
+
+/** Suma `valueOf` de cada fila en el mes de su fecha (las fuera de rango se ignoran). */
+function fillBuckets<T>(
+  list: MonthBucket[],
+  rows: T[],
+  dateOf: (row: T) => string,
+  valueOf: (row: T) => number
+) {
   const byKey = new Map(list.map((m) => [m.key, m]))
-  for (const row of activity) {
-    const d = parseDate(row.occurred_at)
+  for (const row of rows) {
+    const d = parseDate(dateOf(row))
     const bucket = byKey.get(`${d.getFullYear()}-${d.getMonth()}`)
     if (bucket) bucket.value += valueOf(row)
   }
   return list
+}
+
+/** Los últimos `count` meses (el actual al final), sumando `valueOf` de cada registro. */
+export function monthBuckets(
+  activity: ActivityRow[],
+  count: number,
+  valueOf: (row: ActivityRow) => number
+): MonthBucket[] {
+  const now = new Date()
+  const first = new Date(now.getFullYear(), now.getMonth() - (count - 1), 1)
+  return fillBuckets(emptyBuckets(first, count), activity, (r) => r.occurred_at, valueOf)
+}
+
+/** Los 12 meses de un año (enero a diciembre), sumando `valueOf` de cada fila según su fecha. */
+export function yearBuckets<T>(
+  rows: T[],
+  year: number,
+  dateOf: (row: T) => string,
+  valueOf: (row: T) => number
+): MonthBucket[] {
+  return fillBuckets(emptyBuckets(new Date(year, 0, 1), 12), rows, dateOf, valueOf)
 }
 
 /** Los `limit` valores más repetidos, de mayor a menor. */
