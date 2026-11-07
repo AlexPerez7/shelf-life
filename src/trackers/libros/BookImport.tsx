@@ -18,7 +18,11 @@ import { plural } from '../../lib/text'
 
 const section = mediaSections.libros
 
-const SOURCE_NAMES: Record<ImportSource, string> = { goodreads: 'Goodreads', storygraph: 'StoryGraph' }
+const SOURCE_NAMES: Record<ImportSource, string> = {
+  goodreads: 'Goodreads',
+  storygraph: 'StoryGraph',
+  bookwyrm: 'BookWyrm',
+}
 
 /** Cómo exportar desde cada app (lo primero que se lee en la pantalla). */
 function HowTo() {
@@ -38,12 +42,19 @@ function HowTo() {
           <span className="text-ink">.csv</span> para descargar.
         </p>
       </div>
+      <div className="rounded-2xl bg-background-surface p-4 shadow-sm ring-1 ring-primary-dark/15">
+        <p className="font-book font-semibold text-ink">BookWyrm</p>
+        <p className="mt-1 text-lavender">
+          En tu instancia: <span className="text-ink">Import/Export → Export book data</span>, y descarga el{' '}
+          <span className="text-ink">.csv</span>. Los libros que están en varios estantes se juntan en uno.
+        </p>
+      </div>
     </div>
   )
 }
 
 /**
- * Importar el librero desde Goodreads o StoryGraph: se elige el CSV que
+ * Importar el librero desde Goodreads, StoryGraph o BookWyrm: se elige el CSV que
  * exportan, se ve un resumen (y qué ya está, que se salta) y se importa.
  * El archivo se lee en el teléfono; solo se guardan los libros.
  */
@@ -115,7 +126,7 @@ export function BookImport() {
         <ArrowLeft size={16} /> Agregar libro
       </Link>
       <h1 className="text-3xl font-bold text-ink">Importar libros</h1>
-      <p className="mb-4 text-sm text-lavender">Trae tu biblioteca de Goodreads o StoryGraph</p>
+      <p className="mb-4 text-sm text-lavender">Trae tu biblioteca de Goodreads, StoryGraph o BookWyrm</p>
 
       <div className="flex flex-col gap-4 md:max-w-xl">
         {finished != null ? (

@@ -77,9 +77,52 @@ describe('parseBookExport: StoryGraph', () => {
   })
 })
 
+const BOOKWYRM = `title,author_text,remote_id,openlibrary_key,inventaire_id,librarything_key,goodreads_key,bnf_id,viaf,wikidata,asin,aasin,isfdb,isbn_10,isbn_13,oclc_number,start_date,finish_date,stopped_date,rating,review_name,review_cw,review_content,review_published,shelf,shelf_name,shelf_date
+Piranesi,Susanna Clarke,https://bw.example/book/1,OL1W,,,,,,,,,,1635575636,9781635575637,,2022-03-05 00:00:00+00:00,2022-03-20 00:00:00+00:00,,4,Genial,,"<p>Línea uno</p><p>Línea &amp; dos<br>tres</p>",2022-03-21,read,Read,2022-03-20 10:00:00+00:00
+Piranesi,Susanna Clarke,https://bw.example/book/1,OL1W,,,,,,,,,,1635575636,9781635575637,,,,,,,,,,favoritos,Favoritos,2022-04-01 10:00:00+00:00
+Rayuela,Julio Cortázar,https://bw.example/book/2,,,,,,,,,,,,,,,,,0,,,,,to-read,Want to Read,2024-02-10 09:00:00+00:00
+Dune,Frank Herbert,https://bw.example/book/3,,,,,,,,,,,,,,2021-01-01 00:00:00+00:00,,2021-02-01 00:00:00+00:00,2,,,,,stopped-reading,Stopped Reading,2021-02-01 09:00:00+00:00
+Hyperion,Dan Simmons,https://bw.example/book/4,,,,,,,,,,,,,,,,,,,,,,reading,Currently Reading,2024-05-01 09:00:00+00:00
+Cuaderno,Autora Propia,https://bw.example/book/5,,,,,,,,,,,,,,,,,,,,,,mi-estante,Mi estante,2024-05-02 09:00:00+00:00
+`
+
+describe('parseBookExport: BookWyrm', () => {
+  const { source, books } = parseBookExport(BOOKWYRM)
+
+  it('reconoce el archivo y junta los estantes repetidos de un libro en una fila', () => {
+    expect(source).toBe('bookwyrm')
+    expect(books.map((b) => b.title)).toEqual(['Piranesi', 'Rayuela', 'Dune', 'Hyperion', 'Cuaderno'])
+  })
+
+  it('traduce estado, puntaje, ISBN, fechas y reseña', () => {
+    expect(books[0]).toMatchObject({
+      status: 'completed',
+      rating: 8, // 4 estrellas
+      isbn: '9781635575637',
+      authors: ['Susanna Clarke'],
+      dateRead: '2022-03-20',
+      dateAdded: '2022-03-20',
+      review: 'Línea uno\n\nLínea & dos\ntres',
+    })
+  })
+
+  it('el estante de lectura gana sobre uno propio, venga primero o después', () => {
+    const reversed = BOOKWYRM.split('\n')
+    const swapped = [reversed[0], reversed[2], reversed[1], ...reversed.slice(3)].join('\n')
+    expect(parseBookExport(swapped).books[0]).toMatchObject({ status: 'completed', rating: 8 })
+  })
+
+  it('traduce el resto de los estantes', () => {
+    expect(books[1]).toMatchObject({ title: 'Rayuela', status: 'wishlist', rating: null })
+    expect(books[2]).toMatchObject({ title: 'Dune', status: 'dropped', rating: 4, dateRead: '2021-02-01' })
+    expect(books[3]).toMatchObject({ title: 'Hyperion', status: 'in_progress' })
+    expect(books[4]).toMatchObject({ title: 'Cuaderno', status: 'planned' })
+  })
+})
+
 describe('parseBookExport: otros archivos', () => {
-  it('rechaza un CSV que no es de Goodreads ni StoryGraph', () => {
-    expect(() => parseBookExport('a,b\n1,2')).toThrow(/Goodreads o StoryGraph/)
+  it('rechaza un CSV que no es de Goodreads, StoryGraph ni BookWyrm', () => {
+    expect(() => parseBookExport('a,b\n1,2')).toThrow(/BookWyrm/)
   })
 
   it('rechaza un archivo vacío', () => {

@@ -27,7 +27,7 @@ El inicio junta lo que tienes en curso en los tres, con una acción rápida para
 - Un librero con repisas por estado, colecciones, géneros y autores; tema claro "papel".
 - Alta por título, autor o ISBN, con escáner de código de barras en Android.
 - Lectura en curso con ritmo, cronómetro de lectura y formatos (físico, eBook, Kindle, audiolibro...).
-- Importar de Goodreads o StoryGraph; estadísticas y diario de lectura.
+- Importar de Goodreads, StoryGraph o BookWyrm; estadísticas y diario de lectura.
 
 ### Lo común · [detalle](docs/comunes.md)
 

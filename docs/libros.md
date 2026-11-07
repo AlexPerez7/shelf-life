@@ -53,9 +53,10 @@ Ruta `/libros`, código en `src/trackers/libros/`. Lecturas por páginas, con te
 - **Cronómetro de lectura** ("Leer" en la ficha y en el inicio): sigue contando aunque se cierre la app y, al terminar, pide la página con los minutos ya puestos (o guarda solo el tiempo). Es el mismo cronómetro de los juegos: uno a la vez.
 - **Cambiar portada**: tocar la portada (o ⋮ → Cambiar portada) ofrece las ediciones de Open Library (primero en español), Apple Books y Google Books (con key), o se sube una foto propia (por ejemplo, de tu edición) o se pega la URL de una imagen.
 
-## Importar de Goodreads o StoryGraph
+## Importar de Goodreads, StoryGraph o BookWyrm
 
-- En `/libros/importar`, con el CSV que exportan: estados, puntajes, fechas, reseñas, relecturas y formato.
+- En `/libros/importar`, con el CSV que exportan: estados, puntajes, fechas, reseñas, relecturas y formato. La app se reconoce por los encabezados del archivo (`lib/bookImport.ts`).
+- **BookWyrm** (Import/Export → Export book data en la instancia): traduce los estantes (`read`, `reading`, `to-read` y `stopped-reading`; uno propio queda como "Por leer"), el puntaje de 1 a 5, las fechas de lectura y la reseña (que viene en HTML y se pasa a texto). Como el export repite la fila de un libro por cada estante, se junta en una, con el estante de lectura que más dice (leído, leyendo, abandonado, por leer). No trae páginas, formato ni relecturas.
 - Los que ya están se saltan y las portadas salen de Open Library por ISBN.
 - El archivo se procesa en el dispositivo.
 

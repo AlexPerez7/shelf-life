@@ -314,7 +314,7 @@ export function BooksLibrary() {
             to={`${section.libraryPath}/importar`}
             className="flex min-h-12 items-center justify-center gap-2 rounded-xl text-sm font-medium text-accent ring-1 ring-primary-dark/25 active:bg-primary-dark/10"
           >
-            <FileUp size={16} /> Importar de Goodreads o StoryGraph
+            <FileUp size={16} /> Importar de otra app
           </Link>
         </div>
       ) : results ? (
