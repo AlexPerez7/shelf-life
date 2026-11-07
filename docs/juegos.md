@@ -6,6 +6,7 @@ Ruta `/juegos`, código en `src/trackers/juegos/`. Tema violeta y magenta.
 
 ## Biblioteca y alta
 
+- Bajo el título, el **resumen en una línea** ("40 juegos · 2 jugando · 15 completados · 320h jugadas"; lo que está en cero no se muestra, salvo los juegos). Con filtros activos se ve además "N de M". Lógica en `lib/librarySummary.ts`.
 - Vista de lista o de portadas, filtros por estado y plataforma, favoritos, búsqueda por título y orden (recientes, título, horas, puntaje). Los filtros viven en la URL y se conservan al volver de un juego.
 - Cambio rápido de estado desde la tarjeta.
 - Estado "Deseado" (wishlist) separado de "Pendiente".

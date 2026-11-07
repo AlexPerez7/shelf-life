@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
 import { MediaCoverCard } from '../../components/MediaCoverCard'
+import { SummaryLine } from '../../components/SummaryLine'
 import { ShowMore } from '../../components/ShowMore'
 import { useBatch } from '../../hooks/useBatch'
 import { ItemStatusSheet } from '../../components/ItemStatusSheet'
@@ -49,22 +50,6 @@ const RAILS: { status: ItemStatus; title: string }[] = [
 const byRecent = (a: Item, b: Item) => b.updated_at.localeCompare(a.updated_at)
 const byFinished = (a: Item, b: Item) =>
   (b.date_finished ?? b.updated_at).localeCompare(a.date_finished ?? a.updated_at)
-
-/** Resumen de una línea con los números de Pantalla (lo que está en cero no se muestra). */
-function Stats({ items }: { items: Item[] }) {
-  const parts = screenStats(items)
-  return (
-    <p className="mb-5 text-sm leading-relaxed text-lavender">
-      {parts.map((p, i) => (
-        <span key={p.label} className="whitespace-nowrap">
-          {i > 0 && <span aria-hidden="true"> · </span>}
-          <strong className="font-semibold tabular-nums text-ink">{p.value}</strong> {p.label}
-          {i < parts.length - 1 && ' '}
-        </span>
-      ))}
-    </p>
-  )
-}
 
 interface ContinueCardProps {
   item: Item
@@ -490,7 +475,7 @@ export function ScreenLibrary() {
         </>
       ) : (
         <>
-          <Stats items={typed} />
+          <SummaryLine parts={screenStats(typed)} />
 
           {watching.length > 0 && (
             <section className="mb-6">

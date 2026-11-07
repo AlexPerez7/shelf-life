@@ -11,10 +11,11 @@ import { StatusSheet } from '../../components/StatusSheet'
 import { useToast } from '../../contexts/ToastContext'
 import { haptic } from '../../lib/haptics'
 import { todayISO } from '../../lib/dates'
-import { plural } from '../../lib/text'
 import { GameCardGridSkeleton } from '../../components/Skeleton'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
+import { SummaryLine } from '../../components/SummaryLine'
+import { gameSummary } from '../../lib/librarySummary'
 import { Chip } from '../../components/Chip'
 import { parseTags } from '../../lib/tags'
 import { statusLabels, statuses } from '../../lib/status'
@@ -212,14 +213,13 @@ export function Library() {
     <PageContainer>
       <TrackerBar tracker="juegos" />
 
-      <div className="mb-4 flex items-baseline justify-between gap-2">
+      <div className="mb-1 flex items-baseline justify-between gap-2">
         <h1 className="text-xl font-semibold">Mi biblioteca</h1>
-        {!loading && games.length > 0 && (
-          <span className="text-sm text-lavender">
-            {hasFilters ? `${sorted.length} de ${games.length}` : plural(games.length, 'juego')}
-          </span>
+        {!loading && hasFilters && (
+          <span className="text-sm text-lavender">{`${sorted.length} de ${games.length}`}</span>
         )}
       </div>
+      {!loading && games.length > 0 && <SummaryLine parts={gameSummary(games)} className="mb-4" />}
 
       {isEmpty ? (
         <EmptyLibrary />

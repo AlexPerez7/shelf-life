@@ -5,6 +5,8 @@ import { useMedia } from '../../contexts/MediaContext'
 import { useTrash } from '../../hooks/useTrash'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
+import { SummaryLine } from '../../components/SummaryLine'
+import { bookSummary } from '../../lib/librarySummary'
 import { Skeleton } from '../../components/Skeleton'
 import { mediaSections } from '../../lib/media'
 import { allSelected, selectedBooks, toggleSelected } from '../../lib/bookBatch'
@@ -40,52 +42,6 @@ function readMode(): ViewMode {
   } catch {
     return 'portadas'
   }
-}
-
-/** Franja de números del librero (como en Otium Library). */
-function Stats({ books }: { books: Item[] }) {
-  const read = books.filter((b) => b.status === 'completed').length
-  const reading = books.filter((b) => b.status === 'in_progress').length
-  const want = books.filter((b) => b.status === 'wishlist' || b.status === 'planned').length
-  const rated = books.filter((b) => b.rating != null)
-  const avg = rated.length ? rated.reduce((s, b) => s + (b.rating ?? 0), 0) / rated.length / 2 : null
-  const pages = books.reduce(
-    (s, b) => s + (b.status === 'completed' ? (b.progress_total ?? b.progress) : b.progress),
-    0
-  )
-
-  const cells: { value: string; label: string; extra?: string }[] = [
-    { value: String(books.length), label: 'Libros' },
-    {
-      value: String(read),
-      label: 'Leídos',
-      extra: books.length ? `${Math.round((read / books.length) * 100)}%` : undefined,
-    },
-    { value: String(reading), label: 'Leyendo' },
-    { value: String(want), label: 'Por leer' },
-    { value: avg != null ? avg.toFixed(1) : '—', label: 'Puntaje ★' },
-    { value: pages.toLocaleString(), label: 'Páginas' },
-  ]
-
-  return (
-    <div className="scrollbar-hide -mx-4 mb-4 flex overflow-x-auto px-4">
-      <div className="flex divide-x divide-primary-dark/15 rounded-2xl bg-background-surface shadow-sm ring-1 ring-primary-dark/15">
-        {cells.map((c) => (
-          <div key={c.label} className="flex min-w-[5.5rem] flex-col items-center px-3 py-2.5">
-            <p className="font-book flex items-baseline gap-1 text-xl font-bold text-accent">
-              {c.value}
-              {c.extra && (
-                <span className="rounded-full bg-accent/10 px-1.5 font-sans text-[10px] font-semibold">
-                  {c.extra}
-                </span>
-              )}
-            </p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-lavender">{c.label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
 }
 
 /** El librero: la única vista de la biblioteca de libros. */
@@ -381,7 +337,7 @@ export function BooksLibrary() {
         </>
       ) : (
         <>
-          <Stats books={books} />
+          <SummaryLine parts={bookSummary(books)} className="mb-3" />
           <div className="mb-4 flex justify-end">{modeToggle}</div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {units.map((unit) => (
