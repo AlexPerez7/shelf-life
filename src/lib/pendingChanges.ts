@@ -10,6 +10,12 @@
 //   - Cada actividad (episodio, páginas, sesión) lleva su propio id, generado
 //     acá: si se reintenta después de que la base ya la guardó, no se duplica
 //     (ni se vuelve a sumar su tiempo).
+//   - Un título agregado sin conexión también lleva su id desde el principio
+//     (`create`), así se puede abrir, editar y registrar avance antes de que
+//     llegue a la base; reintentar el alta no lo duplica.
+//   - Borrar (`delete`) o mandar a la papelera un título también queda en la
+//     cola. Si el título se agregó sin conexión y todavía no salió, agregarlo
+//     y borrarlo se cancelan entre sí y no tocan la base.
 
 import type { Item, ItemWrite } from '../types/item'
 
@@ -27,6 +33,46 @@ export interface PendingActivity {
 export type PendingOp =
   | { type: 'update'; itemId: string; changes: ItemWrite }
   | { type: 'activity'; itemId: string; activity: PendingActivity; changes: ItemWrite }
+  /** Un título nuevo, con el id y los valores con los que ya se está mostrando. */
+  | { type: 'create'; itemId: string; item: Item }
+  /** Borrar para siempre, o mandar a la papelera (`trash`, con `deletedAt`); `item` es lo que se veía, para poder deshacer. */
+  | { type: 'delete'; itemId: string; trash: boolean; deletedAt: string; item: Item }
+
+/** Fila de un título nuevo, con los valores por defecto de la base (para mostrarlo antes de que se guarde). */
+export function newItem(
+  write: ItemWrite & Pick<Item, 'media_type' | 'title'>,
+  userId: string,
+  id: string = crypto.randomUUID(),
+  now: string = new Date().toISOString()
+): Item {
+  return {
+    status: 'planned',
+    rating: null,
+    cover_url: null,
+    genres: [],
+    summary: null,
+    release_date: null,
+    notes: null,
+    review: null,
+    date_started: null,
+    date_finished: null,
+    time_spent_minutes: 0,
+    progress: 0,
+    progress_total: null,
+    source: null,
+    external_id: null,
+    metadata: {},
+    is_favorite: false,
+    format: null,
+    replays: 0,
+    franchise: null,
+    created_at: now,
+    ...write,
+    id,
+    user_id: userId,
+    updated_at: now,
+  }
+}
 
 export const pendingFor = (ops: PendingOp[], itemId: string) => ops.filter((o) => o.itemId === itemId)
 
@@ -35,6 +81,10 @@ export const withoutItem = (ops: PendingOp[], itemId: string) => ops.filter((o) 
 /** Las actividades de un ítem que todavía no llegaron a la base. */
 export const pendingActivities = (ops: PendingOp[], itemId: string) =>
   ops.flatMap((o) => (o.type === 'activity' && o.itemId === itemId ? [o.activity] : []))
+
+/** La papelera de un título que todavía no llegó a la base (para deshacer sin conexión). */
+export const pendingTrash = (ops: PendingOp[], itemId: string) =>
+  ops.find((o): o is Extract<PendingOp, { type: 'delete' }> => o.type === 'delete' && o.trash && o.itemId === itemId)
 
 /**
  * Suma un cambio al final de la cola. Una edición se junta con la anterior
@@ -60,7 +110,7 @@ export function addPendingOp(ops: PendingOp[], op: PendingOp, inFlight?: Pending
 export function applyPendingOps(item: Item, ops: PendingOp[]): Item {
   let out = item
   for (const op of ops) {
-    if (op.itemId !== item.id) continue
+    if (op.itemId !== item.id || (op.type !== 'update' && op.type !== 'activity')) continue
     out = { ...out, ...op.changes } as Item
     if (op.type === 'activity' && op.activity.duration_minutes) {
       // En la base el tiempo lo suma un trigger al guardar la actividad.
@@ -70,11 +120,21 @@ export function applyPendingOps(item: Item, ops: PendingOp[]): Item {
   return out
 }
 
-/** Lo que trae la base, con los cambios que todavía no llegaron encima. */
+/**
+ * Lo que trae la base, con los cambios que todavía no llegaron encima: lo
+ * editado, lo agregado (los más nuevos primero) y sin lo que se borró.
+ */
 export function overlayPending(items: Item[], ops: PendingOp[]): Item[] {
   if (ops.length === 0) return items
   const ids = new Set(ops.map((o) => o.itemId))
-  return items.map((i) => (ids.has(i.id) ? applyPendingOps(i, ops) : i))
+  const deleted = new Set(ops.filter((o) => o.type === 'delete').map((o) => o.itemId))
+  const known = new Set(items.map((i) => i.id))
+  const created = ops
+    .flatMap((o) => (o.type === 'create' && !known.has(o.itemId) && !deleted.has(o.itemId) ? [o.item] : []))
+    .map((i) => applyPendingOps(i, ops))
+    .reverse()
+  const base = items.filter((i) => !deleted.has(i.id)).map((i) => (ids.has(i.id) ? applyPendingOps(i, ops) : i))
+  return [...created, ...base]
 }
 
 /**
@@ -98,7 +158,13 @@ export const pendingKey = (scope: string, userId: string) => `shelflife_pending_
 function isOp(value: unknown): value is PendingOp {
   if (typeof value !== 'object' || value == null) return false
   const op = value as Record<string, unknown>
-  if (typeof op.itemId !== 'string' || typeof op.changes !== 'object' || op.changes == null) return false
+  if (typeof op.itemId !== 'string') return false
+  if (op.type === 'create' || op.type === 'delete') {
+    const item = op.item as Record<string, unknown> | undefined
+    if (typeof item?.id !== 'string' || item.id !== op.itemId) return false
+    return op.type === 'create' || (typeof op.trash === 'boolean' && typeof op.deletedAt === 'string')
+  }
+  if (typeof op.changes !== 'object' || op.changes == null) return false
   if (op.type === 'update') return true
   const a = op.activity as Record<string, unknown> | undefined
   return op.type === 'activity' && typeof a?.id === 'string' && typeof a.occurred_at === 'string'

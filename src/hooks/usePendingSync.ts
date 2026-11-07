@@ -9,6 +9,7 @@ import {
   pendingActivities,
   pendingFor,
   pendingKey,
+  pendingTrash,
   readPending,
   withoutItem,
   writePending,
@@ -64,8 +65,27 @@ export function usePendingSync(
     return next
   }, [])
 
-  /** Manda un cambio a la base y devuelve la fila como quedó. */
-  const run = useCallback(async (op: PendingOp): Promise<Item> => {
+  /** Manda un cambio a la base y devuelve la fila como quedó (`null` si se borró). */
+  const run = useCallback(async (op: PendingOp): Promise<Item | null> => {
+    if (op.type === 'delete') {
+      // Borrar algo que ya no está no es un error.
+      const { error } = op.trash
+        ? await supabase.from('items').update({ deleted_at: op.deletedAt }).eq('id', op.itemId)
+        : await supabase.from('items').delete().eq('id', op.itemId)
+      if (error) throw error
+      return null
+    }
+    if (op.type === 'create') {
+      // Con el id generado en el dispositivo: si ya estaba (reintento), no se duplica.
+      // `updated_at` lo pone la base.
+      const row: Record<string, unknown> = { ...op.item }
+      delete row.updated_at
+      const { error } = await supabase.from('items').upsert(row, { onConflict: 'id', ignoreDuplicates: true })
+      if (error) throw error
+      const { data, error: readError } = await supabase.from('items').select('*').eq('id', op.itemId).single()
+      if (readError) throw readError
+      return data as Item
+    }
     if (op.type === 'activity') {
       // Con el id generado en el dispositivo: si ya estaba (reintento), no se duplica.
       const { error } = await supabase.from('activity_log').upsert(
@@ -103,8 +123,10 @@ export function usePendingSync(
           const saved = await enqueue(op.itemId, () => run(op))
           if (userRef.current !== user) break
           persist(opsRef.current.filter((o) => o !== op))
-          const rest = pendingFor(opsRef.current, op.itemId)
-          setItems((prev) => prev.map((i) => (i.id === op.itemId ? applyPendingOps(saved, rest) : i)))
+          if (saved) {
+            const rest = pendingFor(opsRef.current, op.itemId)
+            setItems((prev) => prev.map((i) => (i.id === op.itemId ? applyPendingOps(saved, rest) : i)))
+          }
         } catch (err) {
           if (isNetworkError(err)) break
           // La base lo rechazó (ej. el ítem ya no existe): se descarta y el
@@ -162,7 +184,8 @@ export function usePendingSync(
         const saved = await enqueue(id, () => {
           // Si mientras esperaba su turno algo de este ítem quedó en la cola, va detrás.
           if (pendingFor(opsRef.current, id).length > 0) throw new QueuedBehind()
-          return run(op)
+          // Editar y registrar actividad siempre devuelven la fila.
+          return run(op) as Promise<Item>
         })
         if (seqRef.current.get(id) === seq) setItems((prev) => prev.map((i) => (i.id === id ? saved : i)))
         return saved
@@ -175,6 +198,105 @@ export function usePendingSync(
       }
     },
     [enqueue, flush, itemsRef, persist, run, setItems]
+  )
+
+  /** Usuario con la sesión abierta (se sabe sin conexión, a diferencia de `auth.getUser()`). */
+  const getUserId = useCallback(() => userRef.current, [])
+
+  /** Suma un cambio a la cola y trata de mandarla. */
+  const queueOp = useCallback(
+    (op: PendingOp) => {
+      persist(addPendingOp(opsRef.current, op, inFlightRef.current))
+      void flush()
+    },
+    [flush, persist]
+  )
+
+  /**
+   * Alta optimista: el título se ve al instante con su id ya generado y se
+   * guarda en segundo plano; sin conexión queda en la cola (se puede abrir y
+   * editar mientras tanto). Si la base lo rechaza, se saca y el error sube.
+   */
+  const create = useCallback(
+    async (item: Item): Promise<Item> => {
+      const id = item.id
+      setItems((prev) => [item, ...prev])
+      const op: PendingOp = { type: 'create', itemId: id, item }
+      try {
+        const saved = await enqueue(id, async () => (await run(op)) as Item)
+        // Lo que el usuario cambió mientras se guardaba (si quedó en la cola) va encima.
+        const rest = pendingFor(opsRef.current, id)
+        setItems((prev) => prev.map((i) => (i.id === id ? applyPendingOps(saved, rest) : i)))
+        return saved
+      } catch (err) {
+        if (isNetworkError(err)) {
+          persist(addPendingOp(opsRef.current, op, inFlightRef.current))
+          return item
+        }
+        setItems((prev) => prev.filter((i) => i.id !== id))
+        throw err
+      }
+    },
+    [enqueue, persist, run, setItems]
+  )
+
+  /**
+   * Borra (o manda a la papelera) un título: sale al instante y se guarda en
+   * segundo plano. Sin conexión queda en la cola. Si el título se agregó sin
+   * conexión y todavía no salió, simplemente se descarta: la base no se entera.
+   */
+  const remove = useCallback(
+    async (id: string, mode: { trash: boolean }): Promise<void> => {
+      const created = opsRef.current.find((o) => o.type === 'create' && o.itemId === id)
+      if (created && created !== inFlightRef.current) {
+        persist(withoutItem(opsRef.current, id))
+        setItems((prev) => prev.filter((i) => i.id !== id))
+        return
+      }
+      const previous = itemsRef.current.find((i) => i.id === id)
+      const op: PendingOp = {
+        type: 'delete',
+        itemId: id,
+        trash: mode.trash,
+        deletedAt: new Date().toISOString(),
+        // Sin el ítem en memoria (ej. uno que ya estaba en la papelera) no hay qué deshacer: alcanza el id.
+        item: previous ?? ({ id } as Item),
+      }
+      setItems((prev) => prev.filter((i) => i.id !== id))
+      if (pendingFor(opsRef.current, id).length > 0) {
+        queueOp(op)
+        return
+      }
+      try {
+        await enqueue(id, () => {
+          if (pendingFor(opsRef.current, id).length > 0) throw new QueuedBehind()
+          return run(op)
+        })
+      } catch (err) {
+        if (err instanceof QueuedBehind || isNetworkError(err)) {
+          queueOp(op)
+          return
+        }
+        if (previous) setItems((prev) => (prev.some((i) => i.id === id) ? prev : [previous, ...prev]))
+        throw err
+      }
+    },
+    [enqueue, itemsRef, persist, queueOp, run, setItems]
+  )
+
+  /**
+   * Deshace una papelera que todavía no llegó a la base: el título vuelve tal
+   * como estaba. `null` si ya no está en la cola (entonces se restaura en la base).
+   */
+  const cancelTrash = useCallback(
+    (id: string): Item | null => {
+      const op = pendingTrash(opsRef.current, id)
+      if (!op || op === inFlightRef.current || !op.item.title) return null
+      persist(opsRef.current.filter((o) => o !== op))
+      setItems((prev) => (prev.some((i) => i.id === id) ? prev : [op.item, ...prev]))
+      return op.item
+    },
+    [persist, setItems]
   )
 
   /** Usuario dueño de la cola (al iniciar sesión, `null` al cerrarla). */
@@ -242,6 +364,10 @@ export function usePendingSync(
 
   return {
     save,
+    create,
+    remove,
+    cancelTrash,
+    getUserId,
     flush,
     setUser,
     overlay,

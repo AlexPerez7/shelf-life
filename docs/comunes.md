@@ -41,7 +41,9 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 - Si la base rechaza un cambio al reintentar (por ejemplo, el título se borró en otro dispositivo), se descarta con un aviso.
 - Al cerrar sesión se intenta guardar lo pendiente y, si no se puede, se pregunta antes de perderlo.
 - Las sesiones de juego hechas sin señal aparecen en la lista con la marca "sin guardar"; borrar una de esas solo la saca de la cola.
-- Todavía necesitan conexión: agregar o borrar títulos, borrar una sesión ya guardada y las listas.
+- **Agregar un título** también queda en la cola: se ve al instante con un id generado en el dispositivo, así se puede abrir, editar y registrar avance antes de que llegue a la base (un reintento no lo duplica). Buscar en las APIs (IGDB, TMDB, Open Library...) sí necesita señal, así que sin conexión se agrega "a mano" o un título que ya se buscó.
+- **Borrar un título** (o mandar un libro a la papelera) sale al instante y se guarda en segundo plano. "Deshacer" sobre una papelera que todavía no llegó a la base solo la cancela. Un título agregado sin conexión que se borra antes de salir se descarta sin tocar la base.
+- Todavía necesitan conexión: las importaciones (Steam, Goodreads...), agregar un título a una lista (si el título todavía no está en la base, falla), borrar una sesión ya guardada y las listas.
 
 ## Fotos propias como portada
 

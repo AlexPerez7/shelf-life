@@ -5,14 +5,17 @@ import {
   isNetworkError,
   overlayPending,
   pendingActivities,
+  newItem,
   pendingFor,
+  pendingTrash,
   withoutItem,
   type PendingOp,
 } from './pendingChanges'
 import { makeItem } from '../test/factories'
+import type { ItemWrite } from '../types/item'
 
-const update = (itemId: string, changes: PendingOp['changes']): PendingOp => ({ type: 'update', itemId, changes })
-const activity = (itemId: string, id: string, minutes: number | null, changes: PendingOp['changes'] = {}): PendingOp => ({
+const update = (itemId: string, changes: ItemWrite): PendingOp => ({ type: 'update', itemId, changes })
+const activity = (itemId: string, id: string, minutes: number | null, changes: ItemWrite = {}): PendingOp => ({
   type: 'activity',
   itemId,
   activity: { id, duration_minutes: minutes, progress_delta: 1, occurred_at: '2026-10-10T20:00:00Z' },
@@ -86,5 +89,73 @@ describe('isNetworkError', () => {
 
   it('un rechazo de la base no es de red', () => {
     expect(isNetworkError({ message: 'new row violates row-level security policy', code: '42501' }, true)).toBe(false)
+  })
+})
+
+const create = (item: ReturnType<typeof makeItem>): PendingOp => ({ type: 'create', itemId: item.id, item })
+const trash = (item: ReturnType<typeof makeItem>, trashed = true): PendingOp => ({
+  type: 'delete',
+  itemId: item.id,
+  trash: trashed,
+  deletedAt: '2026-10-11T10:00:00Z',
+  item,
+})
+
+describe('newItem', () => {
+  it('completa los valores por defecto de la base y deja lo que se pasa', () => {
+    const item = newItem({ media_type: 'book', title: 'Rayuela', status: 'wishlist' }, 'user-1', 'id-1', '2026-10-11T10:00:00Z')
+    expect(item).toMatchObject({
+      id: 'id-1',
+      user_id: 'user-1',
+      media_type: 'book',
+      title: 'Rayuela',
+      status: 'wishlist',
+      progress: 0,
+      time_spent_minutes: 0,
+      genres: [],
+      metadata: {},
+      is_favorite: false,
+      created_at: '2026-10-11T10:00:00Z',
+    })
+  })
+
+  it('sin estado, empieza como la base: "planned"', () => {
+    expect(newItem({ media_type: 'game', title: 'Hades' }, 'u').status).toBe('planned')
+  })
+})
+
+describe('altas y bajas pendientes', () => {
+  const base = makeItem({ id: 'base', created_at: '2026-01-01T00:00:00Z' })
+  const fresh = makeItem({ id: 'fresh', created_at: '2026-10-11T09:00:00Z', progress: 0 })
+
+  it('lo agregado sin conexión aparece primero, con sus ediciones encima', () => {
+    const out = overlayPending([base], [create(fresh), update('fresh', { progress: 7 })])
+    expect(out.map((i) => i.id)).toEqual(['fresh', 'base'])
+    expect(out[0].progress).toBe(7)
+  })
+
+  it('con varias altas, la más nueva va primero', () => {
+    const second = makeItem({ id: 'second' })
+    expect(overlayPending([base], [create(fresh), create(second)]).map((i) => i.id)).toEqual(['second', 'fresh', 'base'])
+  })
+
+  it('si la base ya tiene el título (se guardó pero la cola no se limpió), no se repite', () => {
+    const out = overlayPending([fresh, base], [create(fresh)])
+    expect(out.map((i) => i.id)).toEqual(['fresh', 'base'])
+  })
+
+  it('lo borrado no se ve, venga de la base o de la cola', () => {
+    expect(overlayPending([base], [trash(base)])).toEqual([])
+    expect(overlayPending([base], [create(fresh), trash(fresh, false)]).map((i) => i.id)).toEqual(['base'])
+  })
+
+  it('applyPendingOps ignora altas y bajas', () => {
+    expect(applyPendingOps(base, [create(base), trash(base)])).toBe(base)
+  })
+
+  it('encuentra la papelera pendiente de un título, no el borrado definitivo', () => {
+    expect(pendingTrash([trash(base)], 'base')?.item).toBe(base)
+    expect(pendingTrash([trash(base, false)], 'base')).toBeUndefined()
+    expect(pendingTrash([trash(base)], 'otro')).toBeUndefined()
   })
 })

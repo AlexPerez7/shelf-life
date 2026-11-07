@@ -4,6 +4,7 @@ import { supabase, ensureSession } from '../lib/supabaseClient'
 import { readCache, removeCacheByPrefix, writeCache } from '../lib/localCache'
 import { usePendingSync } from '../hooks/usePendingSync'
 import { isMissingTrashColumn, trashCutoff } from '../lib/trash'
+import { newItem } from '../lib/pendingChanges'
 import type { Item, ItemWrite } from '../types/item'
 
 interface Activity {
@@ -155,21 +156,17 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     }
   }, [items])
 
-  const addItem = useCallback<MediaContextValue['addItem']>(async (item) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) throw new Error('No hay sesión activa')
+  const { save, create, remove, cancelTrash, getUserId } = sync
 
-    const { data, error } = await supabase
-      .from('items')
-      .insert({ ...item, user_id: user.id })
-      .select()
-      .single()
-    if (error) throw error
-    setItems((prev) => [data as Item, ...prev])
-    return data as Item
-  }, [])
+  /** Optimista y con cola sin conexión, como `updateItem`: el título se ve al instante con su id. */
+  const addItem = useCallback<MediaContextValue['addItem']>(
+    async (item) => {
+      const userId = getUserId()
+      if (!userId) throw new Error('No hay sesión activa')
+      return create(newItem(item, userId))
+    },
+    [create, getUserId]
+  )
 
   const addItems = useCallback<MediaContextValue['addItems']>(async (newItems, onProgress) => {
     const {
@@ -190,7 +187,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return created
   }, [])
 
-  const { save, dropItem } = sync
   /**
    * Optimista: el cambio se ve al instante y se guarda en segundo plano (la
    * ida y vuelta a Supabase en el teléfono puede tardar segundos). Sin
@@ -201,21 +197,14 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     [save]
   )
 
-  const deleteItem = useCallback<MediaContextValue['deleteItem']>(async (id) => {
-    const { error } = await supabase.from('items').delete().eq('id', id)
-    if (error) throw error
-    dropItem(id)
-    setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [dropItem])
+  const deleteItem = useCallback<MediaContextValue['deleteItem']>((id) => remove(id, { trash: false }), [remove])
 
-  const trashItem = useCallback<MediaContextValue['trashItem']>(async (id) => {
-    const { error } = await supabase.from('items').update({ deleted_at: new Date().toISOString() }).eq('id', id)
-    if (error) throw error
-    dropItem(id)
-    setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [dropItem])
+  const trashItem = useCallback<MediaContextValue['trashItem']>((id) => remove(id, { trash: true }), [remove])
 
   const restoreItem = useCallback<MediaContextValue['restoreItem']>(async (id) => {
+    // Si la papelera todavía no llegó a la base, alcanza con cancelarla.
+    const cancelled = cancelTrash(id)
+    if (cancelled) return cancelled
     const { data, error } = await supabase.from('items').update({ deleted_at: null }).eq('id', id).select().single()
     if (error) throw error
     const item = data as Item
@@ -223,7 +212,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       prev.some((i) => i.id === id) ? prev : [...prev, item].sort((a, b) => b.created_at.localeCompare(a.created_at))
     )
     return item
-  }, [])
+  }, [cancelTrash])
 
   /**
    * También optimista: el avance (y el tiempo, que en la base suma un
