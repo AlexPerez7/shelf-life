@@ -34,6 +34,7 @@ import { CoverPicker } from '../../components/CoverPicker'
 import { FormatPicker } from '../../components/FormatPicker'
 import { ReadingHistory } from './ReadingHistory'
 import { MoreByAuthor } from './MoreByAuthor'
+import { TRASH_DAYS } from '../../lib/trash'
 import { EditionPicker } from './EditionPicker'
 import { editionChanges } from '../../lib/bookEditions'
 import { rereadChanges, timesRead } from '../../lib/readings'
@@ -259,7 +260,7 @@ export function BookDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { items, loading, updateItem, deleteItem } = useMedia()
+  const { items, loading, updateItem, deleteItem, trashAvailable, trashItem, restoreItem } = useMedia()
   const { showToast, showError } = useToast()
   const confirm = useConfirm()
   const quick = useQuickProgress()
@@ -373,16 +374,36 @@ export function BookDetail() {
 
   async function handleDelete() {
     setMenuOpen(false)
-    const ok = await confirm({
-      title: `¿Eliminar ${current.title}?`,
-      message: 'Se borra de tu librero junto con su historial de lectura.',
-      confirmLabel: 'Eliminar',
-      danger: true,
-    })
+    const ok = await confirm(
+      trashAvailable
+        ? {
+            title: `¿Mandar ${current.title} a la papelera?`,
+            message: `Sale de tu librero, tus listas y tus estadísticas. Queda ${TRASH_DAYS} días en la papelera y lo puedes restaurar.`,
+            confirmLabel: 'Mandar a la papelera',
+          }
+        : {
+            title: `¿Eliminar ${current.title}?`,
+            message: 'Se borra de tu librero junto con su historial de lectura.',
+            confirmLabel: 'Eliminar',
+            danger: true,
+          }
+    )
     if (!ok) return
     try {
-      await deleteItem(current.id)
-      showToast(`${current.title} eliminado`)
+      if (trashAvailable) {
+        const { id, title } = current
+        await trashItem(id)
+        showToast(`${title} está en la papelera`, {
+          duration: 6000,
+          action: {
+            label: 'Deshacer',
+            onClick: () => restoreItem(id).catch((err) => showError(err, 'No se pudo restaurar')),
+          },
+        })
+      } else {
+        await deleteItem(current.id)
+        showToast(`${current.title} eliminado`)
+      }
       navigate(section.libraryPath, { replace: true })
     } catch (err) {
       showError(err, 'No se pudo eliminar')

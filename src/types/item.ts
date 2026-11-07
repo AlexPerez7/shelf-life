@@ -71,6 +71,8 @@ export interface Item {
   format: string | null
   replays: number
   franchise: string | null
+  /** Libros: cuándo se mandó a la papelera (migración 0015); `null` o ausente si no está en ella. */
+  deleted_at?: string | null
   created_at: string
   updated_at: string
 }

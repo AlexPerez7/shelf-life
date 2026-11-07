@@ -12,6 +12,7 @@ const BookAdd = lazy(() => import('./BookAdd').then((m) => ({ default: m.BookAdd
 const BookStats = lazy(() => import('./BookStats').then((m) => ({ default: m.BookStats })))
 const BookHistory = lazy(() => import('./BookHistory').then((m) => ({ default: m.BookHistory })))
 const BookImport = lazy(() => import('./BookImport').then((m) => ({ default: m.BookImport })))
+const BookTrash = lazy(() => import('./BookTrash').then((m) => ({ default: m.BookTrash })))
 const BookDetail = lazy(() => import('./BookDetail').then((m) => ({ default: m.BookDetail })))
 
 const section = mediaSections.libros
@@ -40,6 +41,7 @@ export function BooksTracker() {
           <Route path="estadisticas" element={<BookStats />} />
           <Route path="historial" element={<BookHistory />} />
           <Route path="importar" element={<BookImport />} />
+          <Route path="papelera" element={<BookTrash />} />
           <Route path=":id" element={<BookDetail />} />
         </Routes>
       </Suspense>

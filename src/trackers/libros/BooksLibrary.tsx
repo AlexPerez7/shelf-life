@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileUp, Library, List, Rows3, Search, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileUp, Library, List, Rows3, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
+import { useTrash } from '../../hooks/useTrash'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
 import { Skeleton } from '../../components/Skeleton'
@@ -88,7 +89,8 @@ function Stats({ books }: { books: Item[] }) {
 /** El librero: la única vista de la biblioteca de libros. */
 export function BooksLibrary() {
   const navigate = useNavigate()
-  const { items, loading, error } = useMedia()
+  const { items, loading, error, trashAvailable } = useMedia()
+  const trash = useTrash(trashAvailable)
   const books = useMemo(() => items.filter((i) => i.media_type === 'book'), [items])
 
   const [params, setParams] = useSearchParams()
@@ -371,6 +373,14 @@ export function BooksLibrary() {
             ))}
           </div>
           <MissingCovers books={books} />
+          {trashAvailable && (
+            <Link
+              to={`${section.libraryPath}/papelera`}
+              className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-medium text-lavender ring-1 ring-primary-dark/25 active:bg-primary-dark/10"
+            >
+              <Trash2 size={15} /> Papelera{trash.items?.length ? ` · ${trash.items.length}` : ''}
+            </Link>
+          )}
         </>
       )}
 

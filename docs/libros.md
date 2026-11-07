@@ -12,6 +12,14 @@ Ruta `/libros`, código en `src/trackers/libros/`. Lecturas por páginas, con te
 - **Vista de lista**: además de portadas y lomos, una lista compacta con una fila por libro (autor, estado y el dato por el que se ordena).
 - **Completar portadas**: si hay libros sin portada (o con la que puso la importación, que puede no existir), una tarjeta al final del librero las revisa y busca las que faltan en Open Library (por ISBN o título), Google Books (con key) y Apple Books (`lib/bookCovers.ts`).
 
+## Papelera
+
+- Borrar un libro desde su ficha lo manda a la **papelera** (`/libros/papelera`, con un acceso al final del librero): sale del librero, de las listas, de las estadísticas y del diario, y el aviso que aparece ofrece "Deshacer".
+- Queda **30 días**. Ahí se puede **Restaurar** (vuelve con su historial y sus listas, tal como estaba), eliminar para siempre o vaciar la papelera. Cada libro dice cuántos días le quedan.
+- Lo vencido se elimina solo al abrir la app (`MediaProvider` borra lo que lleva más de 30 días). Los plazos están en `lib/trash.ts`.
+- Es un borrado "blando": `items.deleted_at` (migración `0015`). `MediaContext` no trae lo que tiene `deleted_at`, y `useActivity` deja afuera su actividad. Sin la migración, la app sigue igual y borrar elimina el libro para siempre (el aviso de confirmación lo dice).
+- Solo Libros: Pantalla y Juegos siguen borrando directo. Importar o buscar un libro que está en la papelera lo agrega como nuevo.
+
 ## Alta
 
 - Busca por título, autor o ISBN, en una lista con ficha (autores, páginas, editorial, sinopsis).

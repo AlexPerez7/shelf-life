@@ -19,13 +19,14 @@ VITE_SUPABASE_ANON_KEY=
 
 ## 3. Migraciones
 
-Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, hoy de la `0001` a la `0014`), o `supabase db push`.
+Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, hoy de la `0001` a la `0015`), o `supabase db push`.
 
 - La `0008` crea un trigger que suma y resta las horas jugadas al registrar o borrar una sesión. El frontend ya no actualiza `hours_played` en ese caso, así que tiene que aplicarse **antes** de desplegar el frontend.
 - La `0011` crea la tabla `items` (todo lo que se registra, de los tres trackers), `activity_log` y `list_items`.
 - La `0012` crea `goals` (metas del año). Sin ella la app funciona igual, solo no muestra las metas.
 - La `0013` crea el bucket público de Storage `covers` y sus políticas, para subir una foto propia como portada (cada usuario solo escribe en su carpeta). Sin ella, "Subir una foto" avisa que falta aplicarla. Se puede aplicar pegando el archivo en el *SQL Editor* del dashboard de Supabase.
 - La `0014` suma `kind` a `goals` para la meta de páginas de Libros (la clave pasa a incluirlo y el tope de la meta sube a 1.000.000). Las metas que ya existen quedan como de libros leídos. Sin ella la app funciona igual, solo que Libros no ofrece la meta de páginas.
+- La `0015` agrega `items.deleted_at` para la papelera de Libros (un libro borrado queda 30 días con "Restaurar"). Sin ella la app funciona igual, pero borrar un libro lo elimina para siempre.
 
 Una migración nueva va con el número siguiente y se anota acá.
 

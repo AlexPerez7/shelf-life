@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ensureSession, supabase } from '../lib/supabaseClient'
 import type { ActivityRow } from '../lib/stats'
+import { isMissingTrashColumn } from '../lib/trash'
 import type { MediaType } from '../types/item'
 
 // Última respuesta de cada consulta: al volver a una pantalla se pinta al
@@ -23,23 +24,27 @@ export function useActivity(types: MediaType[], months: number | null = 12) {
 
   useEffect(() => {
     let cancelled = false
-    ensureSession().then(() => {
-      let query = supabase
-        .from('activity_log')
-        .select('id, item_id, occurred_at, duration_minutes, progress_delta, items!inner(media_type)')
-        .in('items.media_type', typesKey.split(','))
-      if (months != null) {
-        const since = new Date()
-        since.setMonth(since.getMonth() - months, 1)
-        query = query.gte('occurred_at', since.toISOString())
+    ensureSession().then(async () => {
+      const since = new Date()
+      if (months != null) since.setMonth(since.getMonth() - months, 1)
+      const run = (excludeTrash: boolean) => {
+        let query = supabase
+          .from('activity_log')
+          .select('id, item_id, occurred_at, duration_minutes, progress_delta, items!inner(media_type)')
+          .in('items.media_type', typesKey.split(','))
+        // La actividad de lo que está en la papelera no cuenta (migración 0015).
+        if (excludeTrash) query = query.is('items.deleted_at', null)
+        if (months != null) query = query.gte('occurred_at', since.toISOString())
+        return query.order('occurred_at', { ascending: true })
       }
-      return query.order('occurred_at', { ascending: true }).then(({ data, error }) => {
-        if (cancelled) return
-        // Un error no borra lo que ya había en cache.
-        const rows = error ? (cache.get(key) ?? []) : ((data as ActivityRow[] | null) ?? [])
-        if (!error) cache.set(key, rows)
-        setState({ key, rows })
-      })
+      let { data, error } = await run(true)
+      // Sin la migración 0015 no existe la columna: se pide todo, como antes.
+      if (error && isMissingTrashColumn(error)) ({ data, error } = await run(false))
+      if (cancelled) return
+      // Un error no borra lo que ya había en cache.
+      const rows = error ? (cache.get(key) ?? []) : ((data as ActivityRow[] | null) ?? [])
+      if (!error) cache.set(key, rows)
+      setState({ key, rows })
     })
     return () => {
       cancelled = true

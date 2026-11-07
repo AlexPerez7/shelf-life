@@ -77,7 +77,8 @@ function csvCell(value: unknown) {
 /** La biblioteca (los tres trackers) en CSV, con BOM para que Excel lea los acentos. */
 export async function exportCsv(): Promise<Blob> {
   await ensureSession()
-  const items = (await fetchAll('items', 'created_at')) as unknown as Item[]
+  // Lo que está en la papelera (migración 0015) no es parte de la biblioteca.
+  const items = ((await fetchAll('items', 'created_at')) as unknown as Item[]).filter((i) => !i.deleted_at)
   const lines = [
     CSV_COLUMNS.map(([name]) => csvCell(name)).join(','),
     ...items.map((item) => CSV_COLUMNS.map(([, get]) => csvCell(get(item))).join(',')),

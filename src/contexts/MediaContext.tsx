@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { supabase, ensureSession } from '../lib/supabaseClient'
 import { readCache, removeCacheByPrefix, writeCache } from '../lib/localCache'
 import { usePendingSync } from '../hooks/usePendingSync'
+import { isMissingTrashColumn, trashCutoff } from '../lib/trash'
 import type { Item, ItemWrite } from '../types/item'
 
 interface Activity {
@@ -25,7 +26,14 @@ interface MediaContextValue {
     onProgress?: (done: number) => void
   ) => Promise<Item[]>
   updateItem: (id: string, changes: ItemWrite) => Promise<Item>
+  /** Borra para siempre (y sus actividades). Los libros van antes a la papelera: ver `trashItem`. */
   deleteItem: (id: string) => Promise<void>
+  /** ¿La base tiene papelera (migración 0015)? Entonces los libros se mandan a ella en vez de borrarse. */
+  trashAvailable: boolean
+  /** Manda un libro a la papelera: sale del librero, de las listas y de las estadísticas hasta restaurarlo. */
+  trashItem: (id: string) => Promise<void>
+  /** Saca un ítem de la papelera y lo devuelve al librero. */
+  restoreItem: (id: string) => Promise<Item>
   /**
    * Registra actividad (película vista, episodios) en `activity_log` y aplica
    * `changes` al ítem. El tiempo invertido lo suma el trigger de la DB; el
@@ -46,6 +54,17 @@ const MediaContext = createContext<MediaContextValue | null>(null)
 
 const CACHE_PREFIX = 'shelflife_media_v1:'
 
+/** Si la base tiene papelera, recordado para saberlo antes de la primera respuesta. */
+const TRASH_KEY = 'shelflife_trash_available'
+
+function readTrashAvailable() {
+  try {
+    return localStorage.getItem(TRASH_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 /**
  * Biblioteca de las secciones que no son juegos. Mismo esquema que
  * GamesProvider: cache local para pintar al instante y revalidación contra la
@@ -55,6 +74,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [trashAvailable, setTrashAvailable] = useState(readTrashAvailable)
   const hasLoaded = useRef(false)
   const userIdRef = useRef<string | null>(null)
   // Estado actual, para tener el "antes" de un cambio optimista.
@@ -68,15 +88,27 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const fetchItems = useCallback(async () => {
     if (!hasLoaded.current) setLoading(true)
     await ensureSession()
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .neq('media_type', 'game')
-      .order('created_at', { ascending: false })
+    const base = () =>
+      supabase.from('items').select('*').neq('media_type', 'game').order('created_at', { ascending: false })
+    // Lo de la papelera no se ve. Sin la migración 0015 no existe la columna: se pide todo, como antes.
+    let { data, error } = await base().is('deleted_at', null)
+    let hasTrash = !error
+    if (error && isMissingTrashColumn(error)) {
+      ;({ data, error } = await base())
+      hasTrash = false
+    }
 
     if (error) {
       if (!hasLoaded.current) setError(error.message)
     } else {
+      setTrashAvailable(hasTrash)
+      try {
+        localStorage.setItem(TRASH_KEY, hasTrash ? '1' : '0')
+      } catch {
+        /* solo evita un parpadeo al abrir */
+      }
+      // Lo que lleva más de 30 días en la papelera se elimina (sin esperar el resultado).
+      if (hasTrash) void supabase.from('items').delete().lt('deleted_at', trashCutoff())
       // Lo hecho sin conexión que todavía no llegó se sigue viendo.
       setItems(overlay(data as Item[]))
       setError(null)
@@ -176,6 +208,23 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     setItems((prev) => prev.filter((i) => i.id !== id))
   }, [dropItem])
 
+  const trashItem = useCallback<MediaContextValue['trashItem']>(async (id) => {
+    const { error } = await supabase.from('items').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    if (error) throw error
+    dropItem(id)
+    setItems((prev) => prev.filter((i) => i.id !== id))
+  }, [dropItem])
+
+  const restoreItem = useCallback<MediaContextValue['restoreItem']>(async (id) => {
+    const { data, error } = await supabase.from('items').update({ deleted_at: null }).eq('id', id).select().single()
+    if (error) throw error
+    const item = data as Item
+    setItems((prev) =>
+      prev.some((i) => i.id === id) ? prev : [...prev, item].sort((a, b) => b.created_at.localeCompare(a.created_at))
+    )
+    return item
+  }, [])
+
   /**
    * También optimista: el avance (y el tiempo, que en la base suma un
    * trigger) se ve al instante; el registro y el cambio se guardan en fila,
@@ -215,13 +264,32 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       addItems,
       updateItem,
       deleteItem,
+      trashAvailable,
+      trashItem,
+      restoreItem,
       logActivity,
       pendingCount,
       syncError,
       flushPending: flush,
       discardPending: discard,
     }),
-    [items, loading, error, addItem, addItems, updateItem, deleteItem, logActivity, pendingCount, syncError, flush, discard]
+    [
+      items,
+      loading,
+      error,
+      addItem,
+      addItems,
+      updateItem,
+      deleteItem,
+      trashAvailable,
+      trashItem,
+      restoreItem,
+      logActivity,
+      pendingCount,
+      syncError,
+      flush,
+      discard,
+    ]
   )
 
   return <MediaContext.Provider value={value}>{children}</MediaContext.Provider>
