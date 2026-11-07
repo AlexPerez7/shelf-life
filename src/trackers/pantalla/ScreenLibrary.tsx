@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronRight, FileUp, Plus, Search, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, FileUp, Flame, Plus, Search, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { useToast } from '../../contexts/ToastContext'
 import { PageContainer } from '../../components/PageContainer'
@@ -13,6 +13,7 @@ import { GameThumb } from '../../components/GameThumb'
 import { Skeleton } from '../../components/Skeleton'
 import { useQuickProgress } from '../../hooks/useQuickProgress'
 import { useUpcoming } from '../../hooks/useUpcoming'
+import { useTrending } from '../../hooks/useTrending'
 import { UpcomingEpisodes } from './UpcomingEpisodes'
 import { haptic } from '../../lib/haptics'
 import { sizedCover } from '../../lib/images'
@@ -195,6 +196,50 @@ function Rail({ title, items, onSeeAll, onOpen }: RailProps) {
   )
 }
 
+/** Pocos títulos: hasta esta cantidad en la biblioteca se ofrecen tendencias para llenar el espacio. */
+const DISCOVER_MAX_ITEMS = 12
+
+/** Carrusel de tendencias para descubrir; tocar un póster lleva a Agregar con ese tipo. */
+function Discover({ type, owned }: { type: ScreenType; owned: Set<string> }) {
+  const trending = useTrending(type)
+  const list = (trending ?? []).filter((r) => !owned.has(`${r.source}:${r.external_id}`)).slice(0, 12)
+  if (trending != null && list.length === 0) return null
+  const addTo = `${section.addPath}?tipo=${type}`
+  return (
+    <section className="mb-6">
+      <Link
+        to={addTo}
+        className="-mx-1 mb-2 flex min-h-11 w-[calc(100%+0.5rem)] items-center justify-between gap-2 rounded-lg px-1 active:bg-primary-dark/20"
+      >
+        <h2 className="flex items-center gap-1.5 text-lg font-semibold text-ink">
+          <Flame size={18} className="text-accent" /> Para descubrir
+        </h2>
+        <span className="flex items-center text-sm text-accent">
+          Buscar más <ChevronRight size={16} />
+        </span>
+      </Link>
+      <div className="scrollbar-hide -mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-1">
+        {trending == null
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-[2/3] w-28 shrink-0 sm:w-32" />
+            ))
+          : list.map((r) => (
+              <Link
+                key={`${r.source}:${r.external_id}`}
+                to={addTo}
+                className="w-28 shrink-0 snap-start active:opacity-80 sm:w-32"
+              >
+                <div className="aspect-[2/3] w-full overflow-hidden rounded-lg bg-primary-dark/30 ring-1 ring-primary-dark/40">
+                  <GameThumb size="poster" src={r.cover_url} alt="" className="h-full w-full object-cover" placeholderClassName="text-3xl" />
+                </div>
+                <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-tight text-ink">{r.title}</p>
+              </Link>
+            ))}
+      </div>
+    </section>
+  )
+}
+
 /**
  * Biblioteca de Pantalla, con diseño de app de streaming: lo que estás viendo
  * arriba con avance rápido (+1 episodio, "la vi") y una fila por estado. Los
@@ -276,6 +321,12 @@ export function ScreenLibrary() {
       )
       .sort(statusFilter === 'completed' ? byFinished : byRecent)
   }, [typed, statusFilter, search])
+
+  const owned = useMemo(() => {
+    const set = new Set<string>()
+    for (const i of screenItems) if (i.source && i.external_id) set.add(`${i.source}:${i.external_id}`)
+    return set
+  }, [screenItems])
 
   const open = (item: Item) => navigate(section.detailPath(item.id))
 
@@ -468,6 +519,10 @@ export function ScreenLibrary() {
               onOpen={open}
             />
           ))}
+
+          {screenItems.length <= DISCOVER_MAX_ITEMS && (
+            <Discover type={typeFilter === 'todos' ? 'movie' : typeFilter} owned={owned} />
+          )}
 
           {watching.length === 0 && rails.length === 0 && (
             <p className="mt-8 text-center text-sm text-lavender">
