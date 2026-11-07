@@ -17,6 +17,7 @@ import { UpcomingEpisodes } from './UpcomingEpisodes'
 import { haptic } from '../../lib/haptics'
 import { sizedCover } from '../../lib/images'
 import { todayISO } from '../../lib/dates'
+import { screenStats } from '../../lib/screenStats'
 import {
   episodeLabel,
   episodeProgress,
@@ -48,36 +49,19 @@ const byRecent = (a: Item, b: Item) => b.updated_at.localeCompare(a.updated_at)
 const byFinished = (a: Item, b: Item) =>
   (b.date_finished ?? b.updated_at).localeCompare(a.date_finished ?? a.updated_at)
 
-/** Franja de números de Pantalla. */
+/** Resumen de una línea con los números de Pantalla (lo que está en cero no se muestra). */
 function Stats({ items }: { items: Item[] }) {
-  const minutes = items.reduce((s, i) => s + i.time_spent_minutes, 0)
-  const movies = items.filter((i) => i.media_type === 'movie' && i.status === 'completed').length
-  const episodes = items
-    .filter((i) => i.media_type !== 'movie')
-    .reduce((s, i) => s + i.progress, 0)
-  const watching = items.filter((i) => i.status === 'in_progress').length
-
-  const cells = [
-    { value: String(items.length), label: 'Títulos' },
-    { value: String(watching), label: 'Viendo' },
-    { value: String(movies), label: 'Películas vistas' },
-    { value: episodes.toLocaleString(), label: 'Episodios' },
-    { value: minutes > 0 ? formatMinutes(minutes) : '—', label: 'Frente a la pantalla' },
-  ]
-
+  const parts = screenStats(items)
   return (
-    <div className="scrollbar-hide -mx-4 mb-5 flex overflow-x-auto px-4">
-      <div className="flex divide-x divide-primary-dark/40 rounded-2xl bg-background-surface ring-1 ring-primary-dark/40">
-        {cells.map((c) => (
-          <div key={c.label} className="flex min-w-[5.5rem] flex-col items-center px-3 py-2.5">
-            <p className="text-xl font-bold tabular-nums text-accent">{c.value}</p>
-            <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-lavender">
-              {c.label}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <p className="mb-5 text-sm leading-relaxed text-lavender">
+      {parts.map((p, i) => (
+        <span key={p.label} className="whitespace-nowrap">
+          {i > 0 && <span aria-hidden="true"> · </span>}
+          <strong className="font-semibold tabular-nums text-ink">{p.value}</strong> {p.label}
+          {i < parts.length - 1 && ' '}
+        </span>
+      ))}
+    </p>
   )
 }
 
