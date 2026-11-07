@@ -11,6 +11,7 @@ El inicio (`/`, `src/pages/Hub.tsx` y sus piezas en `src/pages/hub/`) junta los 
 - **Esta semana**: la actividad de cada uno de los últimos 7 días (`lib/week.ts`; cuenta los registros de episodios, páginas, sesiones y películas) y los totales (horas jugadas, episodios, películas, páginas).
 - **Metas del año** como anillos (las de libros leídos; tocar una lleva a las estadísticas de su tracker) y **Sale esta semana**: los próximos episodios en un carrusel con el día de estreno.
 - La **barra inferior** (`components/HomeNav.tsx`) lleva a Juegos, Pantalla, Libros y Listas; arriba a la derecha, el engranaje lleva a Ajustes.
+- La barra inferior de cada tracker (`components/TrackerNav.tsx`) tiene el mismo molde: pegada abajo, fondo opaco y píldora en la sección activa, con el "+" central para agregar.
 - Los títulos usan Bricolage Grotesque (`font-display`). Lo que no tiene datos (sin metas, sin estrenos) no se muestra.
 
 Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`useTrackerTheme`, tokens en `src/index.css`) y su carpeta en `src/trackers/`. Comparten lógica (búsqueda en `hooks/useMediaSearch`, reglas de avance en `lib/media.ts`) y componentes chicos de `src/components/`, no pantallas. Los datos de los tres están en la misma tabla `items`.

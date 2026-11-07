@@ -90,7 +90,7 @@ body[data-theme='libros'] h2 {
   padding-top: calc(1.5rem + env(safe-area-inset-top));
 }
 
-/* Espacio para la barra de navegación flotante + indicador de inicio. */
+/* Espacio para la barra de navegación inferior + indicador de inicio. */
 @utility pb-safe-nav {
   padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 }

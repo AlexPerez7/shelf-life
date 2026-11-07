@@ -24,27 +24,32 @@ function NavItemLink({ item }: { item: TrackerNavItem }) {
         to={item.to}
         end
         className={({ isActive }) =>
-          `flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] transition-colors ${
-            (custom ?? isActive) ? 'text-accent' : 'text-lavender active:text-ink'
+          `flex min-h-13 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] transition-colors ${
+            (custom ?? isActive)
+              ? 'bg-accent/15 font-semibold text-accent'
+              : 'font-medium text-lavender active:bg-primary-dark/20'
           }`
         }
       >
-        <item.Icon size={20} />
+        <item.Icon size={22} strokeWidth={1.8} />
         {item.label}
       </NavLink>
     </li>
   )
 }
 
-/** Barra inferior flotante de un tracker: dos ítems, "+" central, dos ítems. */
+/**
+ * Barra inferior de un tracker: dos ítems, "+" central, dos ítems. Mismo molde
+ * que la del inicio (`HomeNav`): pegada abajo, fondo opaco y píldora en el activo.
+ */
 export function TrackerNav({ left, right, add }: TrackerNavProps) {
   return (
     <nav
       aria-label="Navegación del tracker"
-      className="fixed inset-x-0 z-30 px-4"
-      style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+      className="fixed inset-x-0 bottom-0 z-30 rounded-t-3xl border-t border-primary-dark/30 bg-background-surface"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <ul className="mx-auto flex max-w-md items-center rounded-full bg-background-surface px-2 py-1 shadow-lg shadow-black/40 ring-1 ring-primary-dark/30 md:max-w-3xl lg:max-w-5xl">
+      <ul className="mx-auto flex max-w-md items-center gap-1 px-2.5 pb-2 pt-2 md:max-w-3xl lg:max-w-5xl">
         {left.map((item) => (
           <NavItemLink key={item.to} item={item} />
         ))}
@@ -56,7 +61,7 @@ export function TrackerNav({ left, right, add }: TrackerNavProps) {
             to={add.to}
             aria-label={add.label}
             className={({ isActive }) =>
-              `-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-accent/30 ring-4 ring-background transition-transform active:scale-95 ${
+              `-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-accent/30 ring-4 ring-background-surface transition-transform active:scale-95 ${
                 isActive ? 'scale-105' : ''
               }`
             }
