@@ -8,6 +8,8 @@ Ruta `/libros`, código en `src/trackers/libros/`. Lecturas por páginas, con te
 
 - La biblioteca es un librero: muebles con repisas por estado, colecciones, géneros y autores.
 - Libros en portada o en lomo, y estantes que se abren completos.
+- **Orden y filtros** (botón de controles arriba a la derecha): ordenar por agregado, título, autor, puntaje, páginas, fecha en que lo terminaste o año de publicación (en cualquier dirección; los libros sin ese dato quedan al final), y filtrar por favoritos, año de lectura (cuentan también las relecturas) o género. Con algo elegido, el librero pasa a una lista plana; todo vive en la URL (`?orden=`, `?dir=`, `?anio=`, `?genero=`, `?fav=1`). Lógica en `lib/bookView.ts`.
+- **Vista de lista**: además de portadas y lomos, una lista compacta con una fila por libro (autor, estado y el dato por el que se ordena).
 - **Completar portadas**: si hay libros sin portada (o con la que puso la importación, que puede no existir), una tarjeta al final del librero las revisa y busca las que faltan en Open Library (por ISBN o título), Google Books (con key) y Apple Books (`lib/bookCovers.ts`).
 
 ## Alta

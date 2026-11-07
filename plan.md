@@ -6,13 +6,12 @@ Lo que quedó anotado para hacer más adelante, en el orden recomendado. El plan
 
 Comparado con [Openreads](https://github.com/mateusz-bak/openreads) (la app en la que se inspira Libros), en el orden recomendado:
 
-1. **Orden y filtros en el librero**: ordenar por autor, puntaje, páginas, fecha en que lo terminaste o año de publicación; filtrar por año leído, etiqueta o favoritos. Y una vista de lista compacta además del librero.
-2. **Más estadísticas**: meta de páginas del año (además de la de libros), promedios (puntaje, páginas, tiempo por libro), el libro que leíste más rápido y el más lento, libros terminados por mes y elegir el año a mirar.
-3. **Más de este autor**: en la ficha, los otros libros del mismo autor que tienes, y sugerencias de Open Library.
-4. **Elegir la edición**: buscar las ediciones de Open Library de un libro y quedarse con la exacta (páginas, ISBN, editorial, portada).
-5. **Papelera**: borrar un libro lo manda a una papelera por 30 días con "Restaurar". Necesita una columna nueva (migración).
-6. **Edición en lote**: seleccionar varios libros y cambiarles el formato o el estado, o borrarlos.
-7. **Importar de BookWyrm** (CSV), como Goodreads y StoryGraph.
+1. **Más estadísticas**: meta de páginas del año (además de la de libros), promedios (puntaje, páginas, tiempo por libro), el libro que leíste más rápido y el más lento, libros terminados por mes y elegir el año a mirar.
+2. **Más de este autor**: en la ficha, los otros libros del mismo autor que tienes, y sugerencias de Open Library.
+3. **Elegir la edición**: buscar las ediciones de Open Library de un libro y quedarse con la exacta (páginas, ISBN, editorial, portada).
+4. **Papelera**: borrar un libro lo manda a una papelera por 30 días con "Restaurar". Necesita una columna nueva (migración).
+5. **Edición en lote**: seleccionar varios libros y cambiarles el formato o el estado, o borrarlos.
+6. **Importar de BookWyrm** (CSV), como Goodreads y StoryGraph.
 
 ## Ideas sueltas (sin prioridad)
 

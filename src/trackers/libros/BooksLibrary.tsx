@@ -1,22 +1,39 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileUp, Library, Rows3, Search, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileUp, Library, List, Rows3, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
 import { Skeleton } from '../../components/Skeleton'
 import { mediaSections } from '../../lib/media'
+import {
+  bookGenres,
+  filterBooks,
+  isViewActive,
+  parseBookView,
+  readYears,
+  sortBooks,
+  viewParams,
+  type BookSort,
+  type SortDir,
+} from '../../lib/bookView'
 import { Bookcase, Shelf, ShelfUnit, type ShelfMode } from './Bookshelf'
 import { MissingCovers } from './MissingCovers'
+import { BookList } from './BookList'
+import { BookViewSheet } from './BookViewSheet'
 import { buildShelves, findShelf, shelfParam } from './bookLists'
 import type { Item } from '../../types/item'
 
 const section = mediaSections.libros
 const MODE_KEY = 'shelflife_books_shelf_mode'
 
-function readMode(): ShelfMode {
+/** Cómo se ven los libros: en portada, en lomo o en una lista compacta. */
+type ViewMode = ShelfMode | 'lista'
+
+function readMode(): ViewMode {
   try {
-    return localStorage.getItem(MODE_KEY) === 'lomos' ? 'lomos' : 'portadas'
+    const saved = localStorage.getItem(MODE_KEY)
+    return saved === 'lomos' || saved === 'lista' ? saved : 'portadas'
   } catch {
     return 'portadas'
   }
@@ -91,8 +108,10 @@ export function BooksLibrary() {
     )
   }
 
-  const [mode, setMode] = useState<ShelfMode>(readMode)
-  function changeMode(next: ShelfMode) {
+  const [mode, setMode] = useState<ViewMode>(readMode)
+  // Los estantes siempre muestran libros parados; la lista es una vista plana.
+  const shelfMode: ShelfMode = mode === 'lista' ? 'portadas' : mode
+  function changeMode(next: ViewMode) {
     setMode(next)
     try {
       localStorage.setItem(MODE_KEY, next)
@@ -106,15 +125,50 @@ export function BooksLibrary() {
     () => (openShelfId ? findShelf(books, openShelfId) : null),
     [books, openShelfId]
   )
+
+  // Orden y filtros (en la URL). Con algo elegido, la búsqueda o la vista de
+  // lista, los libros se muestran en una lista plana en vez de por estantes.
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const view = useMemo(() => parseBookView(params), [params])
+  const viewActive = isViewActive(view)
+  const years = useMemo(() => readYears(books), [books])
+  const genres = useMemo(() => bookGenres(books), [books])
   const results = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return null
-    return books.filter(
+    const flat = query !== '' || viewActive || (mode === 'lista' && !openShelfId)
+    if (!flat) return null
+    const found = filterBooks(books, view).filter(
       (b) =>
+        !query ||
         b.title.toLowerCase().includes(query) ||
         (b.metadata.authors ?? []).some((a) => a.toLowerCase().includes(query))
     )
-  }, [books, search])
+    return view.sort ? sortBooks(found, view.sort, view.dir ?? undefined) : found
+  }, [books, search, view, viewActive, mode, openShelfId])
+
+  function setSort(sort: BookSort | null) {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete(viewParams.dir)
+        if (sort) next.set(viewParams.sort, sort)
+        else next.delete(viewParams.sort)
+        return next
+      },
+      { replace: true }
+    )
+  }
+  const setDir = (dir: SortDir) => setParam(viewParams.dir, dir)
+  function clearView() {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        for (const key of Object.values(viewParams)) next.delete(key)
+        return next
+      },
+      { replace: true }
+    )
+  }
 
   const openBook = (item: Item) => navigate(section.detailPath(item.id))
   const isEmpty = !loading && !error && books.length === 0
@@ -129,6 +183,7 @@ export function BooksLibrary() {
         [
           ['portadas', Library, 'Portadas'],
           ['lomos', Rows3, 'Lomos'],
+          ['lista', List, 'Lista'],
         ] as const
       ).map(([m, Icon, label]) => (
         <button
@@ -157,18 +212,31 @@ export function BooksLibrary() {
           <p className="text-sm text-lavender">Tu colección de lecturas</p>
         </div>
         {!isEmpty && (
-          <button
-            type="button"
-            onClick={() => {
-              if (searchOpen) setParam('q', null)
-              setSearchOpen((v) => !v)
-            }}
-            aria-label={searchOpen ? 'Cerrar búsqueda' : 'Buscar'}
-            aria-pressed={searchOpen}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-primary-dark/15"
-          >
-            {searchOpen ? <X size={20} /> : <Search size={20} />}
-          </button>
+          <div className="flex">
+            <button
+              type="button"
+              onClick={() => setSheetOpen(true)}
+              aria-label="Ordenar y filtrar"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-primary-dark/15"
+            >
+              <SlidersHorizontal size={20} />
+              {viewActive && (
+                <span aria-hidden="true" className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-accent" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (searchOpen) setParam('q', null)
+                setSearchOpen((v) => !v)
+              }}
+              aria-label={searchOpen ? 'Cerrar búsqueda' : 'Buscar'}
+              aria-pressed={searchOpen}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-primary-dark/15"
+            >
+              {searchOpen ? <X size={20} /> : <Search size={20} />}
+            </button>
+          </div>
         )}
       </div>
 
@@ -200,7 +268,7 @@ export function BooksLibrary() {
               category="Estado"
               name="Por leer"
               items={[]}
-              mode={mode}
+              mode={shelfMode}
               onOpenBook={openBook}
               emptyText={section.emptyText}
             />
@@ -220,12 +288,35 @@ export function BooksLibrary() {
         </div>
       ) : results ? (
         <>
-          <p className="mb-3 text-sm text-lavender">
-            {results.length === 0
-              ? 'Ningún libro coincide con la búsqueda.'
-              : `${results.length} ${results.length === 1 ? 'libro' : 'libros'}`}
-          </p>
-          {results.length > 0 && <Bookcase items={results} mode={mode} onOpenBook={openBook} />}
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-sm text-lavender">
+              {results.length === 0
+                ? 'Ningún libro coincide.'
+                : `${results.length} ${results.length === 1 ? 'libro' : 'libros'}`}
+              {(viewActive || search) && (
+                <>
+                  {' · '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearView()
+                      setParam('q', null)
+                    }}
+                    className="font-medium text-accent underline underline-offset-2"
+                  >
+                    Limpiar
+                  </button>
+                </>
+              )}
+            </p>
+            {modeToggle}
+          </div>
+          {results.length > 0 &&
+            (mode === 'lista' ? (
+              <BookList items={results} sort={view.sort} onOpenBook={openBook} />
+            ) : (
+              <Bookcase items={results} mode={shelfMode} onOpenBook={openBook} />
+            ))}
         </>
       ) : openShelf ? (
         <>
@@ -250,7 +341,11 @@ export function BooksLibrary() {
               <p className="text-sm text-lavender">Este estante está vacío.</p>
             </div>
           ) : (
-            <Bookcase items={openShelf.items} mode={mode} onOpenBook={openBook} />
+            mode === 'lista' ? (
+              <BookList items={openShelf.items} sort={null} onOpenBook={openBook} />
+            ) : (
+              <Bookcase items={openShelf.items} mode={shelfMode} onOpenBook={openBook} />
+            )
           )}
         </>
       ) : (
@@ -267,7 +362,7 @@ export function BooksLibrary() {
                     category={shelf.category}
                     name={shelf.name}
                     items={shelf.items}
-                    mode={mode}
+                    mode={shelfMode}
                     onOpenBook={openBook}
                     onOpenShelf={() => setParam(shelfParam, shelf.id)}
                   />
@@ -278,6 +373,20 @@ export function BooksLibrary() {
           <MissingCovers books={books} />
         </>
       )}
+
+      <BookViewSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        view={view}
+        years={years}
+        genres={genres}
+        onSort={setSort}
+        onDir={setDir}
+        onYear={(y) => setParam(viewParams.year, y == null ? null : String(y))}
+        onGenre={(g) => setParam(viewParams.genre, g)}
+        onFavorites={(on) => setParam(viewParams.favorites, on ? '1' : null)}
+        onClear={clearView}
+      />
     </PageContainer>
   )
 }
