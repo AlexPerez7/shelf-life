@@ -90,6 +90,22 @@ export function airLabel(date: Date) {
   return `El ${day.toLocaleDateString('es', { day: 'numeric', month: 'long' })}`
 }
 
+/** Día corto para una etiqueta: "Hoy", "Mañana" o "Mar", "Jue"... (o "12 nov" pasada la semana). */
+export function airShort(date: Date) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const day = new Date(date)
+  day.setHours(0, 0, 0, 0)
+  const days = Math.round((day.getTime() - today.getTime()) / 86400000)
+  if (days === 0) return 'Hoy'
+  if (days === 1) return 'Mañana'
+  const text =
+    days < 7
+      ? day.toLocaleDateString('es', { weekday: 'short' })
+      : day.toLocaleDateString('es', { day: 'numeric', month: 'short' })
+  return text.replace('.', '').replace(/^./, (c) => c.toUpperCase())
+}
+
 /** "T2 · E5" (series) o "Ep. 12" (anime). */
 export function episodeCode(ep: UpcomingEpisode) {
   if (ep.season != null && ep.episode != null) return `T${ep.season} · E${ep.episode}`

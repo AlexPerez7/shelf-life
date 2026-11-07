@@ -14,6 +14,8 @@
   --color-ink: #f4efe6;
   --color-error: #f2545b;
   --color-warning: #f5a623;
+  /* Títulos del inicio (ver pages/Hub.tsx). */
+  --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Acento de cada tracker en las tarjetas del inicio (sobre la marca). */

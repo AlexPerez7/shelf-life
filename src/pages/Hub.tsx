@@ -1,42 +1,19 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  BookOpen,
-  Check,
-  ChevronRight,
-  ClipboardList,
-  Download,
-  Loader2,
-  LogOut,
-  Play,
-  Plus,
-  Settings,
-  Sheet,
-  Square,
-  UserRound,
-} from 'lucide-react'
+import '@fontsource-variable/bricolage-grotesque'
+import { BookOpen, Check, Play, Plus, Settings, Square } from 'lucide-react'
 import { useGames } from '../hooks/useGames'
-import { useLists } from '../hooks/useLists'
-import { useGoals } from '../hooks/useGoals'
-import { goalDone, goalUnits } from '../lib/goals'
 import { useMedia } from '../contexts/MediaContext'
 import { useToast } from '../contexts/ToastContext'
-import { useAuth } from '../hooks/useAuth'
-import { useSignOut } from '../hooks/useSignOut'
-import { deliverFile, exportCsv, exportJson } from '../lib/exportData'
 import { formatElapsed, useNow, useSessionTimer } from '../contexts/SessionTimerContext'
-import { useActivity } from '../hooks/useActivity'
 import { useQuickProgress } from '../hooks/useQuickProgress'
 import { useUpcoming } from '../hooks/useUpcoming'
-import { UpcomingEpisodes } from '../trackers/pantalla/UpcomingEpisodes'
 import { PageContainer } from '../components/PageContainer'
-import { GameThumb } from '../components/GameThumb'
 import { PageSheet } from '../components/PageSheet'
-import { useSaveStoppedTimer } from '../hooks/useSaveStoppedTimer'
+import { HomeNav } from '../components/HomeNav'
 import { Skeleton } from '../components/Skeleton'
-import { asset } from '../lib/appUrl'
+import { useSaveStoppedTimer } from '../hooks/useSaveStoppedTimer'
 import { haptic } from '../lib/haptics'
-import { parseDate } from '../lib/dates'
 import {
   episodeLabel,
   episodeProgress,
@@ -48,13 +25,17 @@ import {
   progressKind,
 } from '../lib/media'
 import { gamesPaths } from '../trackers/juegos/paths'
-import { listPaths } from '../lib/listPaths'
-import { trackers, trackerIds, type TrackerId } from '../trackers/trackers'
+import { trackers } from '../trackers/trackers'
+import { HeroCard } from './hub/HeroCard'
+import { NowRail } from './hub/NowRail'
+import { WeekPanel } from './hub/WeekPanel'
+import { GoalRings } from './hub/GoalRings'
+import { UpcomingRail } from './hub/UpcomingRail'
+import type { NowModel } from './hub/nowModel'
 import type { Game } from '../types/game'
 import type { Item, MediaType, NonGameType } from '../types/item'
 
-const ALL_TYPES: MediaType[] = ['game', 'movie', 'series', 'anime', 'book']
-/** Cuántos en curso se muestran en el inicio. */
+/** Cuántos en curso se muestran en el inicio (el primero es "Continuar"). */
 const NOW_LIMIT = 6
 
 function greeting() {
@@ -70,246 +51,28 @@ type NowEntry =
   | { kind: 'game'; tracker: 'juegos'; game: Game; updated: string }
   | { kind: 'media'; tracker: 'pantalla' | 'libros'; item: Item; updated: string }
 
-/** Metas del año que tengas puestas, con su avance; tocar una lleva a sus estadísticas. */
-function GoalsStrip({ games, items }: { games: Game[]; items: Item[] }) {
-  const year = new Date().getFullYear()
-  const { goals } = useGoals(year)
-  if (!goals.some((g) => g.kind === 'items')) return null
-
-  return (
-    <section className="mb-6">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">Metas {year}</h2>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {trackerIds
-          .map((id) => goals.find((g) => g.tracker === id && g.kind === 'items'))
-          .filter((g) => g != null)
-          .map((goal) => {
-            const { Icon, base } = trackers[goal.tracker]
-            const done = goalDone(goal.tracker, year, games, items)
-            const pct = Math.min(100, Math.round((done / goal.target) * 100))
-            return (
-              <Link
-                key={goal.tracker}
-                to={`${base}/estadisticas`}
-                data-tracker={goal.tracker}
-                className="flex items-center gap-3 rounded-2xl bg-background-surface px-3 py-2.5 ring-1 ring-primary-dark/30 active:bg-primary-dark/10"
-              >
-                <Icon size={18} className="shrink-0 text-accent" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-ink">
-                    <strong className="tabular-nums">{done}</strong>
-                    <span className="text-lavender">
-                      {' '}
-                      de {goal.target} {goalUnits[goal.tracker][1]}
-                    </span>
-                  </p>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary-dark/30">
-                    <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
-      </div>
-    </section>
-  )
-}
-
-/** Números de los últimos 7 días, de los tres trackers. */
-function WeekStrip({ typeOf }: { typeOf: Map<string, MediaType> }) {
-  const activity = useActivity(ALL_TYPES, 1)
-  // Desde hace 7 días, fijado al abrir el inicio.
-  const [since] = useState(() => Date.now() - 7 * 24 * 60 * 60 * 1000)
-
-  const week = useMemo(() => {
-    if (!activity) return null
-    let gameMinutes = 0
-    let episodes = 0
-    let movies = 0
-    let pages = 0
-    for (const r of activity) {
-      if (parseDate(r.occurred_at).getTime() < since) continue
-      const type = typeOf.get(r.item_id)
-      if (type === 'game') gameMinutes += r.duration_minutes ?? 0
-      else if (type === 'movie') movies++
-      else if (type === 'book') pages += Math.max(0, r.progress_delta ?? 0)
-      else if (type) episodes += Math.max(0, r.progress_delta ?? 0)
-    }
-    return [
-      gameMinutes > 0 && { tracker: 'juegos' as const, value: formatMinutes(gameMinutes), label: 'jugando' },
-      episodes > 0 && { tracker: 'pantalla' as const, value: String(episodes), label: episodes === 1 ? 'episodio' : 'episodios' },
-      movies > 0 && { tracker: 'pantalla' as const, value: String(movies), label: movies === 1 ? 'película' : 'películas' },
-      pages > 0 && { tracker: 'libros' as const, value: pages.toLocaleString('es'), label: pages === 1 ? 'página' : 'páginas' },
-    ].filter(Boolean) as { tracker: TrackerId; value: string; label: string }[]
-  }, [activity, typeOf, since])
-
-  if (week == null) return <Skeleton className="mb-6 h-[4.5rem] w-full rounded-2xl" />
-  if (week.length === 0) return null
-
-  return (
-    <section className="mb-6">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">Esta semana</h2>
-      <div className="scrollbar-hide -mx-4 flex gap-2 overflow-x-auto px-4">
-        {week.map((c) => {
-          const Icon = trackers[c.tracker].Icon
-          return (
-            <div
-              key={c.label}
-              data-tracker={c.tracker}
-              className="flex min-w-[7.5rem] shrink-0 items-center gap-2.5 rounded-2xl bg-background-surface px-3 py-2.5 ring-1 ring-primary-dark/30"
-            >
-              <Icon size={18} className="shrink-0 text-accent" />
-              <div>
-                <p className="text-lg font-bold leading-tight tabular-nums text-ink">{c.value}</p>
-                <p className="text-xs text-lavender">{c.label}</p>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
-interface NowCardProps {
-  tracker: TrackerId
-  to: string
-  cover: string | null
-  icon: typeof Play
-  kicker: string
-  title: string
-  progress: React.ReactNode
-  pct: number | null
-  action: React.ReactNode
-}
-
 /** Tiempo del cronómetro: lo único que se vuelve a dibujar cada segundo. */
 function Elapsed({ startedAt }: { startedAt: number }) {
   const now = useNow(true)
   return <span className="tabular-nums">{formatElapsed(now - startedAt)}</span>
 }
 
-/** Tarjeta de "En curso": portada, avance y una acción rápida, con el acento de su tracker. */
-function NowCard({ tracker, to, cover, icon, kicker, title, progress, pct, action }: NowCardProps) {
-  return (
-    <li data-tracker={tracker} className="flex items-center gap-3 rounded-2xl bg-background-surface p-2.5 ring-1 ring-primary-dark/30">
-      <Link to={to} className="flex min-w-0 flex-1 items-center gap-3 active:opacity-80">
-        <div className="h-[4.5rem] w-12 shrink-0 overflow-hidden rounded-lg bg-primary-dark/20">
-          <GameThumb size="thumb" src={cover} alt="" className="h-full w-full object-cover" placeholderClassName="text-xl" icon={icon} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-accent">{kicker}</p>
-          <p className="truncate font-semibold text-ink">{title}</p>
-          <p className="truncate text-xs text-lavender">{progress}</p>
-          {pct != null && (
-            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-primary-dark/30">
-              <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-            </div>
-          )}
-        </div>
-      </Link>
-      <div className="shrink-0">{action}</div>
-    </li>
-  )
-}
-
-const actionClass =
-  'flex min-h-11 items-center gap-1 rounded-full bg-accent px-3.5 text-sm font-semibold text-background transition-transform active:scale-95 disabled:opacity-50'
-
-/** Tu cuenta: exportar los datos (respaldo) y cerrar sesión. */
-function AccountSection() {
-  const { session } = useAuth()
-  const signOut = useSignOut()
-  const { showToast, showError } = useToast()
-  const [exporting, setExporting] = useState<'json' | 'csv' | null>(null)
-
-  async function handleExport(kind: 'json' | 'csv') {
-    setExporting(kind)
-    try {
-      await deliverFile(kind === 'json' ? await exportJson() : await exportCsv(), kind)
-      showToast('Exportación lista')
-    } catch (err) {
-      showError(err, 'No se pudo exportar')
-    } finally {
-      setExporting(null)
-    }
-  }
-
-  async function handleSignOut() {
-    const result = await signOut()
-    if (result?.error) showError(result.error, 'No se pudo cerrar la sesión')
-  }
-
-  const buttonClass =
-    'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-medium text-ink ring-1 ring-primary-dark/40 active:bg-primary-dark/20 disabled:opacity-50'
-
-  return (
-    <section className="mt-6">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">Tu cuenta</h2>
-      <div className="rounded-2xl bg-background-surface p-3 ring-1 ring-primary-dark/30">
-        <div className="mb-3 flex items-center gap-2">
-          <UserRound size={18} className="shrink-0 text-lavender" />
-          <p className="min-w-0 flex-1 truncate text-sm text-ink">{session?.user.email ?? '—'}</p>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-error active:bg-error/10"
-          >
-            <LogOut size={16} /> Salir
-          </button>
-        </div>
-        <p className="mb-2 text-xs text-lavender">Exporta todo como respaldo (o para llevarlo a otra app):</p>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => handleExport('json')} disabled={exporting != null} className={buttonClass}>
-            {exporting === 'json' ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Todo (JSON)
-          </button>
-          <button type="button" onClick={() => handleExport('csv')} disabled={exporting != null} className={buttonClass}>
-            {exporting === 'csv' ? <Loader2 size={15} className="animate-spin" /> : <Sheet size={15} />} Biblioteca (CSV)
-          </button>
-        </div>
-        <Link
-          to="/ajustes"
-          className="mt-3 flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-ink active:bg-primary-dark/20"
-        >
-          <Settings size={16} className="text-lavender" />
-          <span className="flex-1">Ajustes y actualización</span>
-          <ChevronRight size={16} className="text-lavender" />
-        </Link>
-      </div>
-    </section>
-  )
-}
-
-/** Tarjeta de cada tracker: entrar y su resumen. */
-function TrackerCard({ id, line }: { id: TrackerId; line: string }) {
-  const { label, Icon, base } = trackers[id]
-  return (
-    <Link
-      to={base}
-      data-tracker={id}
-      className="flex items-center gap-3 rounded-2xl bg-background-surface p-3 ring-1 ring-primary-dark/30 active:bg-primary-dark/10"
-    >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
-        <Icon size={24} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <h3 className="font-bold text-ink">{label}</h3>
-        <p className="truncate text-sm text-lavender">{line}</p>
-      </div>
-      <ChevronRight size={20} className="text-accent" />
-    </Link>
-  )
-}
+const primaryClass =
+  'flex min-h-13 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-4 text-base font-semibold text-background transition-transform active:scale-[0.98]'
+const secondaryClass =
+  'flex h-13 w-13 shrink-0 items-center justify-center rounded-full text-accent ring-1 ring-accent/50 active:bg-accent/10'
+const quickClass =
+  'absolute top-[7.25rem] right-2 flex h-11 w-11 items-center justify-center rounded-full bg-accent text-background shadow-lg shadow-black/40 transition-transform active:scale-95'
 
 /**
- * Inicio de Shelf Life: lo que está en curso en los tres trackers, con avance
- * rápido (jugar, +1 episodio, página), los números de la semana y la entrada
- * a cada tracker.
+ * Inicio de Shelf Life: "Continuar" con lo último que usaste, el resto de lo
+ * que sigues en un carrusel (todo con acción de un toque: jugar, +1 episodio,
+ * página), la semana, las metas y lo que se estrena. La barra de abajo lleva
+ * a los trackers y a las listas.
  */
 export function Hub() {
   const { games, loading: loadingGames } = useGames()
   const { items, loading: loadingMedia } = useMedia()
-  const { lists } = useLists()
   const { showToast, showError } = useToast()
   const sessionTimer = useSessionTimer()
   const timer = sessionTimer.timer
@@ -355,18 +118,6 @@ export function Hub() {
       .slice(0, NOW_LIMIT)
   }, [games, items, timer?.gameId])
 
-  const lines = useMemo(() => {
-    const books = items.filter((i) => i.media_type === 'book')
-    const screen = items.filter((i) => i.media_type !== 'book')
-    const line = (total: number, active: number, activeLabel: string, tagline: string) =>
-      total === 0 ? tagline : `${total} en total${active ? ` · ${active} ${activeLabel}` : ''}`
-    return {
-      juegos: line(games.length, games.filter((g) => g.status === 'jugando').length, 'jugando', trackers.juegos.tagline),
-      pantalla: line(screen.length, screen.filter((i) => i.status === 'in_progress').length, 'viendo', trackers.pantalla.tagline),
-      libros: line(books.length, books.filter((i) => i.status === 'in_progress').length, 'leyendo', trackers.libros.tagline),
-    } satisfies Record<TrackerId, string>
-  }, [games, items])
-
   /**
    * Termina el cronómetro desde el inicio. Juego: guarda la sesión. Libro:
    * abre la hoja de página con los minutos ya puestos.
@@ -397,47 +148,53 @@ export function Hub() {
     sessionTimer.start(book.id, book.title, 'book')
   }
 
-  function renderEntry(entry: NowEntry) {
+  /** Una entrada en curso, lista para las tarjetas (con sus acciones). */
+  function toModel(entry: NowEntry): NowModel {
     if (entry.kind === 'game') {
       const g = entry.game
       const running = timer?.gameId === g.id
-      return (
-        <NowCard
-          key={g.id}
-          tracker="juegos"
-          to={gamesPaths.game(g.id)}
-          cover={g.cover_url}
-          icon={trackers.juegos.Icon}
-          kicker="Juego"
-          title={g.title}
-          progress={
-            running
-              ? <>Jugando ahora · <Elapsed startedAt={timer.startedAt} /></>
-              : g.hours_played > 0
-                ? `${g.hours_played.toLocaleString('es')} h jugadas`
-                : 'Sin horas todavía'
-          }
-          pct={null}
-          action={
-            running ? (
-              <button type="button" onClick={stopTimer} className={actionClass}>
-                <Square size={13} fill="currentColor" /> Terminar
-              </button>
-            ) : timer ? null : (
-              <button
-                type="button"
-                onClick={() => {
-                  haptic()
-                  sessionTimer.start(g.id, g.title)
-                }}
-                className={actionClass}
-              >
-                <Play size={14} fill="currentColor" /> Jugar
-              </button>
-            )
-          }
-        />
-      )
+      const start = () => {
+        haptic()
+        sessionTimer.start(g.id, g.title)
+      }
+      return {
+        key: g.id,
+        tracker: 'juegos',
+        to: gamesPaths.game(g.id),
+        cover: g.cover_url,
+        icon: trackers.juegos.Icon,
+        kicker: 'Jugando · Juego',
+        title: g.title,
+        byline: g.platform ?? 'Juego',
+        progress: running ? (
+          <>
+            Jugando ahora · <Elapsed startedAt={timer.startedAt} />
+          </>
+        ) : g.hours_played > 0 ? (
+          `${g.hours_played.toLocaleString('es')} h jugadas`
+        ) : (
+          'Sin horas todavía'
+        ),
+        pct: null,
+        primary: running ? (
+          <button type="button" onClick={stopTimer} className={primaryClass}>
+            <Square size={16} fill="currentColor" /> Terminar
+          </button>
+        ) : timer ? null : (
+          <button type="button" onClick={start} className={primaryClass}>
+            <Play size={18} fill="currentColor" /> Jugar
+          </button>
+        ),
+        quick: running ? (
+          <button type="button" onClick={stopTimer} aria-label={`Terminar la sesión de ${g.title}`} className={quickClass}>
+            <Square size={15} fill="currentColor" />
+          </button>
+        ) : timer ? null : (
+          <button type="button" onClick={start} aria-label={`Jugar ${g.title}`} className={quickClass}>
+            <Play size={17} fill="currentColor" />
+          </button>
+        ),
+      }
     }
 
     const i = entry.item
@@ -448,132 +205,122 @@ export function Hub() {
     const pct = total ? Math.min(100, Math.round((i.progress / total) * 100)) : null
     const progress =
       kind === 'pages'
-        ? `Página ${i.progress}${total ? ` de ${total} · ${pct}%` : ''}`
+        ? `Página ${i.progress}${total ? ` de ${total}` : ''}`
         : kind === 'episodes'
           ? episodeProgress(i)
           : i.metadata.runtime_minutes
             ? formatMinutes(i.metadata.runtime_minutes)
             : 'Película'
+    const base = {
+      key: i.id,
+      tracker: entry.tracker,
+      to: section.detailPath(i.id),
+      cover: i.cover_url,
+      icon: mediaTypeIcons[type],
+      kicker: `${section.statusLabels.in_progress} · ${mediaTypeLabels[type]}`,
+      title: i.title,
+      byline: (kind === 'pages' ? i.metadata.authors?.[0] : i.release_date?.slice(0, 4)) ?? mediaTypeLabels[type],
+      progress,
+      pct,
+    }
 
-    return (
-      <NowCard
-        key={i.id}
-        tracker={entry.tracker}
-        to={section.detailPath(i.id)}
-        cover={i.cover_url}
-        icon={mediaTypeIcons[type]}
-        kicker={kind === 'pages' && i.metadata.authors?.[0] ? i.metadata.authors[0] : mediaTypeLabels[type]}
-        title={i.title}
-        progress={progress}
-        pct={pct}
-        action={
-          kind === 'pages' ? (
-            timer?.gameId === i.id ? (
-              <button type="button" onClick={stopTimer} className={actionClass}>
-                <Square size={13} fill="currentColor" /> Terminar
+    if (kind === 'pages') {
+      const reading = timer?.gameId === i.id
+      return {
+        ...base,
+        primary: reading ? (
+          <button type="button" onClick={stopTimer} className={primaryClass}>
+            <Square size={16} fill="currentColor" /> Terminar
+          </button>
+        ) : (
+          <>
+            {!timer && (
+              <button type="button" onClick={() => startReading(i)} className={primaryClass}>
+                <Play size={18} fill="currentColor" /> Leer
               </button>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPageMinutes(null)
-                    setPageBook(i)
-                  }}
-                  aria-label={`Anotar la página de ${i.title}`}
-                  className="flex h-11 w-11 items-center justify-center rounded-full text-accent ring-1 ring-primary-dark/40 active:bg-primary-dark/20"
-                >
-                  <BookOpen size={17} />
-                </button>
-                {!timer && (
-                  <button type="button" onClick={() => startReading(i)} className={actionClass}>
-                    <Play size={14} fill="currentColor" /> Leer
-                  </button>
-                )}
-              </div>
-            )
-          ) : (
-            <button type="button" onClick={() => advance(i)} className={actionClass}>
-              {kind === 'none' ? (
-                <>
-                  <Check size={14} /> La vi
-                </>
-              ) : (
-                <>
-                  <Plus size={14} /> {episodeLabel(i.progress + 1, itemSeasons(i))}
-                </>
-              )}
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setPageMinutes(null)
+                setPageBook(i)
+              }}
+              aria-label={`Anotar la página de ${i.title}`}
+              className={`${secondaryClass} ${timer ? 'flex-1 w-auto gap-2 text-sm font-semibold' : ''}`}
+            >
+              <BookOpen size={20} />
+              {timer && 'Anotar la página'}
             </button>
-          )
-        }
-      />
-    )
+          </>
+        ),
+        quick: reading ? (
+          <button type="button" onClick={stopTimer} aria-label={`Terminar la lectura de ${i.title}`} className={quickClass}>
+            <Square size={15} fill="currentColor" />
+          </button>
+        ) : timer ? null : (
+          <button type="button" onClick={() => startReading(i)} aria-label={`Leer ${i.title}`} className={quickClass}>
+            <Play size={17} fill="currentColor" />
+          </button>
+        ),
+      }
+    }
+
+    const label = kind === 'none' ? 'La vi' : episodeLabel(i.progress + 1, itemSeasons(i))
+    return {
+      ...base,
+      primary: (
+        <button type="button" onClick={() => advance(i)} className={primaryClass}>
+          {kind === 'none' ? <Check size={18} /> : <Plus size={18} />} {label}
+        </button>
+      ),
+      quick: (
+        <button type="button" onClick={() => advance(i)} aria-label={`${label}: ${i.title}`} className={quickClass}>
+          {kind === 'none' ? <Check size={18} /> : <Plus size={18} />}
+        </button>
+      ),
+    }
   }
+
+  const models = nowEntries.map(toModel)
+  const [hero, ...rail] = models
 
   return (
     <PageContainer>
-      <header className="mb-6 flex items-center gap-3">
-        <img src={asset('icons/icon-192.png')} alt="" className="h-12 w-12 rounded-2xl shadow-lg shadow-black/40" />
+      <header className="mb-6 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-accent">{greeting()}</h1>
-          <p className="text-sm text-lavender first-letter:uppercase">
+          <h1 className="font-display text-3xl leading-tight font-extrabold tracking-tight text-ink">{greeting()}</h1>
+          <p className="mt-1 text-sm text-lavender first-letter:uppercase">
             {new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
         </div>
+        <Link
+          to="/ajustes"
+          aria-label="Ajustes"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-background-surface text-ink active:bg-primary-dark/20"
+        >
+          <Settings size={21} strokeWidth={1.8} />
+        </Link>
       </header>
 
-      <div className="md:mx-auto md:max-w-xl">
-        {!loading && <WeekStrip typeOf={typeOf} />}
-        {!loading && <GoalsStrip games={games} items={items} />}
+      <div className="flex flex-col gap-7 md:mx-auto md:max-w-xl">
+        {loading ? (
+          <Skeleton className="h-80 w-full rounded-[1.75rem]" />
+        ) : hero ? (
+          <HeroCard m={hero} />
+        ) : (
+          <p className="rounded-3xl bg-background-surface p-5 text-sm text-lavender ring-1 ring-primary-dark/30">
+            Nada en curso. Cuando empieces un juego, una serie o un libro, va a aparecer acá para que lo sigas con un
+            toque.
+          </p>
+        )}
 
-        <section className="mb-6">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">En curso</h2>
-          {loading ? (
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 w-full rounded-2xl" />
-              ))}
-            </div>
-          ) : nowEntries.length === 0 ? (
-            <p className="rounded-2xl bg-background-surface p-4 text-sm text-lavender ring-1 ring-primary-dark/30">
-              Nada en curso. Cuando empieces un juego, una serie o un libro, va a aparecer acá para que lo sigas con un
-              toque.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">{nowEntries.map(renderEntry)}</ul>
-          )}
-        </section>
-
-        <UpcomingEpisodes entries={upcomingWeek} title="Esta semana sale" />
-
-        <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">Tus trackers</h2>
-          <div className="flex flex-col gap-2">
-            {trackerIds.map((id) => (
-              <TrackerCard key={id} id={id} line={loading ? trackers[id].tagline : lines[id]} />
-            ))}
-            <Link
-              to={listPaths.lists}
-              className="flex items-center gap-3 rounded-2xl bg-background-surface p-3 ring-1 ring-primary-dark/30 active:bg-primary-dark/10"
-            >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
-                <ClipboardList size={24} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-ink">Mis listas</h3>
-                <p className="truncate text-sm text-lavender">
-                  {lists.length === 0
-                    ? 'Agrupa juegos, películas y libros'
-                    : `${lists.length} ${lists.length === 1 ? 'lista' : 'listas'}`}
-                </p>
-              </div>
-              <ChevronRight size={20} className="text-accent" />
-            </Link>
-          </div>
-        </section>
-
-        <AccountSection />
+        {!loading && <NowRail entries={rail} />}
+        {!loading && <WeekPanel typeOf={typeOf} />}
+        {!loading && <GoalRings games={games} items={items} />}
+        <UpcomingRail entries={upcomingWeek} />
       </div>
+
+      <HomeNav />
 
       <PageSheet
         book={pageBook}

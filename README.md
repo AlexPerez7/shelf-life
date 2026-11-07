@@ -6,7 +6,7 @@ PWA mobile-first para llevar registro de juegos, películas, series, anime y lib
 
 ## Tres trackers en uno
 
-El inicio junta lo que tienes en curso en los tres, con una acción rápida para cada uno (jugar, +1 episodio, anotar la página), tus números de la semana y las metas del año. Cada tracker tiene su ruta, su tema y sus propias pantallas.
+El inicio junta lo que tienes en curso en los tres, con una acción rápida para cada uno (jugar, +1 episodio, anotar la página), tu semana, las metas del año y lo que se estrena. Cada tracker tiene su ruta, su tema y sus propias pantallas.
 
 ### 🎮 Juegos · [detalle](docs/juegos.md)
 

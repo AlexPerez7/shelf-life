@@ -4,12 +4,14 @@
 
 ## Inicio
 
-El inicio (`/`, `src/pages/Hub.tsx`) junta los tres trackers:
+El inicio (`/`, `src/pages/Hub.tsx` y sus piezas en `src/pages/hub/`) junta los tres trackers, de arriba abajo:
 
-- Lo que está en curso (jugando, viendo, leyendo) con una acción rápida cada uno: "Jugar"/"Terminar" con el cronómetro, +1 episodio, "La vi", anotar la página.
-- Los números de los últimos 7 días, los próximos episodios de la semana y las metas del año.
-- La entrada a cada tracker.
-- "Tu cuenta": exportar los datos y cerrar sesión.
+- **Continuar**: lo último que usaste de lo que está en curso (el juego con el cronómetro corriendo va siempre primero), con la portada grande, el avance y las acciones de un toque: "Jugar"/"Terminar" con el cronómetro, +1 episodio, "La vi", "Leer" y anotar la página. Toma el color de su tracker.
+- **En curso**: el resto (hasta 5 más) en un carrusel de portadas con un anillo de avance y un botón redondo con la misma acción rápida.
+- **Esta semana**: la actividad de cada uno de los últimos 7 días (`lib/week.ts`; cuenta los registros de episodios, páginas, sesiones y películas) y los totales (horas jugadas, episodios, películas, páginas).
+- **Metas del año** como anillos (las de libros leídos; tocar una lleva a las estadísticas de su tracker) y **Sale esta semana**: los próximos episodios en un carrusel con el día de estreno.
+- La **barra inferior** (`components/HomeNav.tsx`) lleva a Juegos, Pantalla, Libros y Listas; arriba a la derecha, el engranaje lleva a Ajustes.
+- Los títulos usan Bricolage Grotesque (`font-display`). Lo que no tiene datos (sin metas, sin estrenos) no se muestra.
 
 Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`useTrackerTheme`, tokens en `src/index.css`) y su carpeta en `src/trackers/`. Comparten lógica (búsqueda en `hooks/useMediaSearch`, reglas de avance en `lib/media.ts`) y componentes chicos de `src/components/`, no pantallas. Los datos de los tres están en la misma tabla `items`.
 
@@ -27,7 +29,7 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 
 ## Ajustes y actualización
 
-- `/ajustes` (desde el inicio, en "Tu cuenta" → "Ajustes y actualización"): muestra la versión instalada (los 7 primeros caracteres del commit y la fecha del build, que fija `vite.config.ts` con `GITHUB_SHA`; `dev` en desarrollo).
+- `/ajustes` (el engranaje del inicio): arriba, "Tu cuenta" (el correo, cerrar sesión y exportar; ver más abajo); después muestra la versión instalada (los 7 primeros caracteres del commit y la fecha del build, que fija `vite.config.ts` con `GITHUB_SHA`; `dev` en desarrollo).
 - **Actualizar**: la PWA baja la versión nueva en segundo plano pero la pantalla abierta sigue con el código viejo hasta recargar, y el navegador revisa pocas veces. El botón pide la revisión al service worker, espera a que la versión nueva tome el control (`autoUpdate` activa `skipWaiting` y `clientsClaim`) y recarga; avisa si ya tenía la última, si la nueva todavía se está bajando o si no hay service worker (desarrollo). Lógica en `lib/appUpdate.ts`.
 - **Reinstalar los archivos de la app** (último recurso, con confirmación): desregistra el service worker y borra la caché de archivos; no toca los datos ni los cambios pendientes sin conexión. Hace falta señal para que la app vuelva a abrir.
 - La primera vez que se publica esta pantalla hay que recargar la app a mano (o cerrarla y abrirla): el botón viaja en la versión nueva.
@@ -62,7 +64,7 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 ## Cuenta y datos
 
 - Login y registro con Supabase Auth, con recuperación de contraseña por email. El origen de la app tiene que estar en *Authentication → URL Configuration → Redirect URLs* de Supabase.
-- **Exportar** desde el inicio ("Tu cuenta"): respaldo completo en JSON (biblioteca, actividad, listas y metas) o la biblioteca en CSV. En el teléfono se entrega con el menú de compartir.
+- **Exportar** desde Ajustes ("Tu cuenta"): respaldo completo en JSON (biblioteca, actividad, listas y metas) o la biblioteca en CSV. En el teléfono se entrega con el menú de compartir.
 
 ## PWA y rendimiento
 

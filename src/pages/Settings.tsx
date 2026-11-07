@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Loader2, PackageX, RefreshCw } from 'lucide-react'
 import { PageContainer } from '../components/PageContainer'
+import { AccountSection } from '../components/AccountSection'
 import { useToast } from '../contexts/ToastContext'
 import { useConfirm } from '../contexts/ConfirmContext'
 import { appVersion, buildDateLabel } from '../lib/appInfo'
@@ -9,7 +10,7 @@ import { checkForUpdate, consumeUpdated, markUpdated, reinstallApp } from '../li
 import { haptic } from '../lib/haptics'
 
 /**
- * Ajustes. Por ahora, la actualización de la app: la PWA no siempre toma una
+ * Ajustes: tu cuenta (cerrar sesión, exportar) y la actualización de la app: la PWA no siempre toma una
  * versión nueva al abrirla, así que acá se fuerza la revisión y se recarga.
  */
 export function Settings() {
@@ -79,6 +80,8 @@ export function Settings() {
         <ArrowLeft size={16} /> Inicio
       </Link>
       <h1 className="mb-4 text-3xl font-bold text-ink">Ajustes</h1>
+
+      <AccountSection />
 
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-lavender">La app</h2>
