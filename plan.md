@@ -6,8 +6,7 @@ Lo que quedó anotado para hacer más adelante, en el orden recomendado. El plan
 
 Comparado con [Openreads](https://github.com/mateusz-bak/openreads) (la app en la que se inspira Libros), en el orden recomendado:
 
-1. **Edición en lote**: seleccionar varios libros y cambiarles el formato o el estado, o borrarlos.
-2. **Importar de BookWyrm** (CSV), como Goodreads y StoryGraph.
+1. **Importar de BookWyrm** (CSV), como Goodreads y StoryGraph.
 
 ## Ideas sueltas (sin prioridad)
 

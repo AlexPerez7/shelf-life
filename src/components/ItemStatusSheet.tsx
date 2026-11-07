@@ -6,7 +6,8 @@ import type { ItemStatus } from '../types/item'
 interface ItemStatusSheetProps {
   open: boolean
   onClose: () => void
-  value: ItemStatus
+  /** Estado actual (null si no hay uno solo, como en la edición en lote). */
+  value: ItemStatus | null
   onChange: (status: ItemStatus) => void
   /** Etiquetas de la sección ("Viendo", "Leyendo"...). */
   labels: Record<ItemStatus, string>

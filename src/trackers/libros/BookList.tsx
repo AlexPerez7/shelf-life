@@ -2,7 +2,7 @@
 // que se está ordenando a la derecha.
 
 import { useState } from 'react'
-import { BookOpen, Heart } from 'lucide-react'
+import { BookOpen, Check, Heart } from 'lucide-react'
 import { GameThumb } from '../../components/GameThumb'
 import { formatDate } from '../../lib/dates'
 import { finishedDates } from '../../lib/readings'
@@ -38,10 +38,13 @@ export function BookList({
   items,
   sort,
   onOpenBook,
+  selected,
 }: {
   items: Item[]
   sort: BookSort | null
   onOpenBook: (item: Item) => void
+  /** Ids marcados en modo selección (undefined fuera del modo). */
+  selected?: ReadonlySet<string>
 }) {
   const [limit, setLimit] = useState(PAGE)
   return (
@@ -50,13 +53,27 @@ export function BookList({
         {items.slice(0, limit).map((item) => {
           const authors = item.metadata.authors?.join(', ')
           const extra = detail(item, sort)
+          const isSelected = selected?.has(item.id)
           return (
             <li key={item.id} className="cv-row">
               <button
                 type="button"
                 onClick={() => onOpenBook(item)}
-                className="flex min-h-16 w-full items-center gap-3 px-3 py-2 text-left active:bg-primary-dark/10"
+                aria-pressed={isSelected}
+                className={`flex min-h-16 w-full items-center gap-3 px-3 py-2 text-left active:bg-primary-dark/10 ${
+                  isSelected ? 'bg-accent/10' : ''
+                }`}
               >
+                {selected && (
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ring-2 ${
+                      isSelected ? 'bg-accent text-white ring-accent' : 'ring-lavender/50'
+                    }`}
+                  >
+                    {isSelected && <Check size={12} strokeWidth={3} />}
+                  </span>
+                )}
                 <GameThumb
                   size="thumb"
                   src={item.cover_url}

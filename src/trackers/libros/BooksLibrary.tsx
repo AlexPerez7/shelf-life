@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileUp, Library, List, Rows3, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, CheckSquare, FileUp, Library, List, Rows3, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { useTrash } from '../../hooks/useTrash'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
 import { Skeleton } from '../../components/Skeleton'
 import { mediaSections } from '../../lib/media'
+import { allSelected, selectedBooks, toggleSelected } from '../../lib/bookBatch'
 import {
   bookGenres,
   filterBooks,
@@ -22,6 +23,7 @@ import { Bookcase, Shelf, ShelfUnit, type ShelfMode } from './Bookshelf'
 import { MissingCovers } from './MissingCovers'
 import { BookList } from './BookList'
 import { BookViewSheet } from './BookViewSheet'
+import { BookSelectionBar } from './BookSelectionBar'
 import { buildShelves, findShelf, shelfParam } from './bookLists'
 import type { Item } from '../../types/item'
 
@@ -172,7 +174,23 @@ export function BooksLibrary() {
     )
   }
 
-  const openBook = (item: Item) => navigate(section.detailPath(item.id))
+  // Edición en lote: en modo selección, tocar un libro lo marca en vez de abrirlo.
+  const [selecting, setSelecting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
+  const selection = selecting ? selectedIds : undefined
+  // Lo que se ve ahora: los resultados, el estante abierto o todo el librero.
+  const visibleBooks = results ?? openShelf?.items ?? books
+  const chosen = useMemo(() => selectedBooks(books, selectedIds), [books, selectedIds])
+  function stopSelecting() {
+    setSelecting(false)
+    setSelectedIds(new Set())
+  }
+  function toggleAll() {
+    setSelectedIds(allSelected(visibleBooks, selectedIds) ? new Set() : new Set(visibleBooks.map((b) => b.id)))
+  }
+
+  const openBook = (item: Item) =>
+    selecting ? setSelectedIds((prev) => toggleSelected(prev, item.id)) : navigate(section.detailPath(item.id))
   const isEmpty = !loading && !error && books.length === 0
 
   const modeToggle = (
@@ -215,6 +233,17 @@ export function BooksLibrary() {
         </div>
         {!isEmpty && (
           <div className="flex">
+            <button
+              type="button"
+              onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
+              aria-label={selecting ? 'Salir de la selección' : 'Seleccionar libros'}
+              aria-pressed={selecting}
+              className={`flex h-11 w-11 items-center justify-center rounded-full active:bg-primary-dark/15 ${
+                selecting ? 'bg-accent/10 text-accent' : 'text-ink'
+              }`}
+            >
+              <CheckSquare size={20} />
+            </button>
             <button
               type="button"
               onClick={() => setSheetOpen(true)}
@@ -315,9 +344,9 @@ export function BooksLibrary() {
           </div>
           {results.length > 0 &&
             (mode === 'lista' ? (
-              <BookList items={results} sort={view.sort} onOpenBook={openBook} />
+              <BookList items={results} sort={view.sort} onOpenBook={openBook} selected={selection} />
             ) : (
-              <Bookcase items={results} mode={shelfMode} onOpenBook={openBook} />
+              <Bookcase items={results} mode={shelfMode} onOpenBook={openBook} selected={selection} />
             ))}
         </>
       ) : openShelf ? (
@@ -344,9 +373,9 @@ export function BooksLibrary() {
             </div>
           ) : (
             mode === 'lista' ? (
-              <BookList items={openShelf.items} sort={null} onOpenBook={openBook} />
+              <BookList items={openShelf.items} sort={null} onOpenBook={openBook} selected={selection} />
             ) : (
-              <Bookcase items={openShelf.items} mode={shelfMode} onOpenBook={openBook} />
+              <Bookcase items={openShelf.items} mode={shelfMode} onOpenBook={openBook} selected={selection} />
             )
           )}
         </>
@@ -367,6 +396,7 @@ export function BooksLibrary() {
                     mode={shelfMode}
                     onOpenBook={openBook}
                     onOpenShelf={() => setParam(shelfParam, shelf.id)}
+                    selected={selection}
                   />
                 ))}
               </ShelfUnit>
@@ -382,6 +412,15 @@ export function BooksLibrary() {
             </Link>
           )}
         </>
+      )}
+
+      {selecting && (
+        <BookSelectionBar
+          books={chosen}
+          allChecked={allSelected(visibleBooks, selectedIds)}
+          onToggleAll={toggleAll}
+          onDone={stopSelecting}
+        />
       )}
 
       <BookViewSheet
