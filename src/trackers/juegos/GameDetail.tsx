@@ -186,7 +186,7 @@ export function GameDetail() {
       <PageContainer belowHero>
         <div className="mx-auto md:max-w-xl">
           <div className="flex items-start justify-between gap-3">
-            <h1 ref={titleRef} className="min-w-0 text-2xl font-bold">
+            <h1 ref={titleRef} className="min-w-0 font-display text-2xl font-extrabold tracking-tight">
               {game.title}
             </h1>
             <SaveIndicator state={saveState} onRetry={flush} />

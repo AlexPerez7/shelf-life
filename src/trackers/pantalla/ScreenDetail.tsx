@@ -582,7 +582,7 @@ export function ScreenDetail() {
             <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-accent">
               <TypeIcon size={13} /> {mediaTypeLabels[type]}
             </p>
-            <h1 className="mt-0.5 text-2xl font-bold leading-tight text-ink">{current.title}</h1>
+            <h1 className="mt-0.5 font-display text-2xl font-extrabold tracking-tight leading-tight text-ink">{current.title}</h1>
             {current.metadata.original_title && (
               <p className="mt-0.5 text-xs italic text-lavender">{current.metadata.original_title}</p>
             )}

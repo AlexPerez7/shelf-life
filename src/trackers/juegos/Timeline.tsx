@@ -119,7 +119,7 @@ export function Timeline() {
         <ArrowLeft size={16} /> Estadísticas
       </button>
 
-      <h1 className="mb-4 text-xl font-semibold">Diario</h1>
+      <h1 className="mb-4 font-display text-2xl font-bold tracking-tight">Diario</h1>
 
       {loading && (
         <div className="flex flex-col gap-2">

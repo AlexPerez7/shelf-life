@@ -163,7 +163,7 @@ export function ScreenStats() {
     <PageContainer>
       <TrackerBar tracker="pantalla" />
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h1 className="text-3xl font-bold text-ink">Estadísticas</h1>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">Estadísticas</h1>
         <Link
           to={`${section.libraryPath}/historial`}
           className="-mr-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-medium text-accent active:bg-primary-dark/30"

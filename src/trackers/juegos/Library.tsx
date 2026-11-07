@@ -214,7 +214,7 @@ export function Library() {
       <TrackerBar tracker="juegos" />
 
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">Mi biblioteca</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Mi biblioteca</h1>
         {!loading && hasFilters && (
           <span className="text-sm text-lavender">{`${sorted.length} de ${games.length}`}</span>
         )}

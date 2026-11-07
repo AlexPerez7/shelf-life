@@ -121,7 +121,7 @@ export function Home() {
       </div>
 
       <TrackerBar tracker="juegos" />
-      <h1 className="mb-1 text-xl font-semibold">Descubrir</h1>
+      <h1 className="mb-1 font-display text-2xl font-bold tracking-tight">Descubrir</h1>
       <p className="mb-4 text-sm text-lavender">
         Juegos con más repercusión salidos en los últimos 2 años
       </p>

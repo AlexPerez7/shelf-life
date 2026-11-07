@@ -26,7 +26,7 @@ export function ScreenHistory() {
       >
         <ArrowLeft size={16} /> Estadísticas
       </Link>
-      <h1 className="mb-3 text-3xl font-bold text-ink">Historial</h1>
+      <h1 className="mb-3 font-display text-3xl font-extrabold tracking-tight text-ink">Historial</h1>
       <HistoryFeed
         section={section}
         items={screen}

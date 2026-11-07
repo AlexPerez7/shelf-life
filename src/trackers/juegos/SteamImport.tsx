@@ -298,7 +298,7 @@ export function SteamImport() {
         <ArrowLeft size={16} /> Volver
       </button>
 
-      <h1 className="mb-1 text-xl font-semibold">Importar de Steam</h1>
+      <h1 className="mb-1 font-display text-2xl font-bold tracking-tight">Importar de Steam</h1>
       <p className="mb-4 text-sm text-lavender">
         Vincula tu cuenta de Steam para traer tus juegos con las horas jugadas reales.
       </p>

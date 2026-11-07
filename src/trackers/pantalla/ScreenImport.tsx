@@ -220,7 +220,7 @@ export function ScreenImport() {
       >
         <ArrowLeft size={16} /> Agregar
       </Link>
-      <h1 className="text-3xl font-bold text-ink">Importar</h1>
+      <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">Importar</h1>
       <p className="mb-4 text-sm text-lavender">Trae tus películas de Letterboxd o tu anime de MyAnimeList</p>
 
       <div className="flex flex-col gap-4 md:max-w-xl">

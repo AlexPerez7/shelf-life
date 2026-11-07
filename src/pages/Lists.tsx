@@ -57,7 +57,7 @@ export function Lists() {
       >
         <ChevronLeft size={18} /> Inicio
       </Link>
-      <h1 className="text-3xl font-bold text-ink">Mis listas</h1>
+      <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">Mis listas</h1>
       <p className="mb-4 text-sm text-lavender">Juegos, películas, series y libros, como quieras agruparlos</p>
 
       <form onSubmit={handleCreate} className="mb-5 flex gap-2 md:max-w-md">

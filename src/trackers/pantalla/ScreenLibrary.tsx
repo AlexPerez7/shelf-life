@@ -161,7 +161,7 @@ function Rail({ title, items, onSeeAll, onOpen }: RailProps) {
         onClick={onSeeAll}
         className="-mx-1 mb-2 flex min-h-11 w-[calc(100%+0.5rem)] items-center justify-between gap-2 rounded-lg px-1 text-left active:bg-primary-dark/20"
       >
-        <h2 className="text-lg font-semibold text-ink">
+        <h2 className="font-display text-xl font-bold tracking-tight text-ink">
           {title} <span className="text-sm font-normal text-lavender">· {items.length}</span>
         </h2>
         <span className="flex items-center text-sm text-accent">
@@ -196,7 +196,7 @@ function Discover({ type, owned }: { type: ScreenType; owned: Set<string> }) {
         to={addTo}
         className="-mx-1 mb-2 flex min-h-11 w-[calc(100%+0.5rem)] items-center justify-between gap-2 rounded-lg px-1 active:bg-primary-dark/20"
       >
-        <h2 className="flex items-center gap-1.5 text-lg font-semibold text-ink">
+        <h2 className="flex items-center gap-1.5 font-display text-xl font-bold tracking-tight text-ink">
           <Flame size={18} className="text-accent" /> Para descubrir
         </h2>
         <span className="flex items-center text-sm text-accent">
@@ -346,7 +346,7 @@ export function ScreenLibrary() {
 
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold text-ink">Pantalla</h1>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">Pantalla</h1>
           <p className="text-sm text-lavender">Películas, series y anime</p>
         </div>
         {!isEmpty && (
@@ -448,7 +448,7 @@ export function ScreenLibrary() {
                   <ArrowLeft size={20} />
                 </button>
               )}
-              <h2 className="truncate text-xl font-semibold text-ink">{gridTitle}</h2>
+              <h2 className="truncate font-display text-xl font-bold tracking-tight text-ink">{gridTitle}</h2>
             </div>
             <span className="shrink-0 text-sm text-lavender">{grid.length}</span>
           </div>
@@ -479,7 +479,7 @@ export function ScreenLibrary() {
 
           {watching.length > 0 && (
             <section className="mb-6">
-              <h2 className="mb-2 text-lg font-semibold text-ink">Seguir viendo</h2>
+              <h2 className="mb-2 font-display text-xl font-bold tracking-tight text-ink">Seguir viendo</h2>
               <div className="grid gap-3 md:grid-cols-2">
                 {watching.map((item) => (
                   <ContinueCard

@@ -189,7 +189,7 @@ export function ScreenAdd() {
       >
         <ArrowLeft size={16} /> Pantalla
       </button>
-      <h1 className="mb-2 text-3xl font-bold text-ink">Agregar</h1>
+      <h1 className="mb-2 font-display text-3xl font-extrabold tracking-tight text-ink">Agregar</h1>
 
       <div role="group" aria-label="Tipo" className="-mx-1 mb-3 flex gap-1">
         {section.types.map((t) => (
@@ -248,7 +248,7 @@ export function ScreenAdd() {
 
       {!hasQuery && trending != null && trending.length > 0 && (
         <section>
-          <h2 className="mb-2 flex items-center gap-1.5 text-lg font-semibold text-ink">
+          <h2 className="mb-2 flex items-center gap-1.5 font-display text-xl font-bold tracking-tight text-ink">
             <Flame size={18} className="text-accent" /> Tendencias {type === 'anime' ? 'de la temporada' : 'de la semana'}
           </h2>
           <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4 lg:grid-cols-6">

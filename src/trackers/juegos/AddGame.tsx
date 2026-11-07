@@ -29,7 +29,7 @@ export function AddGame() {
   return (
     <PageContainer>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Agregar juego</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Agregar juego</h1>
         <button
           onClick={() => navigate(gamesPaths.steamImport)}
           className="-mr-2 flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm text-accent active:bg-primary-dark/20"

@@ -24,7 +24,7 @@ export function UpcomingEpisodes({
   if (entries.length === 0) return null
   return (
     <section className={className}>
-      <h2 className="mb-2 flex items-center gap-1.5 text-lg font-semibold text-ink">
+      <h2 className="mb-2 flex items-center gap-1.5 font-display text-xl font-bold tracking-tight text-ink">
         <CalendarClock size={18} className="text-accent" /> {title}
       </h2>
       <div className="scrollbar-hide -mx-4 flex snap-x gap-2 overflow-x-auto scroll-px-4 px-4 pb-1">

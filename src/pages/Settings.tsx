@@ -79,7 +79,7 @@ export function Settings() {
       >
         <ArrowLeft size={16} /> Inicio
       </Link>
-      <h1 className="mb-4 text-3xl font-bold text-ink">Ajustes</h1>
+      <h1 className="mb-4 font-display text-3xl font-extrabold tracking-tight text-ink">Ajustes</h1>
 
       <AccountSection />
 

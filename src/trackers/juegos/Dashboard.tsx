@@ -113,7 +113,7 @@ export function Dashboard() {
     <PageContainer>
       <TrackerBar tracker="juegos" />
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Estadísticas</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Estadísticas</h1>
         <Link
           to={gamesPaths.diary}
           className="-mr-2 flex min-h-11 items-center rounded-full px-2 text-sm text-accent active:bg-primary-dark/20"
