@@ -25,6 +25,13 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 - Arriba de las estadísticas de cada tracker, con el avance y si vas al día según el calendario, y también en el inicio.
 - Tabla `goals` (migración `0012`); sin ella la app funciona igual y no muestra las metas. La `0014` suma `kind` (libros leídos o páginas); sin ella no hay meta de páginas. El inicio solo muestra las de libros leídos.
 
+## Ajustes y actualización
+
+- `/ajustes` (desde el inicio, en "Tu cuenta" → "Ajustes y actualización"): muestra la versión instalada (los 7 primeros caracteres del commit y la fecha del build, que fija `vite.config.ts` con `GITHUB_SHA`; `dev` en desarrollo).
+- **Actualizar**: la PWA baja la versión nueva en segundo plano pero la pantalla abierta sigue con el código viejo hasta recargar, y el navegador revisa pocas veces. El botón pide la revisión al service worker, espera a que la versión nueva tome el control (`autoUpdate` activa `skipWaiting` y `clientsClaim`) y recarga; avisa si ya tenía la última, si la nueva todavía se está bajando o si no hay service worker (desarrollo). Lógica en `lib/appUpdate.ts`.
+- **Reinstalar los archivos de la app** (último recurso, con confirmación): desregistra el service worker y borra la caché de archivos; no toca los datos ni los cambios pendientes sin conexión. Hace falta señal para que la app vuelva a abrir.
+- La primera vez que se publica esta pantalla hay que recargar la app a mano (o cerrarla y abrirla): el botón viaja en la versión nueva.
+
 ## Cambios sin conexión
 
 - Editar un título, cambiar su estado o puntaje, el avance rápido (+1 episodio, la página), anotar episodios o páginas, registrar sesiones de juego y terminar el cronómetro (de juegos o de lectura) funcionan sin señal.

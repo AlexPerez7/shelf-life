@@ -34,6 +34,7 @@ const UpdatePassword = lazy(() =>
 const SharedList = lazy(() => import('./pages/SharedList').then((m) => ({ default: m.SharedList })))
 const Lists = lazy(() => import('./pages/Lists').then((m) => ({ default: m.Lists })))
 const ListDetail = lazy(() => import('./pages/ListDetail').then((m) => ({ default: m.ListDetail })))
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })))
 
 function SplashScreen() {
@@ -132,6 +133,7 @@ function App() {
             <Route path="/juegos/*" element={<GamesTracker />} />
             <Route path="/pantalla/*" element={<ScreenTracker />} />
             <Route path="/libros/*" element={<BooksTracker />} />
+            <Route path="/ajustes" element={<Settings />} />
             <Route path="/listas" element={<Lists />} />
             <Route path="/listas/:id" element={<ListDetail />} />
             {legacyRoutes.map(([path, to]) => (

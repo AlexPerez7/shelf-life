@@ -10,6 +10,7 @@ import {
   LogOut,
   Play,
   Plus,
+  Settings,
   Sheet,
   Square,
   UserRound,
@@ -266,6 +267,14 @@ function AccountSection() {
             {exporting === 'csv' ? <Loader2 size={15} className="animate-spin" /> : <Sheet size={15} />} Biblioteca (CSV)
           </button>
         </div>
+        <Link
+          to="/ajustes"
+          className="mt-3 flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-ink active:bg-primary-dark/20"
+        >
+          <Settings size={16} className="text-lavender" />
+          <span className="flex-1">Ajustes y actualización</span>
+          <ChevronRight size={16} className="text-lavender" />
+        </Link>
       </div>
     </section>
   )

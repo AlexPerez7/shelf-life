@@ -10,6 +10,11 @@ const base = process.env.BASE_PATH ?? '/'
 // https://vite.dev/config/
 export default defineConfig({
   base,
+  // Qué versión corre (se ve en Ajustes): el commit del deploy y cuándo se compiló.
+  define: {
+    __APP_VERSION__: JSON.stringify((process.env.GITHUB_SHA ?? 'dev').slice(0, 7)),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+  },
   build: {
     rolldownOptions: {
       output: {
