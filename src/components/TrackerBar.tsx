@@ -6,8 +6,10 @@ import { trackers, type TrackerId } from '../trackers/trackers'
 /**
  * Barra superior de las pantallas principales de un tracker: vuelve al
  * inicio de Shelf Life (donde se elige tracker) y muestra en cuál se está.
+ * `hideName` saca el nombre del tracker cuando el título de la pantalla ya lo
+ * dice (la biblioteca de Pantalla se titula "Pantalla").
  */
-export function TrackerBar({ tracker }: { tracker: TrackerId }) {
+export function TrackerBar({ tracker, hideName = false }: { tracker: TrackerId; hideName?: boolean }) {
   const { label, Icon } = trackers[tracker]
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
@@ -20,10 +22,12 @@ export function TrackerBar({ tracker }: { tracker: TrackerId }) {
         <img src={asset('icons/icon-192.png')} alt="" className="h-6 w-6 rounded-md" />
         Shelf Life
       </Link>
-      <span className="flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
-        <Icon size={14} />
-        {label}
-      </span>
+      {!hideName && (
+        <span className="flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+          <Icon size={14} />
+          {label}
+        </span>
+      )}
     </div>
   )
 }

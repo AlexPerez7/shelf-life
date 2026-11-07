@@ -306,7 +306,7 @@ export function ScreenLibrary() {
 
   return (
     <PageContainer>
-      <TrackerBar tracker="pantalla" />
+      <TrackerBar tracker="pantalla" hideName />
 
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
