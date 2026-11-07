@@ -47,5 +47,6 @@ Body: `{ type: 'movie' | 'series' | 'anime' | 'book', ... }`:
 | `mode: 'covers'` | Portadas alternativas: para libros, las ediciones de Open Library (primero en español), Apple Books y Google Books (con key); para películas y series, los pósters de TMDB. |
 | `mode: 'match'` + `titles` | Para importar de Letterboxd: la película de TMDB de cada título y año (hasta 20), con el detalle, o `null`. |
 | `mode: 'findCovers'` + `books` | Para completar portadas: la de cada libro (`title`, `author`, `isbn`; hasta 20) en Open Library, Google Books (con key) o Apple Books, o `null`. |
+| `mode: 'byAuthor'` + `author` | Solo libros: las obras más conocidas de ese autor en Open Library (por ediciones, hasta 20, sin repetir títulos ni recopilaciones). Para "Más de este autor" en la ficha. |
 | `mode: 'sequels'` + `id` | Las secuelas de un anime de AniList (relación SEQUEL), con su `format` (TV, MOVIE, OVA...), primero lo que sigue la serie. Para "Sigue la historia". |
 | `mode: 'mal'` + `ids` | Para importar de MyAnimeList: el anime de AniList de cada id de MAL (hasta 50), con `mal_id`. |

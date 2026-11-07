@@ -8,7 +8,7 @@
 //     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
 //     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal' | 'sequels' | 'findCovers', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[], books?: { title: string, author?: string, isbn?: string }[] }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal' | 'sequels' | 'findCovers' | 'byAuthor', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[], books?: { title: string, author?: string, isbn?: string }[] }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
 //   - con `mode: 'trending'` -> lo que es tendencia esta semana (TMDB) o esta
 //                    temporada (AniList), para "Descubrir" en Pantalla. No
@@ -31,6 +31,9 @@
 //   - con `mode: 'sequels'` + `id` (anime de AniList) -> sus secuelas
 //                    (relación SEQUEL), con `format` (TV, MOVIE, OVA...):
 //                    AniList separa cada temporada en otra entrada.
+//   - con `mode: 'byAuthor'` + `author` (libros) -> las obras más conocidas de
+//                    ese autor en Open Library (hasta 20, sin repetir
+//                    títulos), para "Más de este autor".
 //   - con `id`    -> detalle de un resultado (duración, episodios, sinopsis),
 //                    que se pide al agregar: algunas búsquedas no lo traen.
 //                    Para libros, `source` dice de qué API es el id.
@@ -495,6 +498,38 @@ async function olDetails(id: string): Promise<MediaResult> {
   return { ...olToResult(doc), summary: stripHtml(description) }
 }
 
+const MAX_BY_AUTHOR = 20
+/** Recopilaciones y packs: no son "otro libro" del autor. */
+const COMPILATION = /obras? (completas?|escogidas?|selectas?)|complete (works|novels|stories)|collected|box(ed)? set|omnibus|antolog|anthology/i
+
+/** Las obras más conocidas de un autor (por cantidad de ediciones), sin repetir títulos. */
+async function olByAuthor(author: string): Promise<MediaResult[]> {
+  const wanted = normTitle(author)
+  if (!wanted) return []
+  const params = new URLSearchParams({
+    q: `author_name:"${author.replace(/"/g, '')}"`,
+    sort: 'editions',
+    limit: '50',
+    fields: OL_FIELDS,
+  })
+  const data = await openLibrary(`/search.json?${params}`)
+  const seen = new Set<string>()
+  const results: MediaResult[] = []
+  for (const doc of data.docs ?? []) {
+    const result = olToResult(doc)
+    // El autor tiene que ser uno de los de la obra (la búsqueda también trae coautores y menciones).
+    if (!(doc.author_name ?? []).some((a: string) => normTitle(a) === wanted)) continue
+    if (!result.title || COMPILATION.test(result.title)) continue
+    // Mismo título con y sin subtítulo, o en otra edición, es el mismo libro.
+    const key = normTitle(String(doc.title ?? ''))
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    results.push(result)
+    if (results.length >= MAX_BY_AUTHOR) break
+  }
+  return results
+}
+
 async function bookSearch(query: string): Promise<MediaResult[]> {
   if (GOOGLE_BOOKS_API_KEY) {
     try {
@@ -754,6 +789,12 @@ serve(async (req) => {
         })
       )
       return jsonResponse(results.map((r) => (r.status === 'fulfilled' ? r.value : null)))
+    }
+
+    if (mode === 'byAuthor') {
+      if (mediaType !== 'book') return jsonResponse({ error: 'Solo libros' }, 400)
+      const author = typeof body.author === 'string' ? body.author.trim().slice(0, MAX_TEXT) : ''
+      return jsonResponse(author ? await olByAuthor(author) : [])
     }
 
     if (mode === 'sequels') {

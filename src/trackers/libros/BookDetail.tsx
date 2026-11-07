@@ -33,6 +33,7 @@ import { ListPicker } from '../../components/ListPicker'
 import { CoverPicker } from '../../components/CoverPicker'
 import { FormatPicker } from '../../components/FormatPicker'
 import { ReadingHistory } from './ReadingHistory'
+import { MoreByAuthor } from './MoreByAuthor'
 import { rereadChanges, timesRead } from '../../lib/readings'
 import { BOOK_FORMATS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
@@ -697,6 +698,8 @@ export function BookDetail() {
                 </dl>
               </SectionCard>
             )}
+
+            <MoreByAuthor item={current} />
           </div>
         </div>
 

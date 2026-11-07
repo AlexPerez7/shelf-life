@@ -200,6 +200,13 @@ export async function animeSequels(anilistId: string): Promise<AnimeSequel[]> {
   return Array.isArray(result) ? result : []
 }
 
+/** Las obras más conocidas de un autor (Open Library), para "Más de este autor". */
+export async function booksByAuthor(author: string): Promise<MediaSearchResult[]> {
+  const result = await callFn<MediaSearchResult[]>('media-search', { type: 'book', mode: 'byAuthor', author })
+  // Una versión vieja de la función responde otra cosa: sin sugerencias.
+  return Array.isArray(result) ? result : []
+}
+
 /** Una portada alternativa para elegir. */
 export interface CoverOption {
   url: string
