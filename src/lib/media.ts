@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { callFn } from './functions'
+import type { BookEdition } from './bookEditions'
 import { statusColors } from './status'
 import { gameStatusFromItem } from './gameItem'
 import type { Item, ItemStatus, ItemWrite, MediaSearchResult, NonGameType, ScreenType } from '../types/item'
@@ -197,6 +198,20 @@ export type AnimeSequel = MediaSearchResult & { format: string | null }
 export async function animeSequels(anilistId: string): Promise<AnimeSequel[]> {
   const result = await callFn<AnimeSequel[]>('media-search', { type: 'anime', mode: 'sequels', id: anilistId })
   // Una versión vieja de la función responde el detalle: sin sugerencias.
+  return Array.isArray(result) ? result : []
+}
+
+/** Las ediciones de un libro en Open Library (primero las en español), para elegir la exacta. */
+export async function bookEditions(item: Item): Promise<BookEdition[]> {
+  const result = await callFn<BookEdition[]>('media-search', {
+    type: 'book',
+    mode: 'editions',
+    id: item.external_id ?? undefined,
+    source: item.source ?? undefined,
+    title: item.title,
+    author: item.metadata.authors?.[0] ?? '',
+  })
+  // Una versión vieja de la función responde otra cosa: sin ediciones.
   return Array.isArray(result) ? result : []
 }
 

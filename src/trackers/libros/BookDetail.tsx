@@ -34,6 +34,8 @@ import { CoverPicker } from '../../components/CoverPicker'
 import { FormatPicker } from '../../components/FormatPicker'
 import { ReadingHistory } from './ReadingHistory'
 import { MoreByAuthor } from './MoreByAuthor'
+import { EditionPicker } from './EditionPicker'
+import { editionChanges } from '../../lib/bookEditions'
 import { rereadChanges, timesRead } from '../../lib/readings'
 import { BOOK_FORMATS } from '../../lib/formats'
 import { haptic } from '../../lib/haptics'
@@ -270,6 +272,7 @@ export function BookDetail() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [coverOpen, setCoverOpen] = useState(false)
+  const [editionOpen, setEditionOpen] = useState(false)
 
   function goBack() {
     if (location.key !== 'default') navigate(-1)
@@ -674,13 +677,31 @@ export function BookDetail() {
 
             <ListPicker itemId={current.id} inactiveClassName="bg-background text-lavender ring-1 ring-primary-dark/25" />
 
-            {(current.metadata.publisher || current.metadata.isbn || current.metadata.original_title) && (
-              <SectionCard icon={Library} title="Edición">
+            <SectionCard
+              icon={Library}
+              title="Edición"
+              action={
+                <button
+                  type="button"
+                  onClick={() => setEditionOpen(true)}
+                  className="-mr-2 flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-accent active:bg-primary-dark/10"
+                >
+                  Elegir edición
+                </button>
+              }
+            >
+              {current.metadata.publisher || current.metadata.isbn || current.metadata.original_title ? (
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                   {current.metadata.publisher && (
                     <>
                       <dt className="text-lavender">Editorial</dt>
                       <dd className="text-ink">{current.metadata.publisher}</dd>
+                    </>
+                  )}
+                  {current.progress_total != null && (
+                    <>
+                      <dt className="text-lavender">Páginas</dt>
+                      <dd className="tabular-nums text-ink">{current.progress_total}</dd>
                     </>
                   )}
                   {current.metadata.isbn && (
@@ -696,8 +717,12 @@ export function BookDetail() {
                     </>
                   )}
                 </dl>
-              </SectionCard>
-            )}
+              ) : (
+                <p className="text-sm text-lavender">
+                  Sin datos de la edición. Elige la tuya para completar las páginas, el ISBN y la editorial.
+                </p>
+              )}
+            </SectionCard>
 
             <MoreByAuthor item={current} />
           </div>
@@ -740,6 +765,16 @@ export function BookDetail() {
           onPick={(cover_url) => {
             setCoverOpen(false)
             save({ cover_url }, 'Portada cambiada')
+          }}
+        />
+        <EditionPicker
+          item={current}
+          open={editionOpen}
+          onClose={() => setEditionOpen(false)}
+          onPick={(edition, withCover) => {
+            setEditionOpen(false)
+            haptic()
+            save(editionChanges(current, edition, withCover), 'Edición actualizada')
           }}
         />
         <ItemStatusSheet

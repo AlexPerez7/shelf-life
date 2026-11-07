@@ -8,7 +8,7 @@
 //     se usa primero Google Books (mejores portadas y sinopsis) y Open Library
 //     queda de respaldo. Sin key, Google Books ya no responde (cuota 0).
 //
-// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal' | 'sequels' | 'findCovers' | 'byAuthor', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[], books?: { title: string, author?: string, isbn?: string }[] }
+// Body: { type: 'movie' | 'series' | 'anime' | 'book', query?: string, id?: string, source?: string, mode?: 'trending' | 'upcoming' | 'covers' | 'match' | 'mal' | 'sequels' | 'findCovers' | 'byAuthor' | 'editions', ids?: string[], title?: string, author?: string, titles?: { title: string, year?: number }[], books?: { title: string, author?: string, isbn?: string }[] }
 //   - con `query` -> búsqueda por texto (hasta 12 resultados)
 //   - con `mode: 'trending'` -> lo que es tendencia esta semana (TMDB) o esta
 //                    temporada (AniList), para "Descubrir" en Pantalla. No
@@ -34,6 +34,10 @@
 //   - con `mode: 'byAuthor'` + `author` (libros) -> las obras más conocidas de
 //                    ese autor en Open Library (hasta 20, sin repetir
 //                    títulos), para "Más de este autor".
+//   - con `mode: 'editions'` (libros) + `id` (obra de Open Library) o
+//                    `title`/`author` -> las ediciones de la obra (hasta 40,
+//                    primero las en español) con editorial, año, páginas,
+//                    ISBN, idioma y portada, para elegir la exacta.
 //   - con `id`    -> detalle de un resultado (duración, episodios, sinopsis),
 //                    que se pide al agregar: algunas búsquedas no lo traen.
 //                    Para libros, `source` dice de qué API es el id.
@@ -530,6 +534,80 @@ async function olByAuthor(author: string): Promise<MediaResult[]> {
   return results
 }
 
+const MAX_EDITIONS = 40
+
+/** Una edición de una obra de Open Library. */
+interface BookEdition {
+  id: string
+  title: string
+  publisher: string | null
+  publish_date: string | null
+  year: number | null
+  pages: number | null
+  isbn: string | null
+  /** Códigos de idioma de Open Library ('spa', 'eng'...). */
+  languages: string[]
+  cover_url: string | null
+  /** 'Paperback', 'Hardcover'... */
+  format: string | null
+}
+
+/** Las ediciones de una obra: la dada por id, o la primera que da la búsqueda por título y autor. */
+async function olEditions(workId: string | null, title: string, author: string): Promise<BookEdition[]> {
+  let work = workId
+  if (!work && title) {
+    const params = new URLSearchParams({ q: [title, author].filter(Boolean).join(' '), limit: '1', fields: 'key' })
+    const data = await openLibrary(`/search.json?${params}`)
+    work = String(data.docs?.[0]?.key ?? '').replace('/works/', '') || null
+  }
+  if (!work) return []
+  const data = await openLibrary(`/works/${work}/editions.json?limit=100`)
+  const seen = new Set<string>()
+  const editions: (BookEdition & { rank: number })[] = []
+  for (const e of data.entries ?? []) {
+    const isbn = (e.isbn_13 ?? [])[0] ?? (e.isbn_10 ?? [])[0] ?? null
+    const publisher = e.publishers?.[0] ?? null
+    const pages = Number.isInteger(e.number_of_pages) && e.number_of_pages > 0 ? e.number_of_pages : null
+    // Sin ISBN, editorial ni páginas no hay nada que elegir.
+    if (!isbn && !publisher && !pages) continue
+    const key = isbn ?? `${publisher}|${e.publish_date}|${pages}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    const cover = (e.covers ?? []).find((c: number) => c > 0)
+    const languages = (e.languages ?? []).map((l: any) => String(l.key ?? '').replace('/languages/', '')).filter(Boolean)
+    const year = Number(/\b(1[5-9]|20)\d{2}\b/.exec(String(e.publish_date ?? ''))?.[0]) || null
+    editions.push({
+      id: String(e.key ?? '').replace('/books/', ''),
+      title: e.subtitle ? `${e.title}: ${e.subtitle}` : String(e.title ?? title),
+      publisher,
+      publish_date: e.publish_date ?? null,
+      year,
+      pages,
+      isbn,
+      languages,
+      cover_url: cover ? `https://covers.openlibrary.org/b/id/${cover}-L.jpg` : null,
+      format: e.physical_format ?? null,
+      // En español primero; después las más completas.
+      rank: (languages.includes('spa') ? 4 : 0) + (pages ? 2 : 0) + (isbn ? 1 : 0),
+    })
+  }
+  return editions
+    .sort((a, b) => b.rank - a.rank || (b.year ?? 0) - (a.year ?? 0))
+    .slice(0, MAX_EDITIONS)
+    .map((e): BookEdition => ({
+      id: e.id,
+      title: e.title,
+      publisher: e.publisher,
+      publish_date: e.publish_date,
+      year: e.year,
+      pages: e.pages,
+      isbn: e.isbn,
+      languages: e.languages,
+      cover_url: e.cover_url,
+      format: e.format,
+    }))
+}
+
 async function bookSearch(query: string): Promise<MediaResult[]> {
   if (GOOGLE_BOOKS_API_KEY) {
     try {
@@ -795,6 +873,15 @@ serve(async (req) => {
       if (mediaType !== 'book') return jsonResponse({ error: 'Solo libros' }, 400)
       const author = typeof body.author === 'string' ? body.author.trim().slice(0, MAX_TEXT) : ''
       return jsonResponse(author ? await olByAuthor(author) : [])
+    }
+
+    if (mode === 'editions') {
+      if (mediaType !== 'book') return jsonResponse({ error: 'Solo libros' }, 400)
+      const title = typeof body.title === 'string' ? body.title.trim().slice(0, MAX_TEXT) : ''
+      const author = typeof body.author === 'string' ? body.author.trim().slice(0, MAX_TEXT) : ''
+      const safeId = id != null && ID_PATTERN.book.test(String(id)) ? String(id) : null
+      const workId = source === 'openlibrary' && safeId && /^OL\d+W$/.test(safeId) ? safeId : null
+      return jsonResponse(await olEditions(workId, title, author))
     }
 
     if (mode === 'sequels') {

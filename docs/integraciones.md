@@ -48,5 +48,6 @@ Body: `{ type: 'movie' | 'series' | 'anime' | 'book', ... }`:
 | `mode: 'match'` + `titles` | Para importar de Letterboxd: la película de TMDB de cada título y año (hasta 20), con el detalle, o `null`. |
 | `mode: 'findCovers'` + `books` | Para completar portadas: la de cada libro (`title`, `author`, `isbn`; hasta 20) en Open Library, Google Books (con key) o Apple Books, o `null`. |
 | `mode: 'byAuthor'` + `author` | Solo libros: las obras más conocidas de ese autor en Open Library (por ediciones, hasta 20, sin repetir títulos ni recopilaciones). Para "Más de este autor" en la ficha. |
+| `mode: 'editions'` | Solo libros: las ediciones de la obra (`id` de Open Library, o `title` y `author` si no hay), hasta 40, primero las en español: editorial, año, páginas, ISBN, idiomas, formato y portada. Para "Elegir la edición" en la ficha. |
 | `mode: 'sequels'` + `id` | Las secuelas de un anime de AniList (relación SEQUEL), con su `format` (TV, MOVIE, OVA...), primero lo que sigue la serie. Para "Sigue la historia". |
 | `mode: 'mal'` + `ids` | Para importar de MyAnimeList: el anime de AniList de cada id de MAL (hasta 50), con `mal_id`. |
