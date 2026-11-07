@@ -8,6 +8,7 @@ Ruta `/pantalla`, código en `src/trackers/pantalla/`. Tema oscuro azulado con c
 
 - **"Seguir viendo"** con avance rápido: +1 episodio o "la vi".
 - Una fila de pósters por estado y los números del tracker (episodios, horas frente a la pantalla).
+- Los pósters no llevan insignia de estado cuando todos comparten el mismo (las filas por estado y la cuadrícula de un estado); sí en los resultados de búsqueda, donde se mezclan, y desde ahí se cambia el estado de un toque. La barra de avance no se dibuja en lo terminado.
 - **Dónde ves** cada título: Netflix, Max, Disney+, Prime Video, Apple TV+, Crunchyroll, cine o TV. Se elige al agregar o en el detalle y suma "Dónde ves" en las estadísticas.
 - **Próximos episodios** de las series y anime que sigues ("Mañana · T2 · E5"). Los de la semana también aparecen en el inicio.
 

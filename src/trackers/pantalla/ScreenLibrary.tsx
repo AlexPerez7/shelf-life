@@ -180,11 +180,10 @@ interface RailProps {
   items: Item[]
   onSeeAll: () => void
   onOpen: (item: Item) => void
-  onStatusClick: (item: Item) => void
 }
 
-/** Fila horizontal de pósters, como en las apps de streaming. */
-function Rail({ title, items, onSeeAll, onOpen, onStatusClick }: RailProps) {
+/** Fila horizontal de pósters, como en las apps de streaming. Todos tienen el mismo estado: sin insignia. */
+function Rail({ title, items, onSeeAll, onOpen }: RailProps) {
   return (
     <section className="mb-6">
       <button
@@ -199,13 +198,14 @@ function Rail({ title, items, onSeeAll, onOpen, onStatusClick }: RailProps) {
           Ver todo <ChevronRight size={16} />
         </span>
       </button>
-      <div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1">
+      {/* Sin `snap-mandatory` ni espaciador al final: con pocos pósters el carrusel apenas se pasaba
+          del ancho y el snap lo dejaba corrido, con el primero cortado a la izquierda. */}
+      <div className="scrollbar-hide -mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-1">
         {items.slice(0, 15).map((item) => (
           <div key={item.id} className="w-28 shrink-0 snap-start sm:w-32">
-            <MediaCoverCard item={item} onClick={onOpen} onStatusClick={onStatusClick} />
+            <MediaCoverCard item={item} onClick={onOpen} hideStatus />
           </div>
         ))}
-        <div className="shrink-0 basis-1" aria-hidden="true" />
       </div>
     </section>
   )
@@ -440,7 +440,13 @@ export function ScreenLibrary() {
             <>
               <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4 lg:grid-cols-6">
                 {grid.slice(0, batch.limit).map((item) => (
-                  <MediaCoverCard key={item.id} item={item} onClick={open} onStatusClick={setStatusItem} />
+                  <MediaCoverCard
+                    key={item.id}
+                    item={item}
+                    onClick={open}
+                    onStatusClick={setStatusItem}
+                    hideStatus={statusFilter != null}
+                  />
                 ))}
               </div>
               <ShowMore remaining={grid.length - batch.limit} onClick={batch.more} />
@@ -476,7 +482,6 @@ export function ScreenLibrary() {
               items={r.items}
               onSeeAll={() => setParam('estado', r.status, false)}
               onOpen={open}
-              onStatusClick={setStatusItem}
             />
           ))}
 

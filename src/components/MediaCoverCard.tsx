@@ -14,6 +14,11 @@ interface MediaCoverCardProps {
   item: Item
   onClick: (item: Item) => void
   onStatusClick?: (item: Item) => void
+  /**
+   * Sin la insignia de estado: cuando toda la lista tiene el mismo estado (una
+   * fila "Vistos", un estado filtrado) no dice nada y tapa el póster.
+   */
+  hideStatus?: boolean
 }
 
 function subtitle(item: Item) {
@@ -33,11 +38,12 @@ function subtitle(item: Item) {
 }
 
 /** Tarjeta de película / serie / anime / libro en la cuadrícula. */
-export function MediaCoverCard({ item, onClick, onStatusClick }: MediaCoverCardProps) {
+export function MediaCoverCard({ item, onClick, onStatusClick, hideStatus = false }: MediaCoverCardProps) {
   const type = item.media_type as NonGameType
   const StatusIcon = itemStatusIcons[item.status]
   const statusLabel = sectionForType(type).statusLabels[item.status]
-  const showProgress = item.progress_total != null && item.progress > 0
+  // Lo terminado ya lo dice el subtítulo (170/170): la barra llena sobra.
+  const showProgress = item.progress_total != null && item.progress > 0 && item.status !== 'completed'
   return (
     <div className="relative">
       <button
@@ -75,15 +81,17 @@ export function MediaCoverCard({ item, onClick, onStatusClick }: MediaCoverCardP
           className="pointer-events-none absolute left-1.5 top-1.5 text-accent drop-shadow"
         />
       )}
-      <button
-        type="button"
-        onClick={() => onStatusClick?.(item)}
-        disabled={!onStatusClick}
-        aria-label={`Estado: ${statusLabel}. Cambiar`}
-        className={`absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full shadow after:absolute after:-inset-1.5 after:content-[''] ${itemStatusColor(item.status, sectionForType(type))}`}
-      >
-        <StatusIcon size={15} />
-      </button>
+      {!hideStatus && (
+        <button
+          type="button"
+          onClick={() => onStatusClick?.(item)}
+          disabled={!onStatusClick}
+          aria-label={`Estado: ${statusLabel}. Cambiar`}
+          className={`absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full shadow after:absolute after:-inset-1.5 after:content-[''] ${itemStatusColor(item.status, sectionForType(type))}`}
+        >
+          <StatusIcon size={15} />
+        </button>
+      )}
     </div>
   )
 }
