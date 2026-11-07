@@ -52,7 +52,7 @@ export function ProgressCard({
         </button>
       }
     >
-      <div className="grid grid-cols-3 gap-2 rounded-xl bg-background/40 p-3">
+      <div className="grid grid-cols-3 gap-2 rounded-2xl bg-background/40 p-3">
         <ProgressRing icon={BookOpen} label="Historia" percent={storyPercent} />
         <ProgressRing icon={ListChecks} label="General" percent={generalPercent} />
         <ProgressRing icon={Trophy} label="100%" percent={completionistPercent} />
@@ -86,7 +86,7 @@ export function ProgressCard({
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between rounded-xl bg-background/40 p-3">
+      <div className="mt-4 flex items-center justify-between rounded-2xl bg-background/40 p-3">
         <div>
           <p className="text-2xl font-bold text-ink">{game.hours_played}</p>
           <p className="text-xs text-lavender">horas jugadas</p>

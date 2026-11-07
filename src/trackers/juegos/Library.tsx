@@ -87,7 +87,7 @@ function ChipRow<T extends string>({
 
 function EmptyLibrary() {
   return (
-    <div className="mt-6 flex flex-col items-center rounded-2xl bg-background-surface px-6 py-10 text-center ring-1 ring-primary-dark/30">
+    <div className="mt-6 flex flex-col items-center rounded-3xl bg-background-surface px-6 py-10 text-center ring-1 ring-primary-dark/30">
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-dark/30 text-accent">
         <Gamepad2 size={30} />
       </div>

@@ -146,7 +146,7 @@ export function Dashboard() {
           {stats.deseados > 0 && (
             <Link
               to={`${gamesPaths.library}?estado=deseado`}
-              className="flex min-h-12 items-center justify-between gap-3 rounded-lg bg-background-surface px-3 ring-1 ring-primary-dark/30 active:bg-primary-dark/20"
+              className="flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-background-surface px-3 ring-1 ring-primary-dark/30 active:bg-primary-dark/20"
             >
               <span className="flex items-center gap-1.5 text-sm text-lavender">
                 <Bookmark size={16} /> Deseados
@@ -198,7 +198,7 @@ export function Dashboard() {
                   </>
                 )
                 const className =
-                  'flex min-h-12 items-center justify-between gap-3 rounded-lg bg-background-surface px-3 ring-1 ring-primary-dark/30'
+                  'flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-background-surface px-3 ring-1 ring-primary-dark/30'
                 return h.to ? (
                   <Link key={h.label} to={h.to} className={`${className} active:bg-primary-dark/20`}>
                     {inner}
@@ -350,7 +350,7 @@ function AccountCard() {
   }
 
   return (
-    <div className="mt-8 rounded-lg bg-background-surface p-3 ring-1 ring-primary-dark/30">
+    <div className="mt-8 rounded-2xl bg-background-surface p-3 ring-1 ring-primary-dark/30">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary-dark/30 text-lavender">
           <UserRound size={18} />

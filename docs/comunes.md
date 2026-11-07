@@ -12,7 +12,7 @@ El inicio (`/`, `src/pages/Hub.tsx` y sus piezas en `src/pages/hub/`) junta los 
 - **Metas del año** como anillos (las de libros leídos; tocar una lleva a las estadísticas de su tracker) y **Sale esta semana**: los próximos episodios en un carrusel con el día de estreno.
 - La **barra inferior** (`components/HomeNav.tsx`) lleva a Juegos, Pantalla, Libros y Listas; arriba a la derecha, el engranaje lleva a Ajustes.
 - La barra inferior de cada tracker (`components/TrackerNav.tsx`) tiene el mismo molde: pegada abajo, fondo opaco y píldora en la sección activa, con el "+" central para agregar.
-- Los títulos usan Bricolage Grotesque (`font-display`). Lo que no tiene datos (sin metas, sin estrenos) no se muestra. Lo mismo en los títulos de pantalla y de sección de Juegos y Pantalla, y en Listas y Ajustes; Libros conserva su serif (Lora) como identidad.
+- Los títulos usan Bricolage Grotesque (`font-display`). Lo que no tiene datos (sin metas, sin estrenos) no se muestra. Lo mismo en los títulos de pantalla y de sección de Juegos y Pantalla, y en Listas y Ajustes; Libros conserva su serif (Lora) como identidad. Las tarjetas y paneles van redondeados como los del inicio: `rounded-3xl` los grandes (estado vacío, metas, tarjeta de "Seguir viendo") y `rounded-2xl` los chicos.
 
 Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`useTrackerTheme`, tokens en `src/index.css`) y su carpeta en `src/trackers/`. Comparten lógica (búsqueda en `hooks/useMediaSearch`, reglas de avance en `lib/media.ts`) y componentes chicos de `src/components/`, no pantallas. Los datos de los tres están en la misma tabla `items`.
 

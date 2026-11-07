@@ -148,7 +148,7 @@ export function GoalCard({
 
   return (
     <>
-      <div className="rounded-2xl bg-background-surface p-4 ring-1 ring-primary-dark/30">
+      <div className="rounded-3xl bg-background-surface p-4 ring-1 ring-primary-dark/30">
         <div className="flex items-start justify-between gap-2">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-ink">
             <Target size={16} className="text-accent" /> {heading}

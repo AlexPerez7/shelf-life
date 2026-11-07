@@ -65,7 +65,7 @@ function ContinueCard({ item, onOpen, onAdvance }: ContinueCardProps) {
   const pct = item.progress_total ? Math.min(100, (item.progress / item.progress_total) * 100) : null
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-background-surface ring-1 ring-primary-dark/40">
+    <div className="relative overflow-hidden rounded-3xl bg-background-surface ring-1 ring-primary-dark/40">
       {item.cover_url && (
         <img
           src={sizedCover(item.cover_url, 'thumb') ?? undefined}

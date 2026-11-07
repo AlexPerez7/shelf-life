@@ -124,7 +124,7 @@ function SeasonList({
   const starts = seasons.map((_, i) => 1 + seasons.slice(0, i).reduce((a, b) => a + b, 0))
 
   return (
-    <div className="mt-4 flex flex-col divide-y divide-primary-dark/30 overflow-hidden rounded-xl ring-1 ring-primary-dark/40">
+    <div className="mt-4 flex flex-col divide-y divide-primary-dark/30 overflow-hidden rounded-2xl ring-1 ring-primary-dark/40">
       {seasons.map((count, i) => {
         const season = i + 1
         const from = starts[i]
@@ -188,7 +188,7 @@ function ManualEpisode({
 
   return (
     <form
-      className="mt-4 rounded-xl bg-background/40 p-3 ring-1 ring-primary-dark/40"
+      className="mt-4 rounded-2xl bg-background/40 p-3 ring-1 ring-primary-dark/40"
       onSubmit={(e) => {
         e.preventDefault()
         if (!valid) return
