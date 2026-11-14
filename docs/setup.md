@@ -19,7 +19,7 @@ VITE_SUPABASE_ANON_KEY=
 
 ## 3. Migraciones
 
-Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, hoy de la `0001` a la `0015`), o `supabase db push`.
+Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations/`, hoy de la `0001` a la `0016`), o `supabase db push`.
 
 - La `0008` crea un trigger que suma y resta las horas jugadas al registrar o borrar una sesión. El frontend ya no actualiza `hours_played` en ese caso, así que tiene que aplicarse **antes** de desplegar el frontend.
 - La `0011` crea la tabla `items` (todo lo que se registra, de los tres trackers), `activity_log` y `list_items`.
@@ -27,6 +27,7 @@ Ejecutar las migraciones SQL en Supabase, en orden (carpeta `supabase/migrations
 - La `0013` crea el bucket público de Storage `covers` y sus políticas, para subir una foto propia como portada (cada usuario solo escribe en su carpeta). Sin ella, "Subir una foto" avisa que falta aplicarla. Se puede aplicar pegando el archivo en el *SQL Editor* del dashboard de Supabase.
 - La `0014` suma `kind` a `goals` para la meta de páginas de Libros (la clave pasa a incluirlo y el tope de la meta sube a 1.000.000). Las metas que ya existen quedan como de libros leídos. Sin ella la app funciona igual, solo que Libros no ofrece la meta de páginas.
 - La `0015` agrega `items.deleted_at` para la papelera de Libros (un libro borrado queda 30 días con "Restaurar"). Sin ella la app funciona igual, pero borrar un libro lo elimina para siempre.
+- La `0016` crea `push_subscriptions` (los dispositivos que activaron los avisos de episodios) y `push_notified` (qué episodio ya se avisó). Sin ella la app funciona igual, solo que Ajustes avisa que falta aplicarla al intentar activar los avisos. Para que lleguen, falta además la Edge Function `episode-alerts` y su cron: ver [integraciones](integraciones.md#episode-alerts-avisos-de-próximos-episodios).
 
 Una migración nueva va con el número siguiente y se anota acá.
 
@@ -38,7 +39,7 @@ Los secrets van solo en Supabase, nunca en el frontend:
 supabase secrets set TWITCH_CLIENT_ID=xxx TWITCH_CLIENT_SECRET=xxx
 supabase secrets set STEAM_API_KEY=xxx
 supabase secrets set TMDB_API_KEY=xxx
-supabase functions deploy igdb-search steam-library steam-auth game-deals media-search
+supabase functions deploy igdb-search steam-library steam-auth game-deals media-search episode-alerts
 ```
 
 - `STEAM_API_KEY` es una sola key de la app (se obtiene en https://steamcommunity.com/dev/apikey). Cada usuario vincula su cuenta desde la app.

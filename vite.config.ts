@@ -75,7 +75,9 @@ export default defineConfig({
         // De Lora solo se precargan latín y latín extendido: las demás (cirílico,
         // vietnamita, símbolos, matemática) son ~120 KB que casi nunca se usan;
         // si aparece uno de esos caracteres, el navegador baja la fuente en el momento.
-        globIgnores: ['**/lora-{cyrillic,cyrillic-ext,vietnamese,math,symbols}-*.woff2'],
+        globIgnores: ['**/lora-{cyrillic,cyrillic-ext,vietnamese,math,symbols}-*.woff2', 'push-sw.js'],
+        // Avisos push (public/push-sw.js): sus eventos se suman al service worker de la app.
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             // Portadas (IGDB, Steam, TMDB, AniList, Open Library, Google y

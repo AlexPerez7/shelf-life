@@ -18,7 +18,7 @@ El inicio junta lo que tienes en curso en los tres, con una acción rápida para
 ### 📺 Pantalla · [detalle](docs/pantalla.md)
 
 - Películas, series y anime con estilo de app de streaming: "Seguir viendo", +1 episodio, temporadas.
-- Próximos episodios de lo que sigues y dónde ves cada título.
+- Próximos episodios de lo que sigues (con aviso el día que salen, si activas las notificaciones) y dónde ves cada título.
 - Alta con tendencias y vista previa; importar de Letterboxd y MyAnimeList.
 - Estadísticas (horas frente a la pantalla, día más maratonero) e historial día por día.
 

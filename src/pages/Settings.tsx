@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Loader2, PackageX, RefreshCw } from 'lucide-react'
 import { PageContainer } from '../components/PageContainer'
+import { PushSettings } from '../components/PushSettings'
 import { useToast } from '../contexts/ToastContext'
 import { useConfirm } from '../contexts/ConfirmContext'
 import { appVersion, buildDateLabel } from '../lib/appInfo'
@@ -101,6 +102,8 @@ export function Settings() {
             {busy === 'update' ? 'Buscando...' : 'Actualizar'}
           </button>
         </div>
+
+        <PushSettings />
 
         <div className="mt-3 rounded-2xl bg-background-surface p-4 ring-1 ring-primary-dark/30">
           <p className="text-sm font-medium text-ink">¿Sigue sin actualizarse?</p>

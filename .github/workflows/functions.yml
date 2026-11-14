@@ -46,5 +46,5 @@ jobs:
       - name: Publicar funciones
         if: steps.check.outputs.ready == 'true'
         run: |
-          supabase functions deploy igdb-search steam-library steam-auth game-deals media-search \
+          supabase functions deploy igdb-search steam-library steam-auth game-deals media-search episode-alerts \
             --project-ref "$SUPABASE_PROJECT_REF" --yes

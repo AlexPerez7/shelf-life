@@ -7,6 +7,7 @@
 - `.github/workflows/deploy.yml` corre los tests, compila y publica en GitHub Pages en cada push a `main`.
 - La app vive en la subcarpeta `/shelf-life/` (el workflow pasa `BASE_PATH`).
 - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` son *variables* del repo: Settings → Secrets and variables → Actions → Variables.
+- Opcional: `VITE_VAPID_PUBLIC_KEY` (otra *variable*, la clave pública de los avisos de episodios). Sin ella, Ajustes no ofrece los avisos.
 - Para probar localmente un build igual: `BASE_PATH=/shelf-life/ npm run build`.
 
 ## Edge Functions
