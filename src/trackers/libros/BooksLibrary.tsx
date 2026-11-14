@@ -1,12 +1,26 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileUp, Library, List, Rows3, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  BookOpen,
+  CheckSquare,
+  FileUp,
+  Library,
+  List,
+  Rows3,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useMedia } from '../../contexts/MediaContext'
 import { useTrash } from '../../hooks/useTrash'
 import { PageContainer } from '../../components/PageContainer'
 import { TrackerBar } from '../../components/TrackerBar'
 import { Skeleton } from '../../components/Skeleton'
 import { mediaSections } from '../../lib/media'
+import { toggleSelected } from '../../lib/bookBatch'
+import { haptic } from '../../lib/haptics'
 import {
   bookGenres,
   filterBooks,
@@ -22,6 +36,7 @@ import { Bookcase, Shelf, ShelfUnit, type ShelfMode } from './Bookshelf'
 import { MissingCovers } from './MissingCovers'
 import { BookList } from './BookList'
 import { BookViewSheet } from './BookViewSheet'
+import { BookBatchBar } from './BookBatchBar'
 import { buildShelves, findShelf, shelfParam } from './bookLists'
 import type { Item } from '../../types/item'
 
@@ -172,7 +187,26 @@ export function BooksLibrary() {
     )
   }
 
-  const openBook = (item: Item) => navigate(section.detailPath(item.id))
+  // Edición en lote: en modo selección, tocar un libro lo marca en vez de abrirlo.
+  const [selecting, setSelecting] = useState(false)
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
+  // Lo que se está viendo; solo cuentan los elegidos que están a la vista.
+  const visible = results ?? openShelf?.items ?? books
+  const selectedBooks = useMemo(() => visible.filter((b) => picked.has(b.id)), [visible, picked])
+  const allPicked = visible.length > 0 && selectedBooks.length === visible.length
+  function endSelecting() {
+    setSelecting(false)
+    setPicked(new Set())
+  }
+  const openBook = (item: Item) => {
+    if (selecting) {
+      haptic(5)
+      setPicked((prev) => toggleSelected(prev, item.id))
+    } else {
+      navigate(section.detailPath(item.id))
+    }
+  }
+  const selection = selecting ? picked : undefined
   const isEmpty = !loading && !error && books.length === 0
 
   const modeToggle = (
@@ -217,6 +251,17 @@ export function BooksLibrary() {
           <div className="flex">
             <button
               type="button"
+              onClick={() => (selecting ? endSelecting() : setSelecting(true))}
+              aria-label={selecting ? 'Salir de la selección' : 'Seleccionar libros'}
+              aria-pressed={selecting}
+              className={`flex h-11 w-11 items-center justify-center rounded-full active:bg-primary-dark/15 ${
+                selecting ? 'bg-accent/15 text-accent' : 'text-ink'
+              }`}
+            >
+              <CheckSquare size={20} />
+            </button>
+            <button
+              type="button"
               onClick={() => setSheetOpen(true)}
               aria-label="Ordenar y filtrar"
               className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-primary-dark/15"
@@ -256,6 +301,32 @@ export function BooksLibrary() {
       )}
 
       {error && <p className="mb-3 text-sm text-error">{error}</p>}
+
+      {selecting && !isEmpty && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-accent/10 px-3 py-1.5">
+          <p className="text-sm font-medium text-accent" aria-live="polite">
+            {selectedBooks.length === 0
+              ? 'Toca los libros para elegirlos'
+              : `${selectedBooks.length} ${selectedBooks.length === 1 ? 'elegido' : 'elegidos'}`}
+          </p>
+          <div className="flex">
+            <button
+              type="button"
+              onClick={() => setPicked(allPicked ? new Set() : new Set(visible.map((b) => b.id)))}
+              className="min-h-11 rounded-full px-3 text-sm font-semibold text-accent active:bg-primary-dark/10"
+            >
+              {allPicked ? 'Ninguno' : 'Todos'}
+            </button>
+            <button
+              type="button"
+              onClick={endSelecting}
+              className="min-h-11 rounded-full px-3 text-sm font-medium text-lavender active:bg-primary-dark/10"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex flex-col gap-4">
@@ -315,9 +386,9 @@ export function BooksLibrary() {
           </div>
           {results.length > 0 &&
             (mode === 'lista' ? (
-              <BookList items={results} sort={view.sort} onOpenBook={openBook} />
+              <BookList items={results} sort={view.sort} onOpenBook={openBook} selected={selection} />
             ) : (
-              <Bookcase items={results} mode={shelfMode} onOpenBook={openBook} />
+              <Bookcase items={results} mode={shelfMode} onOpenBook={openBook} selected={selection} />
             ))}
         </>
       ) : openShelf ? (
@@ -344,9 +415,9 @@ export function BooksLibrary() {
             </div>
           ) : (
             mode === 'lista' ? (
-              <BookList items={openShelf.items} sort={null} onOpenBook={openBook} />
+              <BookList items={openShelf.items} sort={null} onOpenBook={openBook} selected={selection} />
             ) : (
-              <Bookcase items={openShelf.items} mode={shelfMode} onOpenBook={openBook} />
+              <Bookcase items={openShelf.items} mode={shelfMode} onOpenBook={openBook} selected={selection} />
             )
           )}
         </>
@@ -367,6 +438,7 @@ export function BooksLibrary() {
                     mode={shelfMode}
                     onOpenBook={openBook}
                     onOpenShelf={() => setParam(shelfParam, shelf.id)}
+                    selected={selection}
                   />
                 ))}
               </ShelfUnit>
@@ -383,6 +455,8 @@ export function BooksLibrary() {
           )}
         </>
       )}
+
+      {selecting && !isEmpty && <BookBatchBar books={selectedBooks} onDone={endSelecting} />}
 
       <BookViewSheet
         open={sheetOpen}

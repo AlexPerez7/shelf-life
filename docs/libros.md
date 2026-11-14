@@ -12,6 +12,15 @@ Ruta `/libros`, código en `src/trackers/libros/`. Lecturas por páginas, con te
 - **Vista de lista**: además de portadas y lomos, una lista compacta con una fila por libro (autor, estado y el dato por el que se ordena).
 - **Completar portadas**: si hay libros sin portada (o con la que puso la importación, que puede no existir), una tarjeta al final del librero las revisa y busca las que faltan en Open Library (por ISBN o título), Google Books (con key) y Apple Books (`lib/bookCovers.ts`).
 
+## Edición en lote
+
+- El botón de casilla (arriba a la derecha del librero) activa el **modo selección**: tocar un libro lo marca en vez de abrirlo (en portadas, lomos y lista), y una franja muestra cuántos hay elegidos, con **Todos** / **Ninguno** (los que están a la vista) y **Cancelar**.
+- Con libros elegidos, una barra inferior ofrece **Estado**, **Formato** y **Borrar**:
+  - **Estado**: con las mismas reglas que la ficha (fecha de inicio al empezar, fecha y páginas al terminar); los que ya están en ese estado se saltan.
+  - **Formato**: reemplaza el formato de los elegidos por el que marques (sin ninguno, se les quita).
+  - **Borrar**: los manda a la papelera, con "Deshacer" para restaurarlos todos (sin la migración `0015`, los elimina para siempre y lo avisa).
+- Los cambios son optimistas y pasan por la cola sin conexión, como el resto. Al terminar, se sale del modo selección. Reglas puras en `lib/bookBatch.ts`; la barra, en `BookBatchBar.tsx`.
+
 ## Papelera
 
 - Borrar un libro desde su ficha lo manda a la **papelera** (`/libros/papelera`, con un acceso al final del librero): sale del librero, de las listas, de las estadísticas y del diario, y el aviso que aparece ofrece "Deshacer".

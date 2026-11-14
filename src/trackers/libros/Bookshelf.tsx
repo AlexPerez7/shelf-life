@@ -2,7 +2,7 @@
 // tracker de libros se ve como un librero; acá vive ese diseño.
 
 import { useState, type ReactNode } from 'react'
-import { ChevronRight, BookOpen } from 'lucide-react'
+import { Check, ChevronRight, BookOpen } from 'lucide-react'
 import { GameThumb } from '../../components/GameThumb'
 import type { Item } from '../../types/item'
 
@@ -57,15 +57,32 @@ function Ribbon({ item }: { item: Item }) {
   )
 }
 
+/** Marca de selección (edición en lote): un borde y una tilde sobre el libro. */
+function SelectedMark() {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 flex items-start justify-end rounded-[3px] bg-accent/25 p-1 ring-2 ring-inset ring-accent"
+    >
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white shadow">
+        <Check size={13} strokeWidth={3} />
+      </span>
+    </span>
+  )
+}
+
 /** Un libro parado en la repisa: su portada o su lomo. */
 export function ShelfBook({
   item,
   mode,
   onOpen,
+  selected,
 }: {
   item: Item
   mode: ShelfMode
   onOpen: () => void
+  /** `true` o `false` en modo selección (con aria-pressed); sin definir, fuera de él. */
+  selected?: boolean
 }) {
   const label = `${item.title}${item.metadata.authors?.length ? `, de ${item.metadata.authors[0]}` : ''}`
 
@@ -81,6 +98,7 @@ export function ShelfBook({
         onClick={onOpen}
         aria-label={label}
         title={item.title}
+        aria-pressed={selected}
         className="relative flex flex-shrink-0 flex-col items-center justify-between rounded-[3px] py-2 shadow-[inset_-3px_0_0_rgba(0,0,0,0.15),inset_2px_0_0_rgba(255,255,255,0.12),0_2px_4px_rgba(0,0,0,0.25)] transition-transform active:-translate-y-1"
         style={{ width, height, backgroundColor: bg, color: fg }}
       >
@@ -93,6 +111,7 @@ export function ShelfBook({
         </span>
         <span className="h-px w-3/4 bg-current opacity-40" />
         <Ribbon item={item} />
+        {selected && <SelectedMark />}
       </button>
     )
   }
@@ -103,6 +122,7 @@ export function ShelfBook({
       onClick={onOpen}
       aria-label={label}
       title={item.title}
+      aria-pressed={selected}
       className="relative h-[7.5rem] w-20 flex-shrink-0 overflow-hidden rounded-[3px] bg-primary-dark/20 shadow-[0_3px_6px_rgba(0,0,0,0.3)] transition-transform active:-translate-y-1"
     >
       <GameThumb
@@ -120,6 +140,7 @@ export function ShelfBook({
         </span>
       )}
       <Ribbon item={item} />
+      {selected && <SelectedMark />}
     </button>
   )
 }
@@ -155,6 +176,7 @@ export function Shelf({
   onOpenBook,
   onOpenShelf,
   emptyText = 'Todavía no hay libros acá.',
+  selected,
 }: {
   id: string
   category: string
@@ -164,6 +186,8 @@ export function Shelf({
   onOpenBook: (item: Item) => void
   onOpenShelf?: () => void
   emptyText?: string
+  /** Ids elegidos en modo selección; sin definir, fuera de él. */
+  selected?: ReadonlySet<string>
 }) {
   // Repisas largas: se muestran los primeros y el resto está en el estante completo.
   const shown = items.slice(0, SHELF_PREVIEW)
@@ -192,7 +216,12 @@ export function Shelf({
         {shown.map((item, i) => (
           <div key={item.id} className="contents">
             {i === midDecor && <Decor seed={`${id}-mid`} />}
-            <ShelfBook item={item} mode={mode} onOpen={() => onOpenBook(item)} />
+            <ShelfBook
+              item={item}
+              mode={mode}
+              onOpen={() => onOpenBook(item)}
+              selected={selected?.has(item.id)}
+            />
           </div>
         ))}
         {hidden > 0 && onOpenShelf ? (
@@ -238,10 +267,12 @@ export function Bookcase({
   items,
   mode,
   onOpenBook,
+  selected,
 }: {
   items: Item[]
   mode: ShelfMode
   onOpenBook: (item: Item) => void
+  selected?: ReadonlySet<string>
 }) {
   // De a tandas: cientos de libros (cada uno con su tramo de madera) a la vez traban el teléfono.
   const [limit, setLimit] = useState(BOOKCASE_PAGE)
@@ -253,7 +284,12 @@ export function Bookcase({
           {shown.map((item) => (
             <div key={item.id} className="flex flex-col">
               <div className="flex justify-center px-[3px] pt-1 first:pl-2">
-                <ShelfBook item={item} mode={mode} onOpen={() => onOpenBook(item)} />
+                <ShelfBook
+                  item={item}
+                  mode={mode}
+                  onOpen={() => onOpenBook(item)}
+                  selected={selected?.has(item.id)}
+                />
               </div>
               <Board />
             </div>
