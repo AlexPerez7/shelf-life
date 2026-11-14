@@ -283,7 +283,7 @@ export function BookAdd() {
         >
           <FileUp size={20} className="shrink-0 text-accent" />
           <span className="min-w-0 flex-1 text-sm">
-            <span className="font-book block font-semibold text-ink">¿Vienes de Goodreads o StoryGraph?</span>
+            <span className="font-book block font-semibold text-ink">¿Vienes de Goodreads, StoryGraph o BookWyrm?</span>
             <span className="text-lavender">Importa toda tu biblioteca de una vez</span>
           </span>
           <ChevronRight size={18} className="shrink-0 text-lavender" />

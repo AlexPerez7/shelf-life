@@ -77,9 +77,41 @@ describe('parseBookExport: StoryGraph', () => {
   })
 })
 
+const BOOKWYRM = `title,author_text,remote_id,openlibrary_key,inventaire_id,librarything_key,goodreads_key,bnf_id,viaf,wikidata,asin,aasin,isfdb,isbn_10,isbn_13,oclc_number,start_date,finish_date,stopped_date,rating,review_name,review_cw,review_content,review_published,shelf,shelf_name,shelf_date
+Piranesi,Susanna Clarke,https://bw.example/book/1,OL1W,,,,,,,,,,,9781635575637,,2022-03-05 00:00:00+00:00,2022-03-20 00:00:00+00:00,,4,Hermoso,,"<p>Línea uno</p><p>Línea &amp; dos<br>tres</p>",2022-03-21,read,Read,2022-03-20 10:00:00+00:00
+Piranesi,Susanna Clarke,https://bw.example/book/1,OL1W,,,,,,,,,,,9781635575637,,,,,,,,,,favoritos,Favoritos,2022-04-01 10:00:00+00:00
+Dune,Frank Herbert,https://bw.example/book/2,,,,,,,,,,,0441172717,,,,,,,,,,,to-read,To Read,2024-03-01 09:00:00+00:00
+Rayuela,Julio Cortázar,https://bw.example/book/3,,,,,,,,,,,,,,,,2024-05-01 00:00:00+00:00,,,,,,stopped-reading,Stopped Reading,2024-05-01 09:00:00+00:00
+Solo en lista propia,Alguien,https://bw.example/book/4,,,,,,,,,,,,,,,,,,,,,,favoritos,Favoritos,2024-06-01 09:00:00+00:00
+,Sin título,https://bw.example/book/5,,,,,,,,,,,,,,,,,,,,,,read,Read,2024-06-01 09:00:00+00:00
+`
+
+describe('parseBookExport: BookWyrm', () => {
+  const { source, books } = parseBookExport(BOOKWYRM)
+
+  it('reconoce el archivo, une las filas repetidas y salta los libros sin título', () => {
+    expect(source).toBe('bookwyrm')
+    expect(books.map((b) => b.title)).toEqual(['Piranesi', 'Dune', 'Rayuela', 'Solo en lista propia'])
+  })
+
+  it('se queda con el estante estándar y traduce estado, puntaje, ISBN, fechas y reseña', () => {
+    expect(books[0]).toMatchObject({
+      status: 'completed',
+      rating: 8, // 4 estrellas
+      isbn: '9781635575637',
+      dateRead: '2022-03-20',
+      dateAdded: '2022-03-20',
+      review: 'Hermoso\n\nLínea uno\nLínea & dos\ntres',
+    })
+    expect(books[1]).toMatchObject({ status: 'wishlist', isbn: '0441172717', rating: null, review: null })
+    expect(books[2]).toMatchObject({ status: 'dropped' })
+    expect(books[3]).toMatchObject({ status: 'planned' })
+  })
+})
+
 describe('parseBookExport: otros archivos', () => {
-  it('rechaza un CSV que no es de Goodreads ni StoryGraph', () => {
-    expect(() => parseBookExport('a,b\n1,2')).toThrow(/Goodreads o StoryGraph/)
+  it('rechaza un CSV que no es de Goodreads, StoryGraph ni BookWyrm', () => {
+    expect(() => parseBookExport('a,b\n1,2')).toThrow(/BookWyrm/)
   })
 
   it('rechaza un archivo vacío', () => {

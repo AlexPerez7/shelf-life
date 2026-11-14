@@ -1,5 +1,5 @@
 // Completar portadas de libros que no tienen (típico después de importar de
-// Goodreads o StoryGraph): la importación pone la portada de Open Library
+// Goodreads, StoryGraph o BookWyrm): la importación pone la portada de Open Library
 // por ISBN con `?default=false`, que responde 404 si no existe.
 
 import { callFn } from './functions'

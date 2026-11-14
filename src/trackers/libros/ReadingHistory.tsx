@@ -27,7 +27,7 @@ interface ReadingHistoryProps {
 export function ReadingHistory({ item, onSave }: ReadingHistoryProps) {
   const readings = pastReadings(item)
   const total = timesRead(item)
-  // Relecturas importadas (Goodreads, StoryGraph) sin fechas.
+  // Relecturas importadas (Goodreads, StoryGraph, BookWyrm) sin fechas.
   const undated = Math.max(0, item.replays - readings.length)
   const [adding, setAdding] = useState<Reading | null>(null)
 

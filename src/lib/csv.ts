@@ -1,4 +1,4 @@
-// Lectura de CSV (exports de Goodreads, StoryGraph, Letterboxd...).
+// Lectura de CSV (exports de Goodreads, StoryGraph, BookWyrm, Letterboxd...).
 
 /** CSV según RFC 4180: comillas dobles, comas y saltos de línea dentro de campos. */
 export function parseCsv(text: string): string[][] {

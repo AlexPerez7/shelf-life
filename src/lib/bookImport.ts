@@ -1,12 +1,13 @@
 // Importar la biblioteca de libros desde el CSV que exportan Goodreads
-// ("My Books → Import and export → Export library") o StoryGraph ("Manage
-// account → Export StoryGraph library"). Todo se procesa en el dispositivo:
+// ("My Books → Import and export → Export library"), StoryGraph ("Manage
+// account → Export StoryGraph library") o BookWyrm ("Perfil → Importar/Exportar
+// → Exportar CSV"). Todo se procesa en el dispositivo:
 // el archivo no sale del navegador; solo se guardan los libros en `items`.
 
 import type { Item, ItemStatus, ItemWrite } from '../types/item'
 import { parseCsv } from './csv'
 
-export type ImportSource = 'goodreads' | 'storygraph'
+export type ImportSource = 'goodreads' | 'storygraph' | 'bookwyrm'
 
 export interface ImportedBook {
   title: string
@@ -98,6 +99,67 @@ function storygraphStatus(status: string | undefined): ItemStatus {
   }
 }
 
+/** Estantes estándar de BookWyrm (el campo `shelf`), de más a menos importante. */
+const BOOKWYRM_SHELVES = ['read', 'reading', 'stopped-reading', 'to-read'] as const
+
+function bookwyrmStatus(shelf: string | undefined): ItemStatus {
+  switch ((shelf ?? '').trim()) {
+    case 'read':
+      return 'completed'
+    case 'reading':
+      return 'in_progress'
+    case 'stopped-reading':
+      return 'dropped'
+    case 'to-read':
+      return 'wishlist'
+    default:
+      // Estantes propios: el libro está, pero sin un estado de lectura.
+      return 'planned'
+  }
+}
+
+/** Las reseñas de BookWyrm vienen con HTML: se pasa a texto con saltos de línea. */
+function plainText(v: string | undefined) {
+  const text = (v ?? '')
+    .replace(/<br\s*\/?>|<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  return text === '' ? null : text
+}
+
+/**
+ * BookWyrm exporta una fila por libro *y estantería*: un libro en "leídos" y
+ * en una lista propia aparece dos veces. Se deja una sola, la del estante
+ * estándar más importante (leído, leyendo, abandonado, por leer) y, si no
+ * está en ninguno, la primera.
+ */
+function mergeBookwyrmRows(books: ImportedBook[], shelves: string[]): ImportedBook[] {
+  const rank = (shelf: string) => {
+    const i = (BOOKWYRM_SHELVES as readonly string[]).indexOf(shelf)
+    return i < 0 ? BOOKWYRM_SHELVES.length : i
+  }
+  const best = new Map<string, { book: ImportedBook; rank: number }>()
+  const order: string[] = []
+  books.forEach((book, i) => {
+    const key = bookKey(book.title, book.authors, book.isbn)
+    const current = best.get(key)
+    const r = rank(shelves[i])
+    if (!current) {
+      best.set(key, { book, rank: r })
+      order.push(key)
+    } else if (r < current.rank) {
+      best.set(key, { book, rank: r })
+    }
+  })
+  return order.map((k) => best.get(k)!.book)
+}
+
 /** Separa autores ("A, B" o "A & B"), sin vacíos ni repetidos. */
 function splitAuthors(...values: (string | undefined)[]) {
   const all = values.flatMap((v) => (v ?? '').split(/,|&/)).map((a) => a.trim()).filter(Boolean)
@@ -161,7 +223,36 @@ export function parseBookExport(text: string): { source: ImportSource; books: Im
     return { source: 'storygraph', books: books.filter((b) => b.title) }
   }
 
-  throw new Error('No reconocemos el archivo: tiene que ser el CSV que exporta Goodreads o StoryGraph.')
+  if (col('shelf') >= 0 && col('title') >= 0 && col('author_text') >= 0) {
+    const shelves = rows.map((r) => (get(r, 'shelf') ?? '').trim())
+    const books = rows.map((r) => ({
+      title: (get(r, 'title') ?? '').trim(),
+      authors: splitAuthors(get(r, 'author_text')),
+      isbn: cleanIsbn(get(r, 'isbn_13')) ?? cleanIsbn(get(r, 'isbn_10')),
+      status: bookwyrmStatus(get(r, 'shelf')),
+      rating: rating(get(r, 'rating')),
+      pages: null,
+      year: null,
+      publisher: null,
+      format: null,
+      dateRead: cleanDate(get(r, 'finish_date')),
+      dateAdded: cleanDate(get(r, 'shelf_date')),
+      review: [plainText(get(r, 'review_name')), plainText(get(r, 'review_content'))].filter(Boolean).join('\n\n') || null,
+      notes: null,
+      rereads: 0,
+    }))
+    // Se filtran los sin título antes de unir, para que `shelves` siga alineado.
+    const keep = books.map((b) => b.title !== '')
+    return {
+      source: 'bookwyrm',
+      books: mergeBookwyrmRows(
+        books.filter((_, i) => keep[i]),
+        shelves.filter((_, i) => keep[i])
+      ),
+    }
+  }
+
+  throw new Error('No reconocemos el archivo: tiene que ser el CSV que exporta Goodreads, StoryGraph o BookWyrm.')
 }
 
 /** Clave para no duplicar: ISBN si hay; si no, título + primer autor. */
