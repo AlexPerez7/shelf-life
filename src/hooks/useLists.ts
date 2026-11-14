@@ -1,32 +1,59 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, ensureSession } from '../lib/supabaseClient'
+import { useLists } from '../contexts/ListsContext'
+import { readCache, writeCache } from '../lib/localCache'
+import { LISTS_CACHE_PREFIX, overlayItemListIds, overlayListItemIds } from '../lib/pendingLists'
 
 // La lista de listas se comparte a nivel de app (ver ListsProvider). Las
 // listas son comunes a los tres trackers: `list_items` apunta a `items`.
 export { useLists } from '../contexts/ListsContext'
 
+// Los cambios (agregar o quitar un título de una lista) se ven al instante,
+// van a la base por `mutate` (con cola sin conexión) y la última lectura se
+// guarda en el dispositivo para verse también sin señal.
+
 export function useItemListIds(itemId: string | undefined) {
+  const { userId, mutate, pendingOps, rejectedCount } = useLists()
+  const cacheKey = userId && itemId ? `${LISTS_CACHE_PREFIX}item:${userId}:${itemId}` : null
   const [listIds, setListIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  /** Ítem de quien son los datos que hay en pantalla (para no guardar en la cache los de otro). */
+  const loadedFor = useRef<string | undefined>(undefined)
 
   const fetchListIds = useCallback(async () => {
     if (!itemId) return
-    setLoading(true)
+    if (loadedFor.current !== itemId) setLoading(true)
     await ensureSession()
     const { data, error } = await supabase
       .from('list_items')
       .select('list_id')
       .eq('item_id', itemId)
 
-    if (!error) setListIds(new Set(data.map((row) => row.list_id as string)))
+    if (!error) {
+      setListIds(overlayItemListIds(new Set(data.map((row) => row.list_id as string)), itemId, pendingOps()))
+      loadedFor.current = itemId
+    }
     setLoading(false)
-  }, [itemId])
+  }, [itemId, pendingOps])
+
+  // Primero lo último que se vio (sirve sin señal) y después lo de la base.
+  useEffect(() => {
+    if (cacheKey && loadedFor.current !== itemId) {
+      const cached = readCache<string[]>(cacheKey)
+      if (cached) {
+        setListIds(new Set(cached.data))
+        setLoading(false)
+        loadedFor.current = itemId
+      }
+    }
+    fetchListIds()
+  }, [cacheKey, itemId, fetchListIds, rejectedCount])
 
   useEffect(() => {
-    fetchListIds()
-  }, [fetchListIds])
+    if (cacheKey && loadedFor.current === itemId) writeCache(cacheKey, [...listIds])
+  }, [cacheKey, itemId, listIds])
 
-  /** Optimista: el chip cambia al instante; si falla, vuelve atrás. */
+  /** Optimista: el chip cambia al instante; si la base lo rechaza, vuelve atrás. */
   const toggle = useCallback(
     async (listId: string) => {
       if (!itemId) return
@@ -39,27 +66,29 @@ export function useItemListIds(itemId: string | undefined) {
           return next
         })
       apply(!removing)
-      const { error } = removing
-        ? await supabase.from('list_items').delete().eq('list_id', listId).eq('item_id', itemId)
-        : await supabase.from('list_items').insert({ list_id: listId, item_id: itemId })
-      if (error) {
+      try {
+        await mutate({ type: removing ? 'remove' : 'add', listId, itemId })
+      } catch (err) {
         apply(removing)
-        throw error
+        throw err
       }
     },
-    [itemId, listIds]
+    [itemId, listIds, mutate]
   )
 
   return { listIds, loading, toggle }
 }
 
 export function useListItemIds(listId: string | undefined) {
+  const { userId, mutate, pendingOps, rejectedCount } = useLists()
+  const cacheKey = userId && listId ? `${LISTS_CACHE_PREFIX}list:${userId}:${listId}` : null
   const [itemIds, setItemIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const loadedFor = useRef<string | undefined>(undefined)
 
   const fetchItemIds = useCallback(async () => {
     if (!listId) return
-    setLoading(true)
+    if (loadedFor.current !== listId) setLoading(true)
     await ensureSession()
     const { data, error } = await supabase
       .from('list_items')
@@ -67,44 +96,63 @@ export function useListItemIds(listId: string | undefined) {
       .eq('list_id', listId)
       .order('added_at', { ascending: false })
 
-    if (!error) setItemIds(data.map((row) => row.item_id as string))
+    if (!error) {
+      setItemIds(overlayListItemIds(data.map((row) => row.item_id as string), listId, pendingOps()))
+      loadedFor.current = listId
+    }
     setLoading(false)
-  }, [listId])
+  }, [listId, pendingOps])
 
   useEffect(() => {
+    if (cacheKey && loadedFor.current !== listId) {
+      const cached = readCache<string[]>(cacheKey)
+      if (cached) {
+        setItemIds(cached.data)
+        setLoading(false)
+        loadedFor.current = listId
+      }
+    }
     fetchItemIds()
-  }, [fetchItemIds])
+  }, [cacheKey, listId, fetchItemIds, rejectedCount])
+
+  useEffect(() => {
+    if (cacheKey && loadedFor.current === listId) writeCache(cacheKey, itemIds)
+  }, [cacheKey, listId, itemIds])
 
   const removeItem = useCallback(
     async (itemId: string) => {
       if (!listId) return
-      const { error } = await supabase
-        .from('list_items')
-        .delete()
-        .eq('list_id', listId)
-        .eq('item_id', itemId)
-      if (error) throw error
+      const previous = itemIds
       setItemIds((prev) => prev.filter((id) => id !== itemId))
+      try {
+        await mutate({ type: 'remove', listId, itemId })
+      } catch (err) {
+        setItemIds(previous)
+        throw err
+      }
     },
-    [listId]
+    [itemIds, listId, mutate]
   )
 
   /** Vuelve a agregar un ítem quitado (para "Deshacer"), en su posición. */
   const restoreItem = useCallback(
     async (itemId: string, index: number) => {
       if (!listId) return
-      const { error } = await supabase
-        .from('list_items')
-        .insert({ list_id: listId, item_id: itemId })
-      if (error) throw error
-      setItemIds((prev) => {
+      const insertAt = (prev: string[]) => {
         if (prev.includes(itemId)) return prev
         const next = [...prev]
         next.splice(Math.min(index, next.length), 0, itemId)
         return next
-      })
+      }
+      setItemIds(insertAt)
+      try {
+        await mutate({ type: 'add', listId, itemId })
+      } catch (err) {
+        setItemIds((prev) => prev.filter((id) => id !== itemId))
+        throw err
+      }
     },
-    [listId]
+    [listId, mutate]
   )
 
   return { itemIds, loading, removeItem, restoreItem }

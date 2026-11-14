@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useConfirm } from '../contexts/ConfirmContext'
 import { useGames } from '../contexts/GamesContext'
 import { useMedia } from '../contexts/MediaContext'
+import { useLists } from '../contexts/ListsContext'
 import { plural } from '../lib/text'
 
 /**
@@ -15,9 +16,10 @@ export function useSignOut() {
   const confirm = useConfirm()
   const { flushPending: flushGames, discardPending: discardGames } = useGames()
   const { flushPending: flushMedia, discardPending: discardMedia } = useMedia()
+  const { flushPending: flushLists, discardPending: discardLists } = useLists()
 
   return useCallback(async () => {
-    const pending = (await Promise.all([flushGames(), flushMedia()])).reduce((a, b) => a + b, 0)
+    const pending = (await Promise.all([flushGames(), flushMedia(), flushLists()])).reduce((a, b) => a + b, 0)
     const ok = await confirm(
       pending > 0
         ? {
@@ -38,7 +40,8 @@ export function useSignOut() {
     if (pending > 0) {
       discardGames()
       discardMedia()
+      discardLists()
     }
     return supabase.auth.signOut()
-  }, [confirm, discardGames, discardMedia, flushGames, flushMedia])
+  }, [confirm, discardGames, discardLists, discardMedia, flushGames, flushLists, flushMedia])
 }

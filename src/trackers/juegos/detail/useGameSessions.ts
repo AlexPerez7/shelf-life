@@ -1,4 +1,3 @@
-import { useGames } from '../../../hooks/useGames'
 import { usePlaySessions } from '../../../hooks/usePlaySessions'
 import { useSaveStoppedTimer } from '../../../hooks/useSaveStoppedTimer'
 import { useSessionTimer } from '../../../contexts/SessionTimerContext'
@@ -21,7 +20,6 @@ export function useGameSessions(
   flush: () => Promise<void>,
   onStartPlaying: () => void
 ) {
-  const { refreshGame } = useGames()
   const { showToast, showError } = useToast()
   const confirm = useConfirm()
   const sessionTimer = useSessionTimer()
@@ -109,8 +107,7 @@ export function useGameSessions(
     if (!current) return
     try {
       await flush()
-      const wasPending = await deleteSession(session.id)
-      if (!wasPending) await refreshGame(current.id)
+      await deleteSession(session.id)
       showToast(`Sesión de ${session.duration_minutes} min eliminada`, {
         duration: 5000,
         action: {

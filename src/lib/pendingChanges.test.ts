@@ -7,6 +7,7 @@ import {
   newInsertOp,
   overlayPending,
   pendingActivities,
+  pendingDeletedActivityIds,
   pendingFor,
   withoutItem,
   type PendingOp,
@@ -146,5 +147,26 @@ describe('altas y borrados sin conexión', () => {
     expect(ops).toHaveLength(2)
     expect(overlayPending([a, b], ops).map((i) => i.id)).toEqual(['b'])
     expect(overlayPending([a, b], [remove('b')]).map((i) => i.id)).toEqual(['a'])
+  })
+})
+
+describe('borrar una sesión ya guardada', () => {
+  const del = (itemId: string, activityId: string, minutes: number): PendingOp => ({
+    type: 'deleteActivity',
+    itemId,
+    activityId,
+    minutes,
+    changes: {},
+  })
+
+  it('el tiempo del ítem baja mientras el borrado espera, sin pasar de cero', () => {
+    const game = makeItem({ id: 'g', time_spent_minutes: 90 })
+    expect(overlayPending([game], [del('g', 's1', 30)])[0].time_spent_minutes).toBe(60)
+    expect(overlayPending([game], [del('g', 's1', 200)])[0].time_spent_minutes).toBe(0)
+  })
+
+  it('lista las sesiones borradas de un ítem que esperan en la cola', () => {
+    const ops = [del('g', 's1', 30), del('h', 's2', 10), update('g', { rating: 5 })]
+    expect(pendingDeletedActivityIds(ops, 'g')).toEqual(['s1'])
   })
 })

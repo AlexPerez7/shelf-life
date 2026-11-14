@@ -9,6 +9,7 @@ import {
   newInsertOp,
   overlayPending,
   pendingActivities,
+  pendingDeletedActivityIds,
   pendingFor,
   pendingKey,
   readPending,
@@ -90,6 +91,11 @@ export function usePendingSync(
         .single()
       if (error) throw error
       return data as Item
+    }
+    if (op.type === 'deleteActivity') {
+      // Idempotente: si ya no estaba, está bien. El trigger de la base descuenta el tiempo.
+      const { error } = await supabase.from('activity_log').delete().eq('id', op.activityId)
+      if (error) throw error
     }
     if (op.type === 'activity') {
       // Con el id generado en el dispositivo: si ya estaba (reintento), no se duplica.
@@ -337,6 +343,22 @@ export function usePendingSync(
     [persist, setItems]
   )
 
+  /**
+   * Borra una sesión que ya está en la base: el tiempo se descuenta al
+   * instante y el borrado se manda en segundo plano (o queda en la cola).
+   */
+  const deleteActivity = useCallback(
+    (itemId: string, activityId: string, minutes: number) =>
+      save({ type: 'deleteActivity', itemId, activityId, minutes, changes: {} }, (i) => ({
+        ...i,
+        time_spent_minutes: Math.max(0, i.time_spent_minutes - minutes),
+      })),
+    [save]
+  )
+
+  /** Ids de las sesiones de un ítem cuyo borrado espera en la cola. */
+  const pendingDeletionsFor = useCallback((itemId: string) => pendingDeletedActivityIds(opsRef.current, itemId), [])
+
   /** Descarta todo lo pendiente (al cerrar sesión, si el usuario lo acepta). */
   const discard = useCallback(() => persist([]), [persist])
 
@@ -369,6 +391,8 @@ export function usePendingSync(
     discard,
     pendingActivitiesFor,
     cancelActivity,
+    deleteActivity,
+    pendingDeletionsFor,
     pendingCount,
     syncError,
   }

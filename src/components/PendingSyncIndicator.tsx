@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { CloudOff, Loader2 } from 'lucide-react'
 import { useGames } from '../contexts/GamesContext'
 import { useMedia } from '../contexts/MediaContext'
+import { useLists } from '../contexts/ListsContext'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptics'
 
@@ -27,10 +28,11 @@ function useOnline() {
 export function PendingSyncIndicator() {
   const games = useGames()
   const media = useMedia()
+  const lists = useLists()
   const { showToast, showError } = useToast()
   const online = useOnline()
   const [saving, setSaving] = useState(false)
-  const pending = games.pendingCount + media.pendingCount
+  const pending = games.pendingCount + media.pendingCount + lists.pendingCount
 
   const gamesError = games.syncError
   const mediaError = media.syncError
@@ -40,6 +42,10 @@ export function PendingSyncIndicator() {
   useEffect(() => {
     if (mediaError) showError(new Error(mediaError.message), 'Un cambio hecho sin conexión no se pudo guardar')
   }, [mediaError, showError])
+  const listsError = lists.syncError
+  useEffect(() => {
+    if (listsError) showError(new Error(listsError.message), 'Un cambio hecho sin conexión no se pudo guardar')
+  }, [listsError, showError])
 
   if (pending === 0) return null
 
@@ -50,7 +56,7 @@ export function PendingSyncIndicator() {
       return
     }
     setSaving(true)
-    const left = (await Promise.all([games.flushPending(), media.flushPending()])).reduce((a, b) => a + b, 0)
+    const left = (await Promise.all([games.flushPending(), media.flushPending(), lists.flushPending()])).reduce((a, b) => a + b, 0)
     setSaving(false)
     if (left === 0) showToast('Cambios guardados')
     else showToast('Todavía no se pudieron guardar; se reintenta solo')

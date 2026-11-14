@@ -25,8 +25,13 @@ interface GamesContextValue {
   pendingSessions: (gameId: string) => PlaySession[]
   /** Saca de la cola una sesión sin guardar; `false` si ya está en la base. */
   cancelPendingSession: (sessionId: string) => boolean
-  /** Relee un juego de la DB (ej. después de que un trigger lo modificó). */
-  refreshGame: (id: string) => Promise<void>
+  /** Ids de las sesiones de un juego cuyo borrado espera en la cola. */
+  pendingDeletedSessions: (gameId: string) => string[]
+  /**
+   * Borra una sesión que ya está en la base: las horas bajan al instante y el
+   * borrado se manda en segundo plano (o queda en la cola sin conexión).
+   */
+  deleteSavedSession: (gameId: string, sessionId: string, minutes: number) => Promise<void>
   refetch: () => Promise<void>
   /** Cambios hechos sin conexión que todavía no llegaron a la base. */
   pendingCount: number
@@ -73,6 +78,8 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     discard,
     pendingActivitiesFor,
     cancelActivity,
+    deleteActivity,
+    pendingDeletionsFor,
   } = sync
 
   const fetchGames = useCallback(async () => {
@@ -215,12 +222,6 @@ export function GamesProvider({ children }: { children: ReactNode }) {
 
   const deleteGame = useCallback((id: string) => remove(id, 'delete'), [remove])
 
-  const refreshGame = useCallback(async (id: string) => {
-    const { data, error } = await supabase.from('items').select('*').eq('id', id).single()
-    if (error) throw error
-    setItems((prev) => prev.map((i) => (i.id === id ? overlay([data as Item])[0] : i)))
-  }, [overlay])
-
   const value = useMemo<GamesContextValue>(
     () => ({
       games,
@@ -230,10 +231,13 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       addGames,
       updateGame,
       deleteGame,
-      refreshGame,
       logSession,
       pendingSessions,
       cancelPendingSession: cancelActivity,
+      pendingDeletedSessions: pendingDeletionsFor,
+      deleteSavedSession: async (gameId, sessionId, minutes) => {
+        await deleteActivity(gameId, sessionId, minutes)
+      },
       refetch: fetchGames,
       pendingCount,
       syncError,
@@ -248,10 +252,11 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       addGames,
       updateGame,
       deleteGame,
-      refreshGame,
       logSession,
       pendingSessions,
       cancelActivity,
+      pendingDeletionsFor,
+      deleteActivity,
       fetchGames,
       pendingCount,
       syncError,

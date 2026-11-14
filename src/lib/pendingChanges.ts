@@ -34,6 +34,8 @@ export type PendingOp =
   | { type: 'update'; itemId: string; changes: ItemWrite }
   | { type: 'activity'; itemId: string; activity: PendingActivity; changes: ItemWrite }
   | { type: 'insert'; itemId: string; userId: string; row: NewItemRow & { created_at: string }; changes: ItemWrite }
+  /** Borrar una sesión que ya está en la base; `minutes` es su tiempo (lo descuenta un trigger allá). */
+  | { type: 'deleteActivity'; itemId: string; activityId: string; minutes: number; changes: ItemWrite }
   /** Borrado para siempre. */
   | { type: 'delete'; itemId: string; changes: ItemWrite }
   /** Borrado blando (papelera de Libros): `items.deleted_at`. */
@@ -87,6 +89,10 @@ export const pendingFor = (ops: PendingOp[], itemId: string) => ops.filter((o) =
 
 export const withoutItem = (ops: PendingOp[], itemId: string) => ops.filter((o) => o.itemId !== itemId)
 
+/** Ids de las sesiones de un ítem cuyo borrado todavía no llegó a la base. */
+export const pendingDeletedActivityIds = (ops: PendingOp[], itemId: string) =>
+  ops.flatMap((o) => (o.type === 'deleteActivity' && o.itemId === itemId ? [o.activityId] : []))
+
 /** Las actividades de un ítem que todavía no llegaron a la base. */
 export const pendingActivities = (ops: PendingOp[], itemId: string) =>
   ops.flatMap((o) => (o.type === 'activity' && o.itemId === itemId ? [o.activity] : []))
@@ -130,6 +136,9 @@ export function applyPendingOps(item: Item, ops: PendingOp[]): Item {
     if (op.itemId !== item.id) continue
     if (isRemoval(op) || op.type === 'insert') continue
     out = { ...out, ...op.changes } as Item
+    if (op.type === 'deleteActivity' && op.minutes) {
+      out = { ...out, time_spent_minutes: Math.max(0, out.time_spent_minutes - op.minutes) }
+    }
     if (op.type === 'activity' && op.activity.duration_minutes) {
       // En la base el tiempo lo suma un trigger al guardar la actividad.
       out = { ...out, time_spent_minutes: out.time_spent_minutes + op.activity.duration_minutes }
@@ -177,6 +186,7 @@ function isOp(value: unknown): value is PendingOp {
   if (typeof op.itemId !== 'string' || typeof op.changes !== 'object' || op.changes == null) return false
   if (op.type === 'update' || op.type === 'delete') return true
   if (op.type === 'trash') return typeof op.deletedAt === 'string'
+  if (op.type === 'deleteActivity') return typeof op.activityId === 'string' && typeof op.minutes === 'number'
   if (op.type === 'insert') {
     const row = op.row as Record<string, unknown> | undefined
     return typeof op.userId === 'string' && typeof row?.title === 'string' && typeof row.created_at === 'string'

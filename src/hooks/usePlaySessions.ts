@@ -17,7 +17,7 @@ const byDateDesc = (x: PlaySession, y: PlaySession) =>
  * en la cola, así se ven aunque se haya cerrado la app sin señal.
  */
 export function usePlaySessions(gameId: string | undefined) {
-  const { logSession, pendingSessions, cancelPendingSession } = useGames()
+  const { logSession, pendingSessions, cancelPendingSession, pendingDeletedSessions, deleteSavedSession } = useGames()
   const [saved, setSaved] = useState<PlaySession[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -53,25 +53,29 @@ export function usePlaySessions(gameId: string | undefined) {
 
   /**
    * Una sesión que todavía no se guardó solo sale de la cola; si no, se borra
-   * en la base. Devuelve si estaba en la cola (entonces no hace falta releer el juego).
+   * en la base (optimista: las horas bajan al instante y, sin conexión, el
+   * borrado queda en la cola). Devuelve si estaba en la cola.
    */
   const deleteSession = useCallback(
     async (id: string) => {
       const wasPending = cancelPendingSession(id)
-      if (!wasPending) {
-        const { error } = await supabase.from('activity_log').delete().eq('id', id)
-        if (error) throw error
+      if (!wasPending && gameId) {
+        const minutes = saved.find((s) => s.id === id)?.duration_minutes ?? 0
+        await deleteSavedSession(gameId, id, minutes)
       }
       setSaved((prev) => prev.filter((s) => s.id !== id))
       return wasPending
     },
-    [cancelPendingSession]
+    [cancelPendingSession, deleteSavedSession, gameId, saved]
   )
 
   // Se calcula en cada render: la cola cambia sin cambiar `saved` (y el
   // contexto vuelve a renderizar cuando cambia).
   const pending = gameId ? pendingSessions(gameId).filter((p) => !saved.some((s) => s.id === p.id)) : []
-  const sessions = pending.length ? [...pending, ...saved].sort(byDateDesc) : saved
+  // Las ya borradas cuyo borrado todavía espera en la cola no se muestran.
+  const deleted = gameId ? pendingDeletedSessions(gameId) : []
+  const shownSaved = deleted.length ? saved.filter((s) => !deleted.includes(s.id)) : saved
+  const sessions = pending.length ? [...pending, ...shownSaved].sort(byDateDesc) : shownSaved
 
   /** ¿Esta sesión todavía espera en la cola? (para marcarla en la lista). */
   const isPending = useCallback(

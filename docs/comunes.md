@@ -40,9 +40,10 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 - Los cambios de un mismo título se guardan en el orden en que se hicieron. Cada actividad lleva un id generado en el dispositivo, así un reintento no la duplica ni suma dos veces el tiempo.
 - Si la base rechaza un cambio al reintentar (por ejemplo, el título se borró en otro dispositivo), se descarta con un aviso.
 - Al cerrar sesión se intenta guardar lo pendiente y, si no se puede, se pregunta antes de perderlo.
-- Las sesiones de juego hechas sin señal aparecen en la lista con la marca "sin guardar"; borrar una de esas solo la saca de la cola.
+- Las sesiones de juego hechas sin señal aparecen en la lista con la marca "sin guardar"; borrar una de esas solo la saca de la cola. Borrar una sesión ya guardada también funciona sin señal: las horas bajan al instante y el borrado espera en la cola.
+- **Listas**: crear, renombrar o borrar una lista y agregar o quitar títulos también funcionan sin señal, con su propia cola (`lib/pendingLists.ts`, `hooks/useListsQueue.ts`) que se manda en orden (no se puede agregar un título a una lista que todavía no existe en la base). Lo que se deshace antes de mandarse se cancela. Las listas y sus títulos se guardan en el dispositivo para verse sin señal.
 - Un título agregado sin señal lleva un id generado en el dispositivo (la base lo guarda con ese mismo id, sin duplicarlo): se puede editar y registrar avance antes de que exista allá, y todo se manda en orden. Si se borra antes de guardarse, desaparece de la cola sin tocar la base; mandar un libro a la papelera sin señal y deshacerlo enseguida también cancela el cambio.
-- Todavía necesitan conexión: las importaciones, restaurar o vaciar la papelera, borrar una sesión ya guardada y las listas.
+- Todavía necesitan conexión: las importaciones, restaurar o vaciar la papelera y compartir una lista por link (el link público lo genera la base).
 
 ## Fotos propias como portada
 
