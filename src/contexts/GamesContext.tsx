@@ -65,7 +65,8 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     overlay,
     setUser,
     save,
-    dropItem,
+    insert,
+    remove,
     pendingCount,
     syncError,
     flush,
@@ -146,22 +147,11 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     }
   }, [items])
 
-  const addGame = useCallback(async (game: NewGame) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) throw new Error('No hay sesión activa')
-
-    const { data, error } = await supabase
-      .from('items')
-      .insert({ ...newGameToItem(game), user_id: user.id })
-      .select()
-      .single()
-
-    if (error) throw error
-    setItems((prev) => [data as Item, ...prev])
-    return itemToGame(data as Item)
-  }, [])
+  /** Optimista, como en MediaContext: se ve al instante; sin conexión queda en la cola. */
+  const addGame = useCallback(
+    async (game: NewGame) => itemToGame(await insert(newGameToItem(game))),
+    [insert]
+  )
 
   const addGames = useCallback(async (newGames: NewGame[]) => {
     const {
@@ -223,12 +213,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     [pendingActivitiesFor]
   )
 
-  const deleteGame = useCallback(async (id: string) => {
-    const { error } = await supabase.from('items').delete().eq('id', id)
-    if (error) throw error
-    dropItem(id)
-    setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [dropItem])
+  const deleteGame = useCallback((id: string) => remove(id, 'delete'), [remove])
 
   const refreshGame = useCallback(async (id: string) => {
     const { data, error } = await supabase.from('items').select('*').eq('id', id).single()

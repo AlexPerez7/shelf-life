@@ -34,14 +34,15 @@ Cada tracker vive bajo su propia ruta, con su barra de navegación, su tema (`us
 
 ## Cambios sin conexión
 
-- Editar un título, cambiar su estado o puntaje, el avance rápido (+1 episodio, la página), anotar episodios o páginas, registrar sesiones de juego y terminar el cronómetro (de juegos o de lectura) funcionan sin señal.
+- Agregar un título (con lo que ya tengas a mano: la búsqueda en las APIs sí necesita señal), editarlo, borrarlo o mandarlo a la papelera, cambiar su estado o puntaje, el avance rápido (+1 episodio, la página), anotar episodios o páginas, registrar sesiones de juego y terminar el cronómetro (de juegos o de lectura) funcionan sin señal.
 - El cambio se ve al instante, queda en una cola guardada en el dispositivo (`lib/pendingChanges.ts`, `hooks/usePendingSync.ts`) y se manda solo al volver la conexión, al abrir la app o volver a ella, y cada 30 s.
 - Un aviso arriba a la derecha ("3 cambios sin guardar") lo muestra; tocarlo reintenta en el momento.
 - Los cambios de un mismo título se guardan en el orden en que se hicieron. Cada actividad lleva un id generado en el dispositivo, así un reintento no la duplica ni suma dos veces el tiempo.
 - Si la base rechaza un cambio al reintentar (por ejemplo, el título se borró en otro dispositivo), se descarta con un aviso.
 - Al cerrar sesión se intenta guardar lo pendiente y, si no se puede, se pregunta antes de perderlo.
 - Las sesiones de juego hechas sin señal aparecen en la lista con la marca "sin guardar"; borrar una de esas solo la saca de la cola.
-- Todavía necesitan conexión: agregar o borrar títulos, borrar una sesión ya guardada y las listas.
+- Un título agregado sin señal lleva un id generado en el dispositivo (la base lo guarda con ese mismo id, sin duplicarlo): se puede editar y registrar avance antes de que exista allá, y todo se manda en orden. Si se borra antes de guardarse, desaparece de la cola sin tocar la base; mandar un libro a la papelera sin señal y deshacerlo enseguida también cancela el cambio.
+- Todavía necesitan conexión: las importaciones, restaurar o vaciar la papelera, borrar una sesión ya guardada y las listas.
 
 ## Fotos propias como portada
 

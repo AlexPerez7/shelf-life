@@ -3,6 +3,8 @@ import {
   addPendingOp,
   applyPendingOps,
   isNetworkError,
+  itemFromInsert,
+  newInsertOp,
   overlayPending,
   pendingActivities,
   pendingFor,
@@ -86,5 +88,63 @@ describe('isNetworkError', () => {
 
   it('un rechazo de la base no es de red', () => {
     expect(isNetworkError({ message: 'new row violates row-level security policy', code: '42501' }, true)).toBe(false)
+  })
+})
+
+describe('altas y borrados sin conexión', () => {
+  const insert = (id: string, title = 'Nuevo', createdAt = '2026-11-01T10:00:00Z') =>
+    newInsertOp(id, 'user-1', { media_type: 'book', title, created_at: createdAt })
+  const trash = (itemId: string): PendingOp => ({ type: 'trash', itemId, deletedAt: '2026-11-02T10:00:00Z', changes: {} })
+  const remove = (itemId: string): PendingOp => ({ type: 'delete', itemId, changes: {} })
+
+  it('un alta se ve completa, con lo que la base pondría sola', () => {
+    const op = insert('n1', 'Rayuela')
+    if (op.type !== 'insert') throw new Error('se esperaba un alta')
+    expect(itemFromInsert(op)).toMatchObject({
+      id: 'n1',
+      user_id: 'user-1',
+      title: 'Rayuela',
+      status: 'planned',
+      genres: [],
+      metadata: {},
+      progress: 0,
+      time_spent_minutes: 0,
+      created_at: '2026-11-01T10:00:00Z',
+    })
+  })
+
+  it('lo agregado sin conexión sigue arriba cuando llega lo de la base, con sus cambios encima', () => {
+    const server = makeItem({ id: 's1', created_at: '2026-10-01T00:00:00Z' })
+    const ops = [insert('n1', 'A', '2026-11-01T10:00:00Z'), insert('n2', 'B', '2026-11-02T10:00:00Z'), update('n1', { rating: 9 })]
+    const shown = overlayPending([server], ops)
+    expect(shown.map((i) => i.id)).toEqual(['n2', 'n1', 's1'])
+    expect(shown.find((i) => i.id === 'n1')?.rating).toBe(9)
+  })
+
+  it('editar un alta que no salió cambia la fila del alta, sin sumar otro cambio', () => {
+    const ops = addPendingOp([insert('n1')], update('n1', { rating: 8, status: 'completed' }))
+    expect(ops).toHaveLength(1)
+    expect(ops[0]).toMatchObject({ type: 'insert', row: { title: 'Nuevo', rating: 8, status: 'completed' } })
+  })
+
+  it('un alta que se está mandando no se toca: lo nuevo va detrás', () => {
+    const first = insert('n1')
+    const ops = addPendingOp([first], update('n1', { rating: 8 }), first)
+    expect(ops).toEqual([first, update('n1', { rating: 8 })])
+  })
+
+  it('borrar algo que no llegó a la base cancela todo lo suyo, sin tocar lo de otros', () => {
+    const base = [insert('n1'), update('n1', { notes: 'x' }), update('b', { rating: 3 })]
+    expect(addPendingOp(base, remove('n1'))).toEqual([update('b', { rating: 3 })])
+    expect(addPendingOp(base, trash('n1'))).toEqual([update('b', { rating: 3 })])
+  })
+
+  it('borrar algo que ya está en la base queda en la cola y el ítem deja de verse', () => {
+    const a = makeItem({ id: 'a' })
+    const b = makeItem({ id: 'b' })
+    const ops = addPendingOp([update('a', { rating: 5 })], trash('a'))
+    expect(ops).toHaveLength(2)
+    expect(overlayPending([a, b], ops).map((i) => i.id)).toEqual(['b'])
+    expect(overlayPending([a, b], [remove('b')]).map((i) => i.id)).toEqual(['a'])
   })
 })
